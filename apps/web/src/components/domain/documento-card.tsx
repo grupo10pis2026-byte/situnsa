@@ -15,6 +15,7 @@ import { Card } from "../ui/card.js";
 import { ConfirmDialog } from "../ui/confirm-dialog.js";
 import { StatusBadge } from "../ui/status-badge.js";
 import { useToast } from "../ui/toast.js";
+import { AnalisisDocumentalPanel } from "./analisis-documental-panel.js";
 
 interface Props {
   expedienteId: string;
@@ -246,6 +247,9 @@ export function DocumentoCard(p: Props) {
           }}
         />
       </div>
+      {p.documentoId && p.tipo === "PLAN_ESTRUCTURADO" && (
+        <AnalisisDocumentalPanel key={p.documentoId} documentoId={p.documentoId} />
+      )}
       {pendiente && (
         <ConfirmDialog
           titulo="Reemplazar documento"

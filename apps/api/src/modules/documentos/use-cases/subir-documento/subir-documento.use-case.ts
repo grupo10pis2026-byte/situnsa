@@ -8,7 +8,7 @@ import {
   ok,
   type Result,
 } from "@pis/domain";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { DrizzleUnitOfWork } from "../../../../infra/db/unit-of-work.js";
 import type { AlmacenamientoPort } from "../../../../infra/storage/almacenamiento.port.js";
 import { LocalStorageService } from "../../../../infra/storage/local-storage.service.js";
@@ -25,15 +25,30 @@ export function esPdfReal(bytes: Uint8Array): boolean {
   return CABECERA_PDF.every((b, i) => bytes[i] === b);
 }
 
-export interface SubirDocumentoInput {
+interface SubirDocumentoBase {
   expedienteId: string;
   tipo: string;
   filename: string;
-  bytes: Uint8Array;
   actor: { id: string; dni: string };
   /** true = el actor es el tesista (RN-06: solo su subetapa activa). */
   comoTesista?: boolean;
 }
+
+export type SubirDocumentoInput = SubirDocumentoBase &
+  (
+    | { bytes: Uint8Array; contenido?: never }
+    | {
+        bytes?: never;
+        contenido: {
+          bytes: number;
+          cabecera: Uint8Array;
+          guardar: (
+            expedienteId: string,
+            nombre: string,
+          ) => Promise<{ ruta: string; sha256: string }>;
+        };
+      }
+  );
 
 export interface DocumentoSubido {
   id: string;
@@ -59,10 +74,11 @@ export class SubirDocumentoUseCase {
     if (!input.filename.toLowerCase().endsWith(".pdf")) {
       return fail(new DomainError("DOCUMENTO_INVALIDO", "Solo se admiten archivos PDF"));
     }
-    if (input.bytes.length === 0 || input.bytes.length > MAX_BYTES) {
+    const size = input.contenido?.bytes ?? input.bytes?.length ?? 0;
+    if (size === 0 || size > MAX_BYTES) {
       return fail(new DomainError("DOCUMENTO_INVALIDO", "El archivo debe pesar entre 1B y 50MB"));
     }
-    if (!esPdfReal(input.bytes)) {
+    if (!esPdfReal(input.contenido?.cabecera ?? input.bytes ?? new Uint8Array())) {
       return fail(
         new DomainError("DOCUMENTO_INVALIDO", "El archivo no es un PDF válido (cabecera)"),
       );
@@ -73,6 +89,10 @@ export class SubirDocumentoUseCase {
     }
     const uow = new DrizzleUnitOfWork(db);
     return uow.run(async (tx) => {
+      // Serializa versiones del mismo tipo dentro del expediente.
+      await tx.execute(
+        sql`select pg_advisory_xact_lock(hashtextextended(${`${input.expedienteId}:${input.tipo}`}, 0))`,
+      );
       const catalogo = this.catalogo ?? (await leerChecklist(tx));
       const def = catalogo.find((d) => d.tipo === input.tipo) ?? enCodigo;
       if (!def)
@@ -121,7 +141,9 @@ export class SubirDocumentoUseCase {
       }
       const version = (ultimo?.version ?? 0) + 1;
       const nombre = `${input.tipo}_v${version}.pdf`;
-      const { ruta, sha256 } = await this.storage.save(input.expedienteId, nombre, input.bytes);
+      const { ruta, sha256 } = input.contenido
+        ? await input.contenido.guardar(input.expedienteId, nombre)
+        : await this.storage.save(input.expedienteId, nombre, input.bytes);
       const inserted = await tx
         .insert(documentos)
         .values({

@@ -27,6 +27,8 @@ function crearTransporte(): Transporter | null {
   const puerto = Number(process.env.SMTP_PORT || 587);
   const usuario = process.env.SMTP_USER;
   return nodemailer.createTransport({
+    disableFileAccess: true,
+    disableUrlAccess: true,
     host,
     port: puerto,
     secure: process.env.SMTP_SECURE === "true" || puerto === 465,

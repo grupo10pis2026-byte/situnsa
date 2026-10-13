@@ -1,3 +1,4 @@
+name: grupo10-dev
 services:
   postgres:
     image: postgres:16-alpine
@@ -8,9 +9,9 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pis_dev}
       POSTGRES_DB: ${POSTGRES_DB:-pis_titulacion}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - ${DOCKER_VOLUMES_PATH:-../docker-volumes/grupo10-proyecto}/postgres-dev:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-pis} -d $${POSTGRES_DB:-pis_titulacion}"]
       interval: 5s
@@ -22,8 +23,5 @@ services:
     container_name: pis-mailpit
     restart: unless-stopped
     ports:
-      - "1025:1025" # SMTP para Fastify
-      - "8025:8025" # UI web dev
-
-volumes:
-  pgdata:
+      - "127.0.0.1:1025:1025" # SMTP para Fastify
+      - "127.0.0.1:8025:8025" # UI web dev
