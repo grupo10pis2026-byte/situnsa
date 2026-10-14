@@ -1,6 +1,7 @@
 export * from "./auditoria-transiciones.js";
 export * from "./catalogo-proceso.js";
 export * from "./cierre.js";
+export * from "./documento-revisiones.js";
 export * from "./documentos.js";
 export * from "./enums.js";
 export * from "./expedientes.js";

@@ -200,13 +200,15 @@ export async function seedTallerFlujo(db: Db): Promise<void> {
     tallerId = ins[0]?.id;
     if (!tallerId) throw new Error("Seed TALLER 06: no se pudo crear");
     await db.insert(tallerSesiones).values(
-      sesiones.value.map((s) => ({
-        tallerId: tallerId as string,
-        nro: s.nro,
-        fecha: s.fecha,
-        horaInicio: s.horaInicio,
-        horaFin: s.horaFin,
-      })),
+      sesiones.value.map(
+        (s: { nro: number; fecha: string; horaInicio: string; horaFin: string }) => ({
+          tallerId: tallerId as string,
+          nro: s.nro,
+          fecha: s.fecha,
+          horaInicio: s.horaInicio,
+          horaFin: s.horaFin,
+        }),
+      ),
     );
     await auditarTaller(db, {
       tallerId,
