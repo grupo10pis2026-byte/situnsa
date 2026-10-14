@@ -1,4 +1,5 @@
 export * from "./audit/cryptographic-trail.js";
+export * from "./documentos/analisis-caratula-resumen.js";
 export * from "./documentos/datos-documento.js";
 export * from "./documentos/etiquetas.js";
 export * from "./documentos/plantillas.js";

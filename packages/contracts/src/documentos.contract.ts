@@ -1,5 +1,13 @@
+/**
+ * Contrato documental compartido; declara rutas /api/documentos y /api/documentos-generados.
+ * El análisis usa analisis-documental.ts; los handlers reales se registran como rutas Fastify nativas.
+ */
 import { initContract } from "@ts-rest/core";
 import { z } from "zod";
+import {
+  AnalisisDocumentoRequestSchema,
+  AnalisisDocumentoResponseSchema,
+} from "./analisis-documental.js";
 import { ErrorEnvelopeSchema } from "./api-conventions.js";
 
 export const VistoBuenoSchema = z.object({
@@ -85,6 +93,22 @@ export type DocumentoRevisionDTO = z.infer<typeof DocumentoRevisionDTOSchema>;
 const c = initContract();
 
 export const documentosContract = c.router({
+  analisis: {
+    method: "POST",
+    path: "/api/documentos/:id/analisis",
+    pathParams: z.object({ id: z.string().uuid() }),
+    body: AnalisisDocumentoRequestSchema,
+    responses: {
+      200: AnalisisDocumentoResponseSchema,
+      400: ErrorEnvelopeSchema,
+      401: ErrorEnvelopeSchema,
+      403: ErrorEnvelopeSchema,
+      404: ErrorEnvelopeSchema,
+      429: ErrorEnvelopeSchema,
+      503: ErrorEnvelopeSchema,
+    },
+    summary: "Análisis orientativo de carátula y resumen (páginas 1–3)",
+  },
   metadata: {
     method: "GET",
     path: "/api/documentos/:id",

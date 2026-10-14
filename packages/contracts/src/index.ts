@@ -38,6 +38,7 @@ export const appContract = c.router({
   },
 });
 
+export * from "./analisis-documental.js";
 export * from "./api-conventions.js";
 export * from "./auth.contract.js";
 export * from "./cierre.contract.js";

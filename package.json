@@ -9,7 +9,7 @@
     "build": "turbo run build",
     "lint": "biome check .",
     "format": "biome check --write .",
-    "test": "vitest run --workspace=vitest.workspace.ts",
+    "test": "turbo run build --filter=@pis/api... && vitest run --config=vitest.config.ts",
     "typecheck": "turbo run typecheck",
     "check": "pnpm lint && pnpm typecheck && pnpm test",
     "prod:local": "docker compose -f deploy/docker-compose.prod.yml up --build",
@@ -17,12 +17,12 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.2.4",
-    "turbo": "2.5.6",
+    "turbo": "2.11.8",
     "typescript": "5.9.2",
-    "vitest": "3.2.4"
+    "vitest": "4.1.11"
   },
   "engines": {
-    "node": ">=20",
-    "pnpm": ">=9"
+    "node": ">=24.21.0 <25",
+    "pnpm": ">=11.24.0 <12"
   }
 }

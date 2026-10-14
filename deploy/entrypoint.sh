@@ -40,9 +40,7 @@ if [ -n "$DATABASE_URL" ]; then
       process.exit(1);
     }
     check();
-  ' || {
-    echo "Advertencia: Error conectando a DB, continuando..."
-  }
+  '
 
   # 3. Aplicar migraciones y seed
   # SEED_MODE=demo (default): catálogos + roles + usuarios demo (00000001/x).
@@ -50,17 +48,18 @@ if [ -n "$DATABASE_URL" ]; then
   # poner SEED_MODE=base (solo catálogos+roles, sin usuarios demo) y crear
   # el admin a mano por SQL.
   echo "Aplicando migraciones versionadas..."
-  node packages/db/dist/migrate.js || pnpm --filter @pis/db db:migrate || true
+  node packages/db/dist/migrate.js
 
   if [ "${SEED_MODE:-demo}" = "base" ]; then
     echo "Ejecutando seed base (sin usuarios demo)..."
-    node packages/db/dist/seed-base.js || pnpm --filter @pis/db db:seed:base || true
+    node packages/db/dist/seed-base.js
   else
     echo "Ejecutando seed de datos demo..."
-    node packages/db/dist/seed.js || pnpm --filter @pis/db db:seed || true
+    node packages/db/dist/seed.js
   fi
 else
-  echo "ADVERTENCIA: DATABASE_URL no definida: se omite migrate/seed y la API no tendra DB (login dara 500)."
+  echo "ERROR: DATABASE_URL es obligatoria."
+  exit 1
 fi
 
 # 4. Arrancar Fastify API en background

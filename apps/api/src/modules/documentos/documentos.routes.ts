@@ -1,3 +1,8 @@
+/**
+ * Registro de rutas nativas Fastify: POST /api/documentos/upload y GET /api/documentos/:id.
+ * Incluye GET /api/documentos/:id/descargar, POST /api/documentos/:id/visto-bueno y análisis.
+ * También genera por POST /api/expedientes/:id/documentos/generar y descarga formatos generados.
+ */
 import { GenerarDocumentosSchema, VistoBuenoSchema } from "@pis/contracts";
 import { db, documentoRevisiones, documentos, documentosGenerados } from "@pis/db";
 import { desc, eq } from "drizzle-orm";
@@ -8,6 +13,7 @@ import { errorEnvelope, estadoHttp, PATRON_UUID } from "../../infra/http/errores
 import { LocalStorageService } from "../../infra/storage/local-storage.service.js";
 import { requireAuth } from "../../middleware/require-auth.js";
 import { leerChecklist } from "../expedientes/expedientes.repository.js";
+import { registerAnalisisDocumental } from "./analisis.routes.js";
 import { GenerarDocumentosUseCase } from "./use-cases/generar-documentos/generar-documentos.use-case.js";
 import { SubirDocumentoUseCase } from "./use-cases/subir-documento/subir-documento.use-case.js";
 import { VistoBuenoDocumentoUseCase } from "./use-cases/visto-bueno/visto-bueno.use-case.js";
@@ -19,24 +25,30 @@ import { VistoBuenoDocumentoUseCase } from "./use-cases/visto-bueno/visto-bueno.
 
 const storage = new LocalStorageService();
 
+/** UUID inválido se responde como 404, conservando el envelope común de rutas documentales. */
 function idValido(req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply): boolean {
   if (PATRON_UUID.test(req.params.id)) return true;
   void reply.status(404).send(errorEnvelope("NO_ENCONTRADO", "Documento no encontrado"));
   return false;
 }
 
+/** Lee metadatos internos; cada handler debe comprobar el alcance antes de entregar el archivo. */
 async function documentoPorId(id: string) {
   const rows = await db.select().from(documentos).where(eq(documentos.id, id)).limit(1);
   return rows[0] ?? null;
 }
 
+/** Registra carga, consulta, descargas, visto bueno, generación y el análisis en analisis.routes.ts. */
 export function registerDocumentosRoutes(app: FastifyInstance): void {
+  registerAnalisisDocumental(app);
   /** POST /api/documentos/upload (multipart: expedienteId, tipo, file). */
   app.post(
     "/api/documentos/upload",
     { preHandler: requireAuth },
     async (req: FastifyRequest, reply: FastifyReply) => {
-      const data = await req.file();
+      const data = await req.file({
+        limits: { files: 1, fields: 2, parts: 3, fieldSize: 2048, fileSize: 50 * 1024 * 1024 },
+      });
       const fields = data?.fields as unknown as
         | { expedienteId?: { value: string }; tipo?: { value: string } }
         | undefined;
@@ -53,25 +65,46 @@ export function registerDocumentosRoutes(app: FastifyInstance): void {
         await reply.status(a.status).send(a.body);
         return;
       }
-      const bytes = new Uint8Array(await data.toBuffer());
-      const comoTesista = !esPersonal(a.perfil.roles) && a.perfil.roles.includes("TESISTA");
-      const uc = new SubirDocumentoUseCase(storage, await leerChecklist(db));
-      const actor = req.actor ?? { id: "", dni: "desconocido" };
-      const r = await uc.execute({
-        expedienteId,
-        tipo,
-        filename: data.filename,
-        bytes,
-        actor,
-        comoTesista,
-      });
-      if (!r.ok) {
-        await reply
-          .status(estadoHttp(r.error.code))
-          .send(errorEnvelope(r.error.code, r.error.message));
+      if (
+        !data.filename.toLowerCase().endsWith(".pdf") ||
+        data.filename.length > 255 ||
+        /[\\/:]/u.test(data.filename) ||
+        data.filename.includes(String.fromCharCode(0))
+      ) {
+        await reply.status(400).send(errorEnvelope("DOCUMENTO_INVALIDO", "Nombre PDF inválido"));
         return;
       }
-      await reply.status(201).send(r.value);
+      const contenido = await storage.prepararPdf(data.file);
+      let conservar = false;
+      try {
+        if (data.file.truncated) {
+          await reply
+            .status(400)
+            .send(errorEnvelope("DOCUMENTO_INVALIDO", "El archivo excede el límite permitido"));
+          return;
+        }
+        const comoTesista = !esPersonal(a.perfil.roles) && a.perfil.roles.includes("TESISTA");
+        const uc = new SubirDocumentoUseCase(storage, await leerChecklist(db));
+        const actor = req.actor ?? { id: "", dni: "desconocido" };
+        const r = await uc.execute({
+          expedienteId,
+          tipo,
+          filename: data.filename,
+          contenido,
+          actor,
+          comoTesista,
+        });
+        if (!r.ok) {
+          await reply
+            .status(estadoHttp(r.error.code))
+            .send(errorEnvelope(r.error.code, r.error.message));
+          return;
+        }
+        conservar = true;
+        await reply.status(201).send(r.value);
+      } finally {
+        await contenido.limpiar(conservar);
+      }
     },
   );
 
