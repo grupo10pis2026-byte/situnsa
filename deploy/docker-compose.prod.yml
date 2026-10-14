@@ -30,6 +30,8 @@ services:
       PORT: 80
       DATABASE_URL: postgres://${POSTGRES_USER:-pis}:${POSTGRES_PASSWORD:-pis_dev}@postgres:5432/${POSTGRES_DB:-pis_titulacion}
       DOCS_VOLUME_PATH: /var/data/titulacion-docs
+      # Modo entrega: stream evita problemas de permisos de sistema de archivos con Nginx X-Accel
+      DOCS_ENTREGA: ${DOCS_ENTREGA:-stream}
       # Auth real en modo prod-local (mismos nombres que en Render):
       JWT_SECRET: ${JWT_SECRET:-prod-local-secret-solo-para-paridad-no-usar-en-render-123456}
       DEMO_PASSWORD: ${DEMO_PASSWORD:-x}

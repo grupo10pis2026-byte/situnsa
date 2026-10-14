@@ -4,7 +4,7 @@
  */
 import { createHash, randomUUID } from "node:crypto";
 import { constants, createReadStream, type ReadStream } from "node:fs";
-import { copyFile, mkdir, mkdtemp, open, rm, stat, writeFile } from "node:fs/promises";
+import { chmod, copyFile, mkdir, mkdtemp, open, rm, stat, writeFile } from "node:fs/promises";
 import { join, relative, resolve, sep } from "node:path";
 import type { Readable } from "node:stream";
 import type { AlmacenamientoPort } from "./almacenamiento.port.js";
@@ -80,6 +80,7 @@ export class LocalStorageService implements AlmacenamientoPort {
         // La cuarentena y el bind mount pueden pertenecer a distintos filesystems.
         // Copia del SO sin buffer Node y sin sobrescritura; la API lo publica tras commit.
         await copyFile(temporal, guardado, constants.COPYFILE_EXCL);
+        await chmod(guardado, 0o644).catch(() => {});
         return { ruta: guardado, sha256 };
       },
       // conservar=true solo después del éxito del caso de uso; siempre elimina cuarentena.
@@ -105,6 +106,7 @@ export class LocalStorageService implements AlmacenamientoPort {
     await mkdir(dir, { recursive: true });
     const ruta = join(dir, nombreSeguro(filename));
     await writeFile(ruta, bytes);
+    await chmod(ruta, 0o644).catch(() => {});
     return { ruta, sha256 };
   }
 
