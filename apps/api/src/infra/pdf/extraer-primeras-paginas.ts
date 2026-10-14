@@ -75,8 +75,10 @@ export async function extraerPrimerasPaginas(
       if (!cola) throw new Error("PDF_NO_EVALUABLE");
       return ResultadoExtraccionSchema.parse(await extraerEnSandbox(archivo, cola, sha256));
     }
-    // La ejecución directa queda reservada a fixtures y desarrollo explícito.
-    if (process.env.NODE_ENV === "production") throw new Error("PDF_NO_EVALUABLE");
+    // La ejecución directa se permite si se solicita explícitamente en PDF_EXTRACTOR_MODE=direct o en no-prod.
+    if (process.env.NODE_ENV === "production" && process.env.PDF_EXTRACTOR_MODE !== "direct") {
+      throw new Error("PDF_NO_EVALUABLE");
+    }
     return await new Promise<TextoPdf>((resolveResultado, rechazar) => {
       const apiRoot = resolve(dirname(worker), "../../..");
       const repoRoot = resolve(apiRoot, "../..");
