@@ -1,6 +1,6 @@
 import { GenerarDocumentosSchema, VistoBuenoSchema } from "@pis/contracts";
-import { db, documentos, documentosGenerados } from "@pis/db";
-import { eq } from "drizzle-orm";
+import { db, documentoRevisiones, documentos, documentosGenerados } from "@pis/db";
+import { desc, eq } from "drizzle-orm";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { autorizar, esPersonal } from "../../infra/auth/autorizacion.js";
 import { entregarArchivo } from "../../infra/http/entrega-archivo.js";
@@ -241,6 +241,50 @@ export function registerDocumentosRoutes(app: FastifyInstance): void {
       await entregarArchivo(reply, storage, gen.ruta, {
         nombre: `${gen.tipo}_v${gen.version}.pdf`,
         inline: true,
+      });
+    },
+  );
+
+  app.get<{ Params: { id: string } }>(
+    "/api/documentos/:id/revision",
+    { preHandler: async (req, reply) => requireAuth(req, reply) },
+    async (req, reply) => {
+      if (!idValido(req, reply)) return;
+      const doc = await documentoPorId(req.params.id);
+      if (!doc) {
+        await reply.status(404).send(errorEnvelope("NO_ENCONTRADO", "Documento no encontrado"));
+        return;
+      }
+      const a = await autorizar(req.actor, {
+        permiso: ["documentos", "ver"],
+        expedienteId: doc.expedienteId,
+      });
+      if (!a.ok) {
+        await reply.status(a.status).send(a.body);
+        return;
+      }
+      const rows = await db
+        .select()
+        .from(documentoRevisiones)
+        .where(eq(documentoRevisiones.documentoId, req.params.id))
+        .orderBy(desc(documentoRevisiones.createdAt))
+        .limit(1);
+
+      const rev = rows[0];
+      if (!rev) {
+        await reply.status(200).send(null);
+        return;
+      }
+
+      await reply.status(200).send({
+        id: rev.id,
+        documentoId: rev.documentoId,
+        expedienteId: rev.expedienteId,
+        estado: rev.estado,
+        hallazgos: rev.hallazgos,
+        paginasAnalizadas: rev.paginasAnalizadas,
+        createdAt: rev.createdAt.toISOString(),
+        updatedAt: rev.updatedAt.toISOString(),
       });
     },
   );

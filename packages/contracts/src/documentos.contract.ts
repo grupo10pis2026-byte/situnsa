@@ -50,6 +50,38 @@ export const GenerarDocumentosDTOSchema = z.object({
   ),
 });
 
+export const SeveridadHallazgoSchema = z.enum(["ADVERTENCIA", "INFO", "ERROR"]);
+export type SeveridadHallazgo = z.infer<typeof SeveridadHallazgoSchema>;
+
+export const EstadoRevisionDocumentoSchema = z.enum([
+  "PENDIENTE",
+  "EN_PROCESO",
+  "COMPLETADO",
+  "FALLIDO",
+]);
+export type EstadoRevisionDocumento = z.infer<typeof EstadoRevisionDocumentoSchema>;
+
+export const HallazgoRevisionSchema = z.object({
+  campo: z.string(),
+  mensaje: z.string(),
+  severidad: SeveridadHallazgoSchema,
+  esperado: z.string().optional(),
+  encontrado: z.string().optional(),
+});
+export type HallazgoRevision = z.infer<typeof HallazgoRevisionSchema>;
+
+export const DocumentoRevisionDTOSchema = z.object({
+  id: z.string().uuid(),
+  documentoId: z.string().uuid(),
+  expedienteId: z.string().uuid(),
+  estado: EstadoRevisionDocumentoSchema,
+  hallazgos: z.array(HallazgoRevisionSchema),
+  paginasAnalizadas: z.number().int().nonnegative(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+export type DocumentoRevisionDTO = z.infer<typeof DocumentoRevisionDTOSchema>;
+
 const c = initContract();
 
 export const documentosContract = c.router({
@@ -116,5 +148,17 @@ export const documentosContract = c.router({
       404: ErrorEnvelopeSchema,
     },
     summary: "V°B° académico del documento (RN-08: no cierra subetapa)",
+  },
+  revision: {
+    method: "GET",
+    path: "/api/documentos/:id/revision",
+    pathParams: z.object({ id: z.string().uuid() }),
+    responses: {
+      200: DocumentoRevisionDTOSchema.nullable(),
+      401: ErrorEnvelopeSchema,
+      403: ErrorEnvelopeSchema,
+      404: ErrorEnvelopeSchema,
+    },
+    summary: "Informe de revisión automática de documento",
   },
 });

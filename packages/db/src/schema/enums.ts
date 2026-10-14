@@ -132,3 +132,13 @@ export type EstadoCumplimiento = "PENDIENTE" | "CUMPLIDA" | "OBSERVADA";
 export const estadoEntregaEnum = pgEnum("estado_entrega", ["ENTREGADA", "CONFORME", "OBSERVADA"]);
 
 export type EstadoEntrega = "ENTREGADA" | "CONFORME" | "OBSERVADA";
+
+/** Revisión automática de documentos (carátula, datos, ortografía). */
+export const estadoRevisionDocumentoEnum = pgEnum("estado_revision_documento", [
+  "PENDIENTE",
+  "EN_PROCESO",
+  "COMPLETADO",
+  "FALLIDO",
+]);
+
+export type EstadoRevisionDocumento = "PENDIENTE" | "EN_PROCESO" | "COMPLETADO" | "FALLIDO";

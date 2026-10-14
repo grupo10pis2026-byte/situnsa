@@ -283,7 +283,10 @@ export async function seedDemo(db: Db): Promise<void> {
   const base2025 = new Date("2025-03-03T09:00:00-05:00").getTime();
   await generarSeguimiento(db, SET004_ID, (etapa, orden) => {
     const idx =
-      FLUJO_TITULACION.slice(0, etapa - 1).reduce((n, e) => n + e.subetapas.length, 0) +
+      FLUJO_TITULACION.slice(0, etapa - 1).reduce(
+        (n: number, e: { subetapas: readonly unknown[] | unknown[] }) => n + e.subetapas.length,
+        0,
+      ) +
       (orden - 1);
     const inicio = new Date(base2025 + idx * 3 * 86400000);
     return { estado: "FINALIZADO", inicio, fin: new Date(inicio.getTime() + 2 * 86400000) };
