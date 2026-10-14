@@ -1,3 +1,8 @@
+/**
+ * Registro de rutas nativas Fastify: POST /api/documentos/upload y GET /api/documentos/:id.
+ * Incluye GET /api/documentos/:id/descargar, POST /api/documentos/:id/visto-bueno y análisis.
+ * También genera por POST /api/expedientes/:id/documentos/generar y descarga formatos generados.
+ */
 import { GenerarDocumentosSchema, VistoBuenoSchema } from "@pis/contracts";
 import { db, documentos, documentosGenerados } from "@pis/db";
 import { eq } from "drizzle-orm";
@@ -20,17 +25,20 @@ import { VistoBuenoDocumentoUseCase } from "./use-cases/visto-bueno/visto-bueno.
 
 const storage = new LocalStorageService();
 
+/** UUID inválido se responde como 404, conservando el envelope común de rutas documentales. */
 function idValido(req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply): boolean {
   if (PATRON_UUID.test(req.params.id)) return true;
   void reply.status(404).send(errorEnvelope("NO_ENCONTRADO", "Documento no encontrado"));
   return false;
 }
 
+/** Lee metadatos internos; cada handler debe comprobar el alcance antes de entregar el archivo. */
 async function documentoPorId(id: string) {
   const rows = await db.select().from(documentos).where(eq(documentos.id, id)).limit(1);
   return rows[0] ?? null;
 }
 
+/** Registra carga, consulta, descargas, visto bueno, generación y el análisis en analisis.routes.ts. */
 export function registerDocumentosRoutes(app: FastifyInstance): void {
   registerAnalisisDocumental(app);
   /** POST /api/documentos/upload (multipart: expedienteId, tipo, file). */

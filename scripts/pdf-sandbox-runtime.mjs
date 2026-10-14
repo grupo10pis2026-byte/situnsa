@@ -1,3 +1,7 @@
+/**
+ * Funciones internas del supervisor y sus pruebas; este módulo no expone HTTP.
+ * Respalda POST /api/documentos/:id/analisis mediante contenedores efímeros, sin usar shell.
+ */
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { constants } from "node:fs";
@@ -51,6 +55,7 @@ export function docker(args, { timeout = 20_000, maxOutput = 600_000, signal } =
   });
 }
 
+/** Flags del trabajo efímero: imagen fijada por ID, PDF único de solo lectura y recursos acotados. */
 export function sandboxArgs(name, image, pdf) {
   if (!/^pis-pdf-[a-f0-9-]+$/u.test(name) || !/^sha256:[a-f0-9]{64}$/u.test(image))
     throw new Error("CONFIG_INVALIDA");
@@ -140,6 +145,11 @@ export async function snapshot(queue, id, staging) {
   }
 }
 
+/**
+ * Crea/ejecuta un contenedor para el supervisor y devuelve stdout como JSON sin interpretar.
+ * Timeout o AbortSignal interrumpen el cliente; finally retira el contenedor y descendientes.
+ * command se usa solo en pruebas de aislamiento, nunca se acepta desde la cola de la API.
+ */
 export async function runSandbox(image, pdf, { timeout = 20_000, command = [], signal } = {}) {
   const name = `pis-pdf-${randomUUID()}`;
   const deadline = Date.now() + timeout;
@@ -161,6 +171,7 @@ export async function runSandbox(image, pdf, { timeout = 20_000, command = [], s
   }
 }
 
+/** Confirma limpieza; si queda un contenedor, el supervisor debe dejar de aceptar trabajos. */
 async function removeSandbox(name) {
   try {
     await docker(["rm", "--force", name], { timeout: 10_000 });

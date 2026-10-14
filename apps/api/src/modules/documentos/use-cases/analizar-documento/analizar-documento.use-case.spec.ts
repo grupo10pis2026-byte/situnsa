@@ -1,3 +1,7 @@
+/**
+ * Pruebas del caso de uso de POST /api/documentos/:id/analisis.
+ * Los proveedores inyectados permiten verificar resultados parciales sin DB ni Gemini real.
+ */
 import { describe, expect, it, vi } from "vitest";
 import { AnalizarDocumentoUseCase } from "./analizar-documento.use-case.js";
 

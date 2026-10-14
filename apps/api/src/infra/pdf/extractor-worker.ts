@@ -1,4 +1,8 @@
-/** Subproceso sin secretos: el padre entrega únicamente un descriptor PDF en fd 3. */
+/**
+ * Ejecutable interno de POST /api/documentos/:id/analisis, no servidor HTTP.
+ * Docker entrega /input/document.pdf de solo lectura; desarrollo hereda el descriptor fd 3.
+ * Se coordina con extraer-primeras-paginas.ts y scripts/pdf-sandbox-supervisor.mjs.
+ */
 import { fstatSync, openSync, readFileSync, readSync } from "node:fs";
 import { PDFParse } from "pdf-parse";
 import { PDFDataRangeTransport } from "pdfjs-dist/legacy/build/pdf.mjs";
@@ -7,7 +11,9 @@ const MAX_BYTES = 50 * 1024 * 1024;
 const MAX_TEXTO = 100_000;
 const descriptor = process.env.PDF_SANDBOX_INPUT === "1" ? openSync("/input/document.pdf", "r") : 3;
 
+/** Adaptador de PDF.js para leer rangos del archivo sin convertir el PDF completo en Buffer. */
 class TransporteArchivo extends PDFDataRangeTransport {
+  /** Completa rangos solicitados por PDF.js y difiere el callback hasta registrar la petición. */
   override requestDataRange(begin: number, end: number): void {
     if (begin < 0 || end > this.length || end <= begin || end - begin > MAX_BYTES) {
       throw new Error("Rango inválido");
@@ -24,6 +30,7 @@ class TransporteArchivo extends PDFDataRangeTransport {
   }
 }
 
+/** Extrae texto de las tres primeras páginas; stdout transporta JSON y stderr no contiene PDF. */
 async function extraer() {
   const size = fstatSync(descriptor).size;
   if (size < 8 || size > MAX_BYTES) throw new Error("Tamaño inválido");

@@ -1,3 +1,7 @@
+/**
+ * Caso de uso de POST /api/documentos/upload, llamado desde documentos.routes.ts.
+ * Coordina disco, versionado y auditoría; no ejecuta análisis editorial durante la carga.
+ */
 import { db, documentos, expedientes } from "@pis/db";
 import {
   CHECKLIST_COMPLETO,
@@ -20,6 +24,7 @@ const MAX_BYTES = 50 * 1024 * 1024; // R2: tesis de 20–50MB
 /** Magic bytes PDF: el archivo debe empezar con `%PDF-` (no basta la extensión). */
 const CABECERA_PDF = [0x25, 0x50, 0x44, 0x46, 0x2d] as const;
 
+/** Comprueba solo la firma PDF; no prueba integridad del formato ni ausencia de contenido activo. */
 export function esPdfReal(bytes: Uint8Array): boolean {
   if (bytes.length < CABECERA_PDF.length) return false;
   return CABECERA_PDF.every((b, i) => bytes[i] === b);
@@ -69,8 +74,13 @@ export class SubirDocumentoUseCase {
     private readonly catalogo?: readonly ChecklistDef[],
   ) {}
 
+  /**
+   * Atiende POST /api/documentos/upload: valida referencia, asigna versión y registra custodia.
+   * El advisory lock serializa versiones por expediente/tipo; la ruta limpia el disco si falla.
+   * Acepta contenido en cuarentena para no bufferizar uploads, o bytes del puerto existente.
+   */
   async execute(input: SubirDocumentoInput): Promise<Result<DocumentoSubido, DomainError>> {
-    // Validaciones puras primero: un archivo inválido nunca toca la DB ni el disco.
+    // No publica ni modifica DB antes de validar; el multipart ya puede estar en cuarentena.
     if (!input.filename.toLowerCase().endsWith(".pdf")) {
       return fail(new DomainError("DOCUMENTO_INVALIDO", "Solo se admiten archivos PDF"));
     }

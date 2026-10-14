@@ -1,3 +1,7 @@
+/**
+ * Pruebas de LocalStorageService.prepararPdf, utilizado por POST /api/documentos/upload.
+ * Verifican hash, publicación y limpieza del contenido en cuarentena.
+ */
 import { createHash } from "node:crypto";
 import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";

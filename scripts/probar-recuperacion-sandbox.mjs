@@ -1,3 +1,7 @@
+/**
+ * Ejecutar con node scripts/probar-recuperacion-sandbox.mjs y supervisor activo sin trabajos pendientes.
+ * Interrumpe/reinicia ese supervisor y comprueba recuperación del flujo /api/documentos/:id/analisis.
+ */
 /** Prueba de mantenimiento local: reinicia el supervisor y crea un huérfano sintético. */
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";

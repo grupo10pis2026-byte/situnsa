@@ -1,3 +1,7 @@
+/**
+ * Revisión editorial opcional de POST /api/documentos/:id/analisis, llamada por analizar-documento.use-case.ts.
+ * Implementa I/O en infraestructura: @pis/domain permanece puro y GEMINI_REVISION_ENABLED vale 0 por defecto.
+ */
 import { HallazgoDocumentoSchema } from "@pis/contracts";
 import { z } from "zod";
 
@@ -12,6 +16,7 @@ const RespuestaGeminiSchema = z.object({
     .min(1),
 });
 
+/** Valida el esquema y la evidencia literal del resumen enviado; elimina hallazgos duplicados. */
 export function validarRevisionResumen(respuesta: unknown, resumen: string) {
   const revision = RevisionSchema.parse(respuesta);
   // Una recomendación sin evidencia literal no se presenta al usuario.
@@ -24,13 +29,19 @@ export function validarRevisionResumen(respuesta: unknown, resumen: string) {
   );
 }
 
+/** Oculta patrones de DNI y correo; esta minimización no constituye anonimización completa. */
 export function redactarDatosResumen(resumen: string): string {
   return resumen
     .replace(/\b\d{8}\b/gu, "[IDENTIFICADOR]")
     .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/giu, "[CORREO]");
 }
 
-/** Revisión opcional: sin herramientas ni datos del expediente en el contexto. */
+/**
+ * Adaptador de Gemini 2.5 Flash para el caso de uso analizar-documento.
+ * Requiere activación explícita y clave del servidor; por defecto no ejecuta fetch.
+ * Envía solo el resumen completo, con JSON restringido y timeout de 15 s.
+ * La dependencia solicitar permite pruebas con mocks sin contactar al proveedor.
+ */
 export async function revisarResumen(resumen: string, solicitar: typeof fetch = fetch) {
   if (
     process.env.GEMINI_REVISION_ENABLED !== "1" ||

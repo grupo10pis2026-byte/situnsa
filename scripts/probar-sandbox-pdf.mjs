@@ -1,3 +1,7 @@
+/**
+ * Ejecutar con node scripts/probar-sandbox-pdf.mjs tras construir la imagen pdf-sandbox.
+ * Verifica barreras de los trabajos usados por POST /api/documentos/:id/analisis; no llama Gemini.
+ */
 /** Pruebas de integración del aislamiento real; solo fixtures sintéticas. */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -17,6 +21,7 @@ const image = (
 const requireApi = createRequire(new URL("../apps/api/package.json", import.meta.url));
 const { PDFDocument, StandardFonts } = requireApi("pdf-lib");
 const evidence = [];
+/** Ejecuta un caso y registra evidencia local solo tras completar todas sus aserciones. */
 async function check(name, test) {
   const start = performance.now();
   await test();

@@ -1,3 +1,7 @@
+/**
+ * Adaptador HTTP del análisis documental, registrado desde documentos.routes.ts.
+ * Ruta: POST /api/documentos/:id/analisis. Contrato: packages/contracts/src/analisis-documental.ts.
+ */
 import { AnalisisDocumentoRequestSchema } from "@pis/contracts";
 import { db, documentos, expedientes, usuarios } from "@pis/db";
 import { eq, inArray } from "drizzle-orm";
@@ -9,6 +13,11 @@ import { AnalizarDocumentoUseCase } from "./use-cases/analizar-documento/analiza
 
 let activo = false;
 
+/**
+ * Registra POST /api/documentos/:id/analisis, invocado desde analisis-documental.ts en web.
+ * Exige autenticación, alcance del expediente y PLAN_ESTRUCTURADO; limita a 5/min por actor.
+ * Solo admite un análisis simultáneo en esta instancia y libera el cupo en finally.
+ */
 export function registerAnalisisDocumental(app: FastifyInstance): void {
   const cuota = app.createRateLimit({
     max: 5,

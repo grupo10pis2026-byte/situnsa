@@ -1,4 +1,7 @@
-/** Motor puro: solo recibe texto de las primeras tres páginas y datos esperados. */
+/**
+ * Motor puro de POST /api/documentos/:id/analisis, invocado por analizar-documento.use-case.ts.
+ * Solo recibe texto de páginas 1–3 y referencias esperadas; no lee PDF, DB ni proveedores de IA.
+ */
 export interface PaginaDocumento {
   numero: number;
   texto: string;
@@ -49,6 +52,7 @@ export function normalizarTextoDocumento(texto: string): string {
     .trim();
 }
 
+/** Compara frases normalizadas con límites de palabra para evitar coincidencias parciales. */
 function contieneFrase(texto: string, frase: string): boolean {
   const normal = normalizarTextoDocumento(frase);
   return normal.length > 0 && ` ${normalizarTextoDocumento(texto)} `.includes(` ${normal} `);
@@ -68,6 +72,10 @@ const ENCABEZADO = /^\s*(?:\d+[.)]?\s+)?(resumen|abstract)\s*:?[ \t]*$/iu;
 const FIN_RESUMEN =
   /^\s*(?:palabras\s+clave|keywords|key\s+words|abstract|introducción|introduccion|índice|indice)\s*(?::|$)/iu;
 
+/**
+ * Delimita el resumen por encabezados y calcula si las páginas disponibles cubren su final.
+ * Un resumen cortado al terminar la página 3 no se entrega a revisión editorial.
+ */
 function leerResumen(paginas: readonly PaginaDocumento[], totalPaginas: number) {
   let iniciado = false;
   let cerrado = false;
@@ -96,6 +104,7 @@ function leerResumen(paginas: readonly PaginaDocumento[], totalPaginas: number) 
   };
 }
 
+/** Busca etiquetas, comillas o bloques exactos en la carátula; no infiere títulos del resumen. */
 function detectarTitulo(caratula: string, esperado: string): string | null {
   const lineas = caratula
     .split(/\r?\n/u)
@@ -128,6 +137,13 @@ function detectarTitulo(caratula: string, esperado: string): string | null {
   return null;
 }
 
+/**
+ * Motor puro utilizado por POST /api/documentos/:id/analisis.
+ * @param paginasEntrada Texto ya extraído; se descartan páginas fuera de 1–3.
+ * @param datos Referencias del expediente suministradas por la capa de aplicación.
+ * @param totalPaginas Total del PDF para distinguir un resumen completo de uno truncado.
+ * @returns Controles y hallazgos orientativos; no cambia datos ni concede visto bueno.
+ */
 export function analizarCaratulaResumen(
   paginasEntrada: readonly PaginaDocumento[],
   datos: DatosAnalisisDocumento,
@@ -141,6 +157,7 @@ export function analizarCaratulaResumen(
   const hallazgos: HallazgoDocumento[] = [];
   const caratula = paginas.find((p) => p.numero === 1)?.texto ?? "";
   const legible = normalizarTextoDocumento(caratula).length >= 20;
+  // Centraliza la correspondencia entre control no conforme y severidad del hallazgo.
   const agregar = (
     tipo: string,
     estado: ControlDocumento["estado"],
@@ -175,6 +192,7 @@ export function analizarCaratulaResumen(
       1,
     );
 
+  /** Verifica nombre completo y, si existe referencia, DNI con límites numéricos. */
   function identidad(persona: IdentidadDocumento, tipo: string) {
     if (!legible || !persona.nombre.trim())
       agregar(tipo, "NO_EVALUABLE", "No hay datos suficientes para verificar esta identidad.", 1);

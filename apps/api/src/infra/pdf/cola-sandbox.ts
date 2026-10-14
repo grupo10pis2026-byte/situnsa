@@ -1,10 +1,19 @@
+/**
+ * Transporte por archivos de POST /api/documentos/:id/analisis, utilizado por extraer-primeras-paginas.ts.
+ * El supervisor del host scripts/pdf-sandbox-supervisor.mjs controla Docker; la API no recibe su socket.
+ */
 import { createHash, randomUUID } from "node:crypto";
 import type { FileHandle } from "node:fs/promises";
 import { mkdir, open, rename, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { setTimeout as esperar } from "node:timers/promises";
 
-/** Cola local: no transporta rutas originales ni secretos. */
+/**
+ * Publica una copia por bloques para scripts/pdf-sandbox-supervisor.mjs.
+ * Comprueba latido y hash, espera JSON acotado hasta 25 s y retira el trabajo al finalizar.
+ * Devuelve unknown: extraer-primeras-paginas.ts valida el contrato antes de usar la salida.
+ * La cola no transporta rutas originales, comandos Docker ni secretos.
+ */
 export async function extraerEnSandbox(
   archivo: FileHandle,
   cola: string,

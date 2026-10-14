@@ -2,7 +2,12 @@ import { useAnalizarDocumento } from "../../api/analisis-documental.js";
 import { Button } from "../ui/button.js";
 import { Card } from "../ui/card.js";
 
-/** Se remonta por documentoId: una respuesta de v1 no se muestra en v2. */
+/**
+ * Panel de DocumentoCard en /expedientes/$id y /mi-tramite para PLAN_ESTRUCTURADO.
+ * Consume POST /api/documentos/:id/analisis mediante useAnalizarDocumento.
+ * Se remonta por documentoId: una respuesta de v1 no se muestra en v2.
+ * Muestra controles y resumen; la revisión de IA permanece sin solicitar.
+ */
 export function AnalisisDocumentalPanel({ documentoId }: { documentoId: string }) {
   const analisis = useAnalizarDocumento(documentoId);
   const resultado = analisis.data?.documentoId === documentoId ? analisis.data : null;

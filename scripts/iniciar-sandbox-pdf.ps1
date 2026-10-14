@@ -1,3 +1,6 @@
+# Inicio local del supervisor usado por POST /api/documentos/:id/analisis.
+# Ejecuta scripts/pdf-sandbox-supervisor.mjs con Node LTS y ventana oculta.
+# -NodePath admite un ejecutable LTS existente; no cambia Node global ni expone un puerto.
 param([string]$NodePath = '')
 $ErrorActionPreference = 'Stop'
 $repoPath = Split-Path -Parent $PSScriptRoot

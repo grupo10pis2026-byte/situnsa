@@ -21,6 +21,7 @@ export interface ResultadoEnvio {
 
 let transporte: Transporter | null = null;
 
+/** Configura SMTP sin acceso a archivos/URLs del host desde el contenido del mensaje. */
 function crearTransporte(): Transporter | null {
   const host = process.env.SMTP_HOST;
   if (!host) return null;
@@ -36,10 +37,12 @@ function crearTransporte(): Transporter | null {
   });
 }
 
+/** Resuelve el remitente institucional configurado sin exponer credenciales SMTP. */
 function remitente(): string {
   return process.env.MAIL_FROM || "no-reply@fips.unsa.edu.pe";
 }
 
+/** Envía mensajes de los casos de uso tras el commit; no es un endpoint HTTP ni revisión editorial. */
 export async function enviarCorreo(m: MensajeCorreo): Promise<ResultadoEnvio> {
   const para = [...new Set(m.para.map((p) => p.trim()).filter(Boolean))];
   if (para.length === 0) return { enviado: false, modo: "log" };

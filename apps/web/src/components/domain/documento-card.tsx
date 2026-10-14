@@ -1,3 +1,7 @@
+/**
+ * Componente compartido por las vistas /expedientes/$id y /mi-tramite.
+ * La tarjeta enlaza carga/descarga/visto bueno y el panel de análisis del plan estructurado.
+ */
 import { cargaHabilitadaTesista } from "@pis/domain/dist/expediente/checklist-catalogo.js";
 import { AlertTriangle, Eye, FileDown, FileText, Stamp, UploadCloud } from "lucide-react";
 import { useRef, useState } from "react";
@@ -35,7 +39,11 @@ interface Props {
 
 const PERSONAL = ["ADMIN_FIPS", "SECRETARIA", "DECANO"];
 
-/** Tarjeta documental §§7–8: estado + faltantes + VER + formato + ADJUNTAR/REEMPLAZAR + V°B°. */
+/**
+ * Tarjeta de /expedientes/$id y /mi-tramite: carga, descarga y visto bueno del documento.
+ * PLAN_ESTRUCTURADO incorpora AnalisisDocumentalPanel cuando hay documentoId.
+ * La API vuelve a comprobar autorización y reglas que la vista usa para habilitar acciones.
+ */
 export function DocumentoCard(p: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const subir = useSubirDocumento(p.expedienteId);
@@ -72,6 +80,7 @@ export function DocumentoCard(p: Props) {
     }
   }
 
+  /** Envía aprobación u observación a POST /api/documentos/:id/visto-bueno. */
   async function visar(aprobado: boolean): Promise<void> {
     if (!p.documentoId) return;
     const comentario = aprobado
@@ -90,6 +99,7 @@ export function DocumentoCard(p: Props) {
     }
   }
 
+  /** Sube por multipart a POST /api/documentos/upload y notifica la nueva versión. */
   async function ejecutar(file: File): Promise<void> {
     setError(null);
     try {
@@ -100,6 +110,7 @@ export function DocumentoCard(p: Props) {
     }
   }
 
+  /** Reemplazar requiere confirmación; una primera carga puede iniciarse inmediatamente. */
   function onFile(file: File | undefined): void {
     if (!file || !puedeCargar) return;
     if (p.version !== null) {

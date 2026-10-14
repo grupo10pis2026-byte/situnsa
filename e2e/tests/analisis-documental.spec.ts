@@ -1,3 +1,7 @@
+/**
+ * Pruebas de POST /api/documentos/upload y POST /api/documentos/:id/analisis.
+ * La vista se prueba en /expedientes/$id; solo crea PDFs/identidades sintéticos en el entorno local o CI.
+ */
 import { writeFile } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
 import { PDFDocument, StandardFonts } from "pdf-lib";

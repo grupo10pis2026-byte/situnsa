@@ -1,3 +1,7 @@
+/**
+ * Pruebas puras del motor documentos/analisis-caratula-resumen.ts, usado por POST /api/documentos/:id/analisis.
+ * Cubren normalización, identidad, encabezados y cobertura del resumen sin I/O.
+ */
 import { describe, expect, it } from "vitest";
 import {
   analizarCaratulaResumen,

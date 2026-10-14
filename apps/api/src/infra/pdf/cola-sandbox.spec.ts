@@ -1,3 +1,7 @@
+/**
+ * Pruebas de cola-sandbox.ts para POST /api/documentos/:id/analisis.
+ * El supervisor se simula con archivos temporales: no necesitan Docker ni servicios externos.
+ */
 import { mkdir, mkdtemp, open, readdir, readFile, rm, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -13,6 +17,7 @@ afterEach(async () => {
   await rm(root, { recursive: true, force: true });
 });
 
+/** Simula un supervisor de archivos: publica JSON sin iniciar Docker y comprueba limpieza. */
 async function withQueue(response: string) {
   const queue = join(root, "queue");
   await mkdir(queue);

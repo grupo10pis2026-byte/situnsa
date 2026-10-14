@@ -1,3 +1,7 @@
+/**
+ * Pruebas de extraer-primeras-paginas.ts, infraestructura de POST /api/documentos/:id/analisis.
+ * PDFs sintéticos verifican selección 1–3, integridad y rechazo de entradas inválidas.
+ */
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

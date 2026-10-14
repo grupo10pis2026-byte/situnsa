@@ -1,5 +1,10 @@
+/**
+ * Esquemas de entrada/salida de POST /api/documentos/:id/analisis; no ejecutan lógica ni acceden a DB.
+ * Los consumen documentos.contract.ts, la ruta nativa de API y el cliente web.
+ */
 import { z } from "zod";
 
+/** Salida orientativa de POST /api/documentos/:id/analisis, compartida entre API y web. */
 export const HallazgoDocumentoSchema = z
   .object({
     tipo: z.string().min(1).max(64),
@@ -11,12 +16,14 @@ export const HallazgoDocumentoSchema = z
   })
   .strict();
 
+/** Solo acepta la opción editorial; nunca rutas del cliente ni metadatos del expediente. */
 export const AnalisisDocumentoRequestSchema = z
   .object({
     revisionEditorial: z.boolean().default(false),
   })
   .strict();
 
+/** Resultado ligado a documento/versión/hash; COMPLETADO no equivale a visto bueno académico. */
 export const AnalisisDocumentoResponseSchema = z
   .object({
     documentoId: z.string().uuid(),

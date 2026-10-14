@@ -1,3 +1,7 @@
+/**
+ * Capa de aplicación de POST /api/documentos/:id/analisis; recibe metadatos ya autorizados por analisis.routes.ts.
+ * Combina infra/pdf con @pis/domain y retorna el DTO compartido, sin escribir hallazgos en DB.
+ */
 import { type AnalisisDocumentoDTO, AnalisisDocumentoResponseSchema } from "@pis/contracts";
 import { analizarCaratulaResumen, type DatosAnalisisDocumento } from "@pis/domain";
 import {
@@ -13,7 +17,9 @@ export interface DocumentoAnalizable {
   sha256: string;
 }
 
+/** Orquesta extracción, dominio y revisión opcional para POST /api/documentos/:id/analisis. */
 export class AnalizarDocumentoUseCase {
+  /** Inyecta proveedores para probar fallos y contratos sin PDF real ni llamadas a Gemini. */
   constructor(
     private readonly extraer: (
       ruta: string,
@@ -23,6 +29,11 @@ export class AnalizarDocumentoUseCase {
     private readonly revisar: typeof revisarResumen = revisarResumen,
   ) {}
 
+  /**
+   * Asocia el resultado a id, versión y hash del documento, sin persistir hallazgos.
+   * Un fallo del parser devuelve NO_EVALUABLE; un fallo editorial conserva controles locales.
+   * editorial=false omite por completo la revisión de IA.
+   */
   async execute(
     documento: DocumentoAnalizable,
     datos: DatosAnalisisDocumento,

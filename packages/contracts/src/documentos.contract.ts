@@ -1,3 +1,7 @@
+/**
+ * Contrato documental compartido; declara rutas /api/documentos y /api/documentos-generados.
+ * El análisis usa analisis-documental.ts; los handlers reales se registran como rutas Fastify nativas.
+ */
 import { initContract } from "@ts-rest/core";
 import { z } from "zod";
 import {

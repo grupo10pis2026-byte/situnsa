@@ -1,3 +1,7 @@
+/**
+ * Configuración compartida de los E2E; E2E_BASE_URL indica el servidor ya levantado.
+ * analisis-documental.spec.ts cubre /expedientes/$id y /api/documentos/:id/analisis.
+ */
 import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({

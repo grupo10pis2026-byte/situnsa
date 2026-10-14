@@ -1,3 +1,7 @@
+/**
+ * Ejecutar con node scripts/verificar-memoria-pdf.mjs [--sandbox], tras compilar la API.
+ * Mide fixtures de 20/50 MiB del extractor usado por POST /api/documentos/:id/analisis; no envía documentos reales.
+ */
 /** Benchmark reproducible, sintético y sin datos personales. Ejecutar tras pnpm build. */
 import { mkdtemp, open, rm } from "node:fs/promises";
 import { createRequire } from "node:module";

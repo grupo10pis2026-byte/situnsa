@@ -1,3 +1,7 @@
+/**
+ * Infraestructura de POST /api/documentos/:id/analisis.
+ * Coordina apertura segura, cola-sandbox.ts y extractor-worker.ts; no decide reglas académicas.
+ */
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { constants } from "node:fs";
@@ -39,6 +43,11 @@ export async function abrirPdfSeguro(ruta: string, base: string) {
   return archivo;
 }
 
+/**
+ * Abre el documento del servidor, comprueba su hash y valida el JSON del extractor.
+ * Producción exige la cola Docker; el proceso directo se reserva a desarrollo y fixtures.
+ * Cierra siempre el descriptor y convierte fallos de proceso en PDF_NO_EVALUABLE.
+ */
 export async function extraerPrimerasPaginas(
   ruta: string,
   base: string,
@@ -92,6 +101,7 @@ export async function extraerPrimerasPaginas(
       );
       let salida = "";
       let terminado = false;
+      // Resolver una sola vez evita que timeout, monitor y evento close compitan.
       const terminar = (error?: Error, resultado?: TextoPdf) => {
         if (terminado) return;
         terminado = true;

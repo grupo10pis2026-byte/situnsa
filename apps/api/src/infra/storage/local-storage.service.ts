@@ -1,3 +1,7 @@
+/**
+ * Persistencia de POST /api/documentos/upload y formatos generados.
+ * Las descargas GET /api/documentos/:id/descargar usan stream o /protected-files/ de Nginx.
+ */
 import { createHash, randomUUID } from "node:crypto";
 import { constants, createReadStream, type ReadStream } from "node:fs";
 import { copyFile, mkdir, mkdtemp, open, rm, stat, writeFile } from "node:fs/promises";
@@ -24,7 +28,11 @@ export class LocalStorageService implements AlmacenamientoPort {
     this.baseDir = resolve(baseDir);
   }
 
-  /** Cuarentena hermana al volumen servido: nunca es accesible por X-Accel. */
+  /**
+   * Recibe el stream de POST /api/documentos/upload y calcula tamaño, cabecera y hash.
+   * La cuarentena es hermana al volumen servido: nunca es accesible por X-Accel.
+   * Devuelve callbacks de publicación y limpieza para coordinar disco y transacción.
+   */
   async prepararPdf(stream: Readable) {
     const cuarentena = `${this.baseDir}-cuarentena`;
     await mkdir(cuarentena, { recursive: true, mode: 0o700 });
@@ -60,6 +68,7 @@ export class LocalStorageService implements AlmacenamientoPort {
     return {
       bytes,
       cabecera,
+      // Publicar sin sobrescribir permite retirar esta copia si la transacción falla.
       guardar: async (expedienteId: string, nombre: string) => {
         if (!UUID.test(expedienteId)) throw new Error("Identificador inválido");
         const destino = join(this.baseDir, expedienteId);
@@ -73,6 +82,7 @@ export class LocalStorageService implements AlmacenamientoPort {
         await copyFile(temporal, guardado, constants.COPYFILE_EXCL);
         return { ruta: guardado, sha256 };
       },
+      // conservar=true solo después del éxito del caso de uso; siempre elimina cuarentena.
       limpiar: async (conservar = false) => {
         await rm(dir, { recursive: true, force: true });
         if (guardado && !conservar) await rm(guardado, { force: true });
@@ -80,6 +90,7 @@ export class LocalStorageService implements AlmacenamientoPort {
     };
   }
 
+  /** Guarda bytes de formatos generados u otros consumidores del puerto; uploads usan prepararPdf. */
   async save(
     expedienteId: string,
     filename: string,

@@ -1,3 +1,7 @@
+/**
+ * Pruebas del adaptador editorial revisar-resumen.ts de POST /api/documentos/:id/analisis.
+ * El fetch siempre se simula: ninguna prueba envía texto ni claves reales a Gemini.
+ */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { redactarDatosResumen, revisarResumen, validarRevisionResumen } from "./revisar-resumen.js";
 

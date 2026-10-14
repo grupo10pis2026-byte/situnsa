@@ -1,3 +1,6 @@
+# Parada ordenada del supervisor iniciado por iniciar-sandbox-pdf.ps1.
+# Publica stop fuera de la cola de API y espera limpieza; no usa una ruta HTTP.
+# Durante la parada, POST /api/documentos/:id/analisis no dispone del extractor.
 $ErrorActionPreference = 'Stop'
 $repoPath = Split-Path -Parent $PSScriptRoot
 $sandboxPath = [IO.Path]::GetFullPath((Join-Path $repoPath '../docker-volumes/grupo10-proyecto/sandbox'))

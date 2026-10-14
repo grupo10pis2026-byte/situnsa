@@ -1,3 +1,8 @@
+/**
+ * Ejecutable del host: node scripts/pdf-sandbox-supervisor.mjs [directorio-sandbox].
+ * Consume queue/ de cola-sandbox.ts para POST /api/documentos/:id/analisis; usa pdf-sandbox-runtime.mjs.
+ * No escucha puertos; protege staging privado, fija imagen y recupera trabajos huérfanos.
+ */
 import {
   lstat,
   mkdir,
