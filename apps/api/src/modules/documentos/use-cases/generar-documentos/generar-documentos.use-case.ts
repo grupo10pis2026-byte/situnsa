@@ -213,16 +213,10 @@ export class GenerarDocumentosUseCase {
 
     const plantillas = opts?.tipo
       ? opts.tipo === "ANEXO_01_DJ" && numTesistas === 2
-        ? PLANTILLAS.filter((p) => p.tipo.startsWith("ANEXO_01_DJ_P"))
+        ? plantillasEtapa.filter((p) => p.tipo.startsWith("ANEXO_01_DJ_P"))
         : opts.tipo === "ANEXO_02_DJ" && numTesistas === 2
-          ? PLANTILLAS.filter((p) => p.tipo.startsWith("ANEXO_02_DJ_P"))
-          : opts.tipo === "ANEXO_17"
-            ? PLANTILLAS.filter((p) => p.tipo === "SOLICITUD_INSCRIPCION")
-            : opts.tipo === "ANEXO_18"
-              ? PLANTILLAS.filter((p) => p.tipo === "ANEXO_08")
-              : opts.tipo === "ANEXO_33"
-                ? PLANTILLAS.filter((p) => p.tipo === "RESOLUCION_DECANAL")
-                : PLANTILLAS.filter((p) => p.tipo === opts.tipo)
+          ? plantillasEtapa.filter((p) => p.tipo.startsWith("ANEXO_02_DJ_P"))
+          : plantillasEtapa.filter((p) => p.tipo === opts.tipo)
       : plantillasEtapa;
 
     if (plantillas.length === 0) {

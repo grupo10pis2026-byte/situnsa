@@ -369,7 +369,7 @@ export function DocumentoCard(p: Props) {
             VER
           </span>
         )}
-        {p.formato ? (
+        {p.formato && tieneFormatoGenerable ? (
           <>
             <Button
               tamano="sm"
