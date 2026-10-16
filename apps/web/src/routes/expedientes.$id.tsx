@@ -14,7 +14,7 @@ import { useState } from "react";
 import { destinoPorRol } from "../api/auth.js";
 import { ApiError } from "../api/errores.js";
 import {
-  abrirArchivoProtegido,
+  descargarArchivoProtegido,
   formatoDescargaUrl,
   type GuardadoEstado,
   useAnular,
@@ -28,6 +28,7 @@ import { useObservar } from "../api/seguimiento.js";
 import { useSession } from "../api/session.js";
 import { DatosForm } from "../components/domain/datos-form.js";
 import { DocumentoCard } from "../components/domain/documento-card.js";
+import { ModalModificarFormato } from "../components/domain/modal-modificar-formato.js";
 import { ResumenTab } from "../components/domain/resumen-tab.js";
 import { AppShell } from "../components/layout/app-shell.js";
 import { Button, botonClases } from "../components/ui/button.js";
@@ -424,6 +425,12 @@ function DocumentosTab({
 }) {
   const generar = useGenerarDocumentos(d.id);
   const avisar = useToast();
+  const [modificandoFormato, setModificandoFormato] = useState<{
+    tipo: string;
+    nombre: string;
+    version: number;
+    pendientes: string[];
+  } | null>(null);
   const cargados = items.filter((c) => c.documentoId !== null).length;
   const pct = items.length > 0 ? Math.round((cargados / items.length) * 100) : 0;
   const generados = d.generados.filter((g) => g.etapa === etapa);
@@ -494,8 +501,11 @@ function DocumentosTab({
                 tamano="sm"
                 variante="contorno"
                 onClick={() =>
-                  void abrirArchivoProtegido(formatoDescargaUrl(g.id)).catch((e: unknown) =>
-                    avisar(e instanceof Error ? e.message : "No se pudo abrir", "error"),
+                  void descargarArchivoProtegido(
+                    formatoDescargaUrl(g.id),
+                    `${g.nombre}.docx`,
+                  ).catch((e: unknown) =>
+                    avisar(e instanceof Error ? e.message : "No se pudo descargar", "error"),
                   )
                 }
                 title={
@@ -532,10 +542,19 @@ function DocumentosTab({
               requeridoEn={c.requeridoEn}
               subetapaActiva={d.subetapaActiva?.clave ?? null}
               formato={generadoPorTipo.get(c.tipo) ?? null}
+              etapa={etapa}
+              onModificar={(f) => setModificandoFormato(f)}
             />
           ))}
         </div>
       )}
+      <ModalModificarFormato
+        abierto={modificandoFormato !== null}
+        onCerrar={() => setModificandoFormato(null)}
+        expedienteId={d.id}
+        etapa={etapa}
+        formato={modificandoFormato}
+      />
     </div>
   );
 }

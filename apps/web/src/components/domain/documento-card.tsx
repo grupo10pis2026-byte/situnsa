@@ -2,14 +2,26 @@
  * Componente compartido por las vistas /expedientes/$id y /mi-tramite.
  * La tarjeta enlaza carga/descarga/visto bueno y el panel de análisis del plan estructurado.
  */
+
+import { tienePlantilla } from "@pis/domain/dist/documentos/plantillas.js";
 import { cargaHabilitadaTesista } from "@pis/domain/dist/expediente/checklist-catalogo.js";
-import { AlertTriangle, Edit3, Eye, FileDown, FileText, Stamp, UploadCloud } from "lucide-react";
+import {
+  AlertTriangle,
+  Edit3,
+  Eye,
+  FileDown,
+  FileText,
+  Stamp,
+  UploadCloud,
+  WandSparkles,
+} from "lucide-react";
 import { useRef, useState } from "react";
 import {
   abrirArchivoProtegido,
   descargarArchivoProtegido,
   documentoDescargaUrl,
   formatoDescargaUrl,
+  useGenerarDocumentos,
   useRevisionDocumento,
   useSubirDocumento,
 } from "../../api/expedientes.js";
@@ -45,6 +57,8 @@ interface Props {
     version: number;
     pendientes: string[];
   }) => void;
+  /** Etapa actual del documento ("E1" | "E2" | "E6") */
+  etapa?: "E1" | "E2" | "E6";
 }
 
 const PERSONAL = ["ADMIN_FIPS", "SECRETARIA", "DECANO"];
@@ -124,6 +138,40 @@ export function DocumentoCard(p: Props) {
     (p.estado === "CARGADO" || p.estado === "OBSERVADO") &&
     !!sesion &&
     ["ASESOR", ...PERSONAL].includes(sesion.rol);
+
+  const generar = useGenerarDocumentos(p.expedienteId);
+  const [generando, setGenerando] = useState(false);
+  const tieneFormatoGenerable = tienePlantilla(p.tipo);
+
+  async function onGenerarIndividual(): Promise<void> {
+    setGenerando(true);
+    const etapaCalc =
+      p.etapa ??
+      (p.tipo.startsWith("E1") ||
+      p.tipo === "SOLICITUD_INSCRIPCION" ||
+      p.tipo === "ACEPTACION_ASESORIA" ||
+      p.tipo === "DJ_CONFIDENCIALIDAD" ||
+      p.tipo === "ANEXO_17" ||
+      p.tipo === "ANEXO_18" ||
+      p.tipo === "CARATULA_PLAN"
+        ? "E1"
+        : "E2");
+    try {
+      const r = await generar.mutateAsync({
+        etapa: etapaCalc,
+        tipo: p.tipo,
+      });
+      const gen = r.generados[0];
+      const faltan = gen?.pendientes.length ?? 0;
+      avisar(
+        `${p.nombre}: plantilla rellenada${faltan > 0 ? ` (${faltan} campos pendientes)` : ""}`,
+      );
+    } catch (e) {
+      avisar(e instanceof Error ? e.message : "No se pudo rellenar la plantilla", "error");
+    } finally {
+      setGenerando(false);
+    }
+  }
 
   async function abrir(url: string): Promise<void> {
     try {
@@ -266,7 +314,7 @@ export function DocumentoCard(p: Props) {
             VER
           </span>
         )}
-        {p.formato && (
+        {p.formato ? (
           <>
             <Button
               tamano="sm"
@@ -284,7 +332,7 @@ export function DocumentoCard(p: Props) {
               <FileDown size={14} />
               Descargar
             </Button>
-            {esPersonal && p.onModificar && p.formato && (
+            {esPersonal && p.onModificar && (
               <Button
                 tamano="sm"
                 variante="contorno"
@@ -297,7 +345,7 @@ export function DocumentoCard(p: Props) {
                     pendientes: p.formato.pendientes,
                   });
                 }}
-                title="Corregir datos de este formato y regenerar en PostgreSQL"
+                title="Corregir datos de este formato y regenerar en Word/Google Drive"
                 type="button"
               >
                 <Edit3 size={14} />
@@ -305,6 +353,22 @@ export function DocumentoCard(p: Props) {
               </Button>
             )}
           </>
+        ) : (
+          !p.formato &&
+          tieneFormatoGenerable &&
+          esPersonal && (
+            <Button
+              tamano="sm"
+              variante="contorno"
+              disabled={generando || generar.isPending}
+              onClick={() => void onGenerarIndividual()}
+              title="Autorrellenar esta plantilla con los datos del expediente"
+              type="button"
+            >
+              <WandSparkles size={14} />
+              {generando || generar.isPending ? "RELLENANDO…" : "RELLENAR"}
+            </Button>
+          )
         )}
         {puedeCargar ? (
           <button

@@ -527,7 +527,21 @@ export const PLANTILLAS: readonly PlantillaDocumento[] = [
 ];
 
 export function plantillaDe(tipo: string): PlantillaDocumento | null {
-  return PLANTILLAS.find((p) => p.tipo === tipo) ?? null;
+  return (
+    PLANTILLAS.find(
+      (p) =>
+        p.tipo === tipo ||
+        (tipo === "ANEXO_17" && p.tipo === "SOLICITUD_INSCRIPCION") ||
+        (tipo === "ANEXO_18" && p.tipo === "ANEXO_08") ||
+        (tipo === "INFORME_ASESORAMIENTO" && p.tipo === "ANEXO_08") ||
+        (tipo === "ANEXO_33" && p.tipo === "RESOLUCION_DECANAL"),
+    ) ?? null
+  );
+}
+
+/** Determina si un tipo documental cuenta con plantilla generable en el sistema. */
+export function tienePlantilla(tipo: string): boolean {
+  return plantillaDe(tipo) !== null;
 }
 
 export interface DocumentoRenderizado {
