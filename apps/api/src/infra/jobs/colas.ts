@@ -47,7 +47,7 @@ export async function enqueueCorreo(payload: CorreoPayload): Promise<void> {
 }
 export async function enqueueRevisionDocumento(payload: RevisionDocumentoPayload): Promise<void> {
   try {
-    // retryLimit: 3 intentará procesar el archivo 3 veces si hay un error transitorio
+    // retryLimit: 3 intentará procesar el archivo 3 veces si hay error transitorio
     await enqueue(COLA_REVISION_DOCUMENTOS, payload, { retryLimit: 3, retryDelay: 60 });
   } catch (err) {
     console.error("[colas] no se pudo encolar la revisión del documento", err);
