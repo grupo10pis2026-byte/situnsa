@@ -1,6 +1,6 @@
 import { Eye, FileText } from "lucide-react";
 import {
-  abrirArchivoProtegido,
+  descargarArchivoProtegido,
   formatoDescargaUrl,
   useExpedienteDetalle,
   useGenerarDocumentos,
@@ -36,9 +36,13 @@ export function InformeSecretaria({ expedienteId }: { expedienteId: string }) {
 
   async function onVer(id: string): Promise<void> {
     try {
-      await abrirArchivoProtegido(formatoDescargaUrl(id));
+      const codigo = detalle.data?.codigo ?? "EXP";
+      await descargarArchivoProtegido(
+        formatoDescargaUrl(id),
+        `${codigo} - Informe para Secretaría Académica.docx`,
+      );
     } catch (e) {
-      avisar(e instanceof Error ? e.message : "No se pudo abrir el informe", "error");
+      avisar(e instanceof Error ? e.message : "No se pudo descargar el informe", "error");
     }
   }
 

@@ -37,6 +37,8 @@ export const expedientes = pgTable("expedientes", {
   horaSustentacion: varchar("hora_sustentacion", { length: 16 }),
   lugarSustentacion: varchar("lugar_sustentacion", { length: 160 }),
   modalidadVirtual: varchar("modalidad_virtual", { length: 64 }),
+  driveFolderId: text("drive_folder_id"),
+  driveFolderUrl: text("drive_folder_url"),
   metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),

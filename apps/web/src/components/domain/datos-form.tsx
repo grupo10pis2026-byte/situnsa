@@ -1,4 +1,5 @@
 import type { ActualizarDatosInput, ExpedienteDetalleDTO } from "@pis/contracts";
+import { horaLimpia } from "@pis/domain/dist/documentos/etiquetas.js";
 import {
   ETIQUETAS_MODALIDAD,
   ETIQUETAS_MODALIDAD_FINAL,
@@ -11,6 +12,7 @@ import { type GuardadoEstado, useActualizarDatos } from "../../api/expedientes.j
 import { cn } from "../../utils/cn.js";
 import { controlClase, Field, ReadonlyField } from "../ui/field.js";
 import { FormSection } from "../ui/form-section.js";
+import { InputFechaLatina } from "../ui/input-fecha-latina.js";
 import { Select } from "../ui/select.js";
 
 type Clave = keyof ActualizarDatosInput;
@@ -87,22 +89,23 @@ function Campo({
         </Select>
       ) : def.control === "programas" ? (
         <ProgramasSelect label={def.label} value={value} onChange={onChange} />
+      ) : def.control === "fecha" ? (
+        <InputFechaLatina id={controlId} value={value} onChange={onChange} ariaLabel={def.label} />
       ) : (
-        <input
-          id={controlId}
-          className={cn(controlClase, "h-9")}
-          type={
-            def.control === "fecha"
-              ? "date"
-              : def.control === "hora"
-                ? "time"
-                : def.control === "email"
-                  ? "email"
-                  : "text"
-          }
-          value={value}
-          onChange={onChange ? (e) => onChange(e.target.value) : undefined}
-        />
+        <div>
+          <input
+            id={controlId}
+            className={cn(controlClase, "h-9")}
+            type={def.control === "hora" ? "time" : def.control === "email" ? "email" : "text"}
+            value={def.control === "hora" ? horaLimpia(value) : value}
+            onChange={onChange ? (e) => onChange(e.target.value) : undefined}
+          />
+          {def.control === "hora" && value ? (
+            <p className="mt-1 text-[11px] font-medium text-navy-800">
+              ⏰ Formato 24h: <span className="font-semibold">{horaLimpia(value)} hrs</span>
+            </p>
+          ) : null}
+        </div>
       )}
     </Field>
   );
@@ -126,7 +129,6 @@ const PERSONA_1: DefCampo[] = [
 const PERSONA_2: DefCampo[] = [
   { clave: null, label: "NOMBRES 02", control: "texto", lectura: "p2nombre" },
   { clave: null, label: "PROGRAMAS 02", control: "texto", lectura: "programa02" },
-  { clave: "titulo02", label: "TESIS 02", control: "area", ancho: "doble" },
   { clave: null, label: "DNI 02", control: "texto", lectura: "p2dni" },
   { clave: "modalidad02", label: "MODALIDAD 02", control: "modalidad" },
   { clave: "participante2Email", label: "CORREO 02", control: "email" },
@@ -140,7 +142,6 @@ const PERSONA_2: DefCampo[] = [
 /** ETAPA 01 · DATOS DE DOCUMENTOS (card legacy exacta). */
 const DATOS_DOCUMENTOS: DefCampo[] = [
   { clave: "nroDecreto", label: "N° DECRETO", control: "texto" },
-  { clave: "recomendacion", label: "RECOMENDACIÓN", control: "texto" },
   { clave: "presidente", label: "PRESIDENTE", control: "texto" },
   { clave: "asesorNombre", label: "ASESOR", control: "texto" },
   { clave: "secretario", label: "SECRETARIO", control: "texto" },
@@ -327,7 +328,6 @@ function extraer(d: ExpedienteDetalleDTO): Record<string, string> {
   return {
     programa: d.programa,
     titulo: d.titulo,
-    titulo02: get(admin.titulo02),
     modalidad: modalidadAEtiqueta(d.modalidad),
     modalidad02: get(admin.modalidad02) || modalidadAEtiqueta(d.modalidad),
     modalidadFinal: get(admin.modalidadFinal),

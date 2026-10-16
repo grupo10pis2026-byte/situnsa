@@ -227,16 +227,28 @@ export interface FormatoGenerado {
   pendientes: string[];
 }
 
-/** "INSERTAR DATOS EN DOCUMENTOS": genera los formatos PDF de la etapa. */
+/** "INSERTAR DATOS EN DOCUMENTOS": genera o regenera los formatos PDF de la etapa con soporte para overrides. */
 export function useGenerarDocumentos(id: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (etapa: "E1" | "E2" | "E6") =>
-      postJson<{ generados: FormatoGenerado[] }>(
+    mutationFn: (
+      param:
+        | "E1"
+        | "E2"
+        | "E6"
+        | {
+            etapa: "E1" | "E2" | "E6";
+            tipo?: string | undefined;
+            overrides?: Record<string, string> | undefined;
+          },
+    ) => {
+      const body = typeof param === "string" ? { etapa: param } : param;
+      return postJson<{ generados: FormatoGenerado[] }>(
         `/api/expedientes/${id}/documentos/generar`,
-        { etapa },
+        body,
         "No se pudieron generar los documentos",
-      ),
+      );
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: expedienteKey(id) });
     },
@@ -321,11 +333,30 @@ export function formatoDescargaUrl(generadoId: string): string {
 export async function descargarArchivoProtegido(url: string, nombre: string): Promise<void> {
   const res = await apiFetch(url);
   if (!res.ok) throw await errorDeRespuesta(res, "No se pudo descargar el archivo");
-  const sugerido = /filename="([^"]+)"/.exec(res.headers.get("Content-Disposition") ?? "")?.[1];
+  const disp = res.headers.get("Content-Disposition") ?? "";
+  let sugerido: string | undefined;
+  const matchUtf8 = /filename\*=(?:UTF-8'')?([^;\r\n]+)/i.exec(disp);
+  if (matchUtf8?.[1]) {
+    try {
+      sugerido = decodeURIComponent(matchUtf8[1].replace(/^["']|["']$/g, ""));
+    } catch {
+      sugerido = matchUtf8[1];
+    }
+  }
+  if (!sugerido) {
+    const matchSimple = /filename="?([^";\r\n]+)"?/i.exec(disp);
+    if (matchSimple?.[1]) {
+      try {
+        sugerido = decodeURIComponent(matchSimple[1]);
+      } catch {
+        sugerido = matchSimple[1];
+      }
+    }
+  }
   const objeto = URL.createObjectURL(await res.blob());
   const enlace = document.createElement("a");
   enlace.href = objeto;
-  enlace.download = sugerido ?? nombre;
+  enlace.download = sugerido || nombre;
   document.body.append(enlace);
   enlace.click();
   enlace.remove();

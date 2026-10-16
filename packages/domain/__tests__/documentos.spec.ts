@@ -4,8 +4,22 @@ import {
   type ExpedienteDocumento,
   formatoAsesor,
 } from "../src/documentos/datos-documento.js";
-import { extraerEtiquetas, fechaLarga, insertarEtiquetas } from "../src/documentos/etiquetas.js";
-import { PLANTILLAS, plantillaDe, renderizarPlantilla } from "../src/documentos/plantillas.js";
+import {
+  esEtiquetaFecha,
+  esEtiquetaHora,
+  extraerEtiquetas,
+  fechaIso,
+  fechaLarga,
+  horaLimpia,
+  insertarEtiquetas,
+} from "../src/documentos/etiquetas.js";
+import {
+  PLANTILLAS,
+  plantillaDe,
+  renderizarPlantilla,
+  resolverNombreArchivo,
+  resolverSubcarpetaEtapa,
+} from "../src/documentos/plantillas.js";
 import { CHECKLIST_COMPLETO } from "../src/expediente/checklist-catalogo.js";
 
 const EXP: ExpedienteDocumento = {
@@ -38,7 +52,37 @@ describe("inserción de etiquetas (legacy insertarDatosEnDocumento)", () => {
 
   it("formatea fechas civiles en español", () => {
     expect(fechaLarga("2026-09-01")).toBe("1 de septiembre de 2026");
+    expect(fechaLarga("2026-09-01T15:30:00Z")).toBe("1 de septiembre de 2026");
+    expect(fechaLarga("01/09/2026")).toBe("1 de septiembre de 2026");
+    expect(fechaLarga("16 de octubre de 2026")).toBe("16 de octubre de 2026");
     expect(fechaLarga(null)).toBe("");
+  });
+
+  it("convierte fechas a formato ISO para inputs nativos (YYYY-MM-DD)", () => {
+    expect(fechaIso("2026-09-01")).toBe("2026-09-01");
+    expect(fechaIso("2026-09-01T15:30:00Z")).toBe("2026-09-01");
+    expect(fechaIso("01/09/2026")).toBe("2026-09-01");
+    expect(fechaIso("16 de octubre de 2026")).toBe("2026-10-16");
+    expect(fechaIso("")).toBe("");
+    expect(fechaIso(null)).toBe("");
+  });
+
+  it("normaliza horas a formato HH:mm (24 horas)", () => {
+    expect(horaLimpia("9:00")).toBe("09:00");
+    expect(horaLimpia("09:00")).toBe("09:00");
+    expect(horaLimpia("09:00:00")).toBe("09:00");
+    expect(horaLimpia("14:30")).toBe("14:30");
+    expect(horaLimpia("")).toBe("");
+  });
+
+  it("detecta etiquetas de fecha y hora", () => {
+    expect(esEtiquetaFecha("FECHA")).toBe(true);
+    expect(esEtiquetaFecha("FECHA DE CONFORMIDAD")).toBe(true);
+    expect(esEtiquetaFecha("FECHA_OFICIO_OTI")).toBe(true);
+    expect(esEtiquetaFecha("PRESIDENTE")).toBe(false);
+    expect(esEtiquetaHora("HORA")).toBe(true);
+    expect(esEtiquetaHora("HORAS DE LA SUSTENTACION")).toBe(true);
+    expect(esEtiquetaHora("FECHA")).toBe(false);
   });
 });
 
@@ -58,12 +102,42 @@ describe("datos del expediente (RN-L07/L08)", () => {
     expect(datos["FECHA APERTURA"]).toBe("1 de septiembre de 2026");
     expect(datos.FECHA_EMISION).toBe("5 de octubre de 2026");
   });
+
+  it("en expediente de 2 tesistas ambos comparten el título de tesis (TESIS y TESIS 02)", () => {
+    const exp2: ExpedienteDocumento = {
+      ...EXP,
+      participante2: { nombres: "Carlos", apellidos: "Gómez López", dni: "70223344" },
+      datosAdmin: { ...EXP.datosAdmin, titulo02: "otro titulo desfasado" },
+    };
+    const d2 = construirDatosDocumento(exp2, new Date("2026-10-05T15:00:00Z"));
+    expect(d2.TESIS).toBe("sistema de gestión de expedientes para la fips");
+    expect(d2["TESIS 02"]).toBe("sistema de gestión de expedientes para la fips");
+    expect(d2.TESIS02).toBe("sistema de gestión de expedientes para la fips");
+  });
 });
 
 describe("plantillas", () => {
   it("cada plantilla de tipo checklist corresponde a un documento del catálogo", () => {
     const tipos = new Set(CHECKLIST_COMPLETO.map((d) => d.tipo));
-    const extras = new Set(["CARATULA_PLAN", "DECRETO_APROBACION", "INFORME_SECRETARIA"]);
+    const extras = new Set([
+      "CARATULA_PLAN",
+      "DECRETO_APROBACION",
+      "OFICIO_CIRCULAR_TERNA",
+      "OBSERVACIONES_PLAN",
+      "ANEXO_08",
+      "ANEXO_02_DJ",
+      "ANEXO_01_DJ_P1",
+      "ANEXO_01_DJ_P2",
+      "ANEXO_02_DJ_P1",
+      "ANEXO_02_DJ_P2",
+      "OBSERVACIONES_TESIS",
+      "INFORME_SIMILITUD",
+      "INVITACION_PUBLICA",
+      "OFICIO_OTI_SIMILITUD",
+      "OFICIO_UGI_REPOSITORIO",
+      "RESOLUCION_DECANAL",
+      "INFORME_SECRETARIA",
+    ]);
     for (const p of PLANTILLAS) expect(tipos.has(p.tipo) || extras.has(p.tipo)).toBe(true);
   });
 
@@ -119,5 +193,31 @@ describe("plantillas", () => {
       "URL REPOSITORIO",
       "VEREDICTO",
     ]);
+  });
+
+  it("resuelve nombres oficiales exactos de archivos para 1 y 2 tesistas", () => {
+    expect(resolverNombreArchivo("SOLICITUD_INSCRIPCION", 1)).toBe("ANEXO 17 - 01 TESISTA.pdf");
+    expect(resolverNombreArchivo("SOLICITUD_INSCRIPCION", 2)).toBe("ANEXO 17 - 02 TESISTAS.pdf");
+    expect(resolverNombreArchivo("CARATULA_PLAN", 1)).toBe("CARATULA_PLAN DE TESIS.pdf");
+    expect(resolverNombreArchivo("CARATULA_PLAN", 2)).toBe("CARATULA_PLAN DE TESIS.pdf");
+    expect(resolverNombreArchivo("DECRETO_APROBACION", 1)).toBe("DECRETO - 01 TESISTA.pdf");
+    expect(resolverNombreArchivo("DECRETO_APROBACION", 2)).toBe("DECRETO - 02 TESISTAS.pdf");
+    expect(resolverNombreArchivo("OFICIO_CIRCULAR_TERNA", 1)).toBe(
+      "OFICIO CIRCULAR- 01 TESISTA.pdf",
+    );
+    expect(resolverNombreArchivo("OFICIO_CIRCULAR_TERNA", 2)).toBe(
+      "OFICIO CIRCULAR- 02 TESISTAS.pdf",
+    );
+    expect(resolverNombreArchivo("OBSERVACIONES_PLAN", 1)).toBe(
+      "OBSERVACIONES DE PLAN DE TESIS - 01 TESISTA.pdf",
+    );
+    expect(resolverNombreArchivo("OBSERVACIONES_PLAN", 2)).toBe(
+      "OBSERVACIONES DE PLAN DE TESIS - 02 TESISTAS.pdf",
+    );
+  });
+
+  it("resuelve las subcarpetas institucionales por etapa", () => {
+    expect(resolverSubcarpetaEtapa("E1")).toBe("01. Plan de Tesis");
+    expect(resolverSubcarpetaEtapa("E2")).toBe("02. Desarrollo y Sustentacion");
   });
 });

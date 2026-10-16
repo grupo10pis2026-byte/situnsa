@@ -64,7 +64,7 @@ export function insertarEtiquetas(
   return { texto: segmentos.map((s) => s.texto).join(""), pendientes };
 }
 
-const MESES = [
+export const MESES = [
   "enero",
   "febrero",
   "marzo",
@@ -77,14 +77,113 @@ const MESES = [
   "octubre",
   "noviembre",
   "diciembre",
-];
+] as const;
 
-/** "2026-09-01" → "1 de septiembre de 2026" (fecha civil, sin zona). */
+/**
+ * Convierte cualquier fecha válida ("2026-09-01", "2026-09-01T...", "01/09/2026")
+ * al formato formal civil español: "1 de septiembre de 2026".
+ * Si ya viene en formato largo español o no es reconocible, preserva el texto limpio.
+ */
 export function fechaLarga(iso: string | null | undefined): string {
   if (!iso) return "";
-  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
-  if (!m?.[1] || !m[2] || !m[3]) return iso;
-  const mes = MESES[Number.parseInt(m[2], 10) - 1];
-  if (!mes) return iso;
-  return `${Number.parseInt(m[3], 10)} de ${mes} de ${m[1]}`;
+  const texto = iso.trim();
+  if (!texto) return "";
+
+  // 1. Formato ISO "YYYY-MM-DD" o con timestamp "YYYY-MM-DDTHH:mm:ss..."
+  const mIso = /^(\d{4})-(\d{2})-(\d{2})/.exec(texto);
+  if (mIso?.[1] && mIso[2] && mIso[3]) {
+    const mes = MESES[Number.parseInt(mIso[2], 10) - 1];
+    if (mes) return `${Number.parseInt(mIso[3], 10)} de ${mes} de ${mIso[1]}`;
+  }
+
+  // 2. Formato común "DD/MM/YYYY" o "DD-MM-YYYY"
+  const mSlash = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/.exec(texto);
+  if (mSlash?.[1] && mSlash[2] && mSlash[3]) {
+    const mes = MESES[Number.parseInt(mSlash[2], 10) - 1];
+    if (mes) return `${Number.parseInt(mSlash[1], 10)} de ${mes} de ${mSlash[3]}`;
+  }
+
+  // 3. Ya está en texto formal o libre
+  return texto;
+}
+
+/**
+ * Convierte cualquier representación de fecha a formato ISO estricto "YYYY-MM-DD",
+ * requerido por los controles nativos `<input type="date">`.
+ * Acepta: "YYYY-MM-DD", "YYYY-MM-DDTHH:mm:ss...", "16 de octubre de 2026", "16/10/2026".
+ */
+export function fechaIso(texto: string | null | undefined): string {
+  if (!texto) return "";
+  const limpio = texto.trim();
+  if (!limpio) return "";
+
+  // 1. "YYYY-MM-DD" (o ISO timestamp)
+  const mIso = /^(\d{4})-(\d{2})-(\d{2})/.exec(limpio);
+  if (mIso?.[1] && mIso[2] && mIso[3]) {
+    return `${mIso[1]}-${mIso[2]}-${mIso[3]}`;
+  }
+
+  // 2. "DD/MM/YYYY" o "DD-MM-YYYY"
+  const mSlash = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/.exec(limpio);
+  if (mSlash?.[1] && mSlash[2] && mSlash[3]) {
+    const d = mSlash[1].padStart(2, "0");
+    const m = mSlash[2].padStart(2, "0");
+    return `${mSlash[3]}-${m}-${d}`;
+  }
+
+  // 3. "16 de octubre de 2026" o "16 de octubre del 2026"
+  const mTexto = /^(\d{1,2})\s+de\s+([a-záéíóú]+)(?:\s+del?|\s+de)?\s+(\d{4})/i.exec(limpio);
+  if (mTexto?.[1] && mTexto[2] && mTexto[3]) {
+    const mesNombre = mTexto[2].toLowerCase();
+    const idx = (MESES as readonly string[]).indexOf(mesNombre);
+    if (idx !== -1) {
+      const d = mTexto[1].padStart(2, "0");
+      const m = String(idx + 1).padStart(2, "0");
+      return `${mTexto[3]}-${m}-${d}`;
+    }
+  }
+
+  return "";
+}
+
+/**
+ * Convierte cualquier fecha a formato civil latinoamericano estricto: "DD/MM/AAAA".
+ * Acepta: "2026-10-16", "2026-10-16T...", "16 de octubre de 2026", "16/10/2026".
+ * Si no es reconocible, retorna la cadena limpia o vacía.
+ */
+export function fechaLatina(texto: string | null | undefined): string {
+  if (!texto) return "";
+  const iso = fechaIso(texto);
+  if (!iso) return texto.trim();
+  const [y, m, d] = iso.split("-");
+  if (!y || !m || !d) return texto.trim();
+  return `${d}/${m}/${y}`;
+}
+
+/**
+ * Normaliza horas a formato estricto 24h "HH:mm", requerido por `<input type="time">`.
+ * Acepta: "9:00", "09:00", "09:00:00", "09:00 hrs", "14:30".
+ */
+export function horaLimpia(v: string | null | undefined): string {
+  if (!v) return "";
+  const limpio = v.trim();
+  const m = /^(\d{1,2}):(\d{2})/.exec(limpio);
+  if (!m?.[1] || !m[2]) return "";
+  const h = m[1].padStart(2, "0");
+  const min = m[2];
+  return `${h}:${min}`;
+}
+
+/** Determina si una clave o etiqueta de documento representa una fecha. */
+export function esEtiquetaFecha(clave: string): boolean {
+  const k = clave.trim().toUpperCase();
+  if (k.startsWith("FECHA") || k.includes("FECHA")) return true;
+  if (k === "DIA" || k === "MES" || k === "ANIO" || k === "AÑO") return true;
+  return false;
+}
+
+/** Determina si una clave o etiqueta de documento representa una hora. */
+export function esEtiquetaHora(clave: string): boolean {
+  const k = clave.trim().toUpperCase();
+  return k.startsWith("HORA") || k.includes("HORA");
 }

@@ -3,10 +3,11 @@
  * La tarjeta enlaza carga/descarga/visto bueno y el panel de análisis del plan estructurado.
  */
 import { cargaHabilitadaTesista } from "@pis/domain/dist/expediente/checklist-catalogo.js";
-import { AlertTriangle, Eye, FileDown, FileText, Stamp, UploadCloud } from "lucide-react";
+import { AlertTriangle, Edit3, Eye, FileDown, FileText, Stamp, UploadCloud } from "lucide-react";
 import { useRef, useState } from "react";
 import {
   abrirArchivoProtegido,
+  descargarArchivoProtegido,
   documentoDescargaUrl,
   formatoDescargaUrl,
   useRevisionDocumento,
@@ -37,6 +38,13 @@ interface Props {
   subetapaActiva?: string | null;
   /** Formato generado por "Insertar datos" (si existe). */
   formato?: { id: string; version: number; pendientes: string[] } | null;
+  /** Callback para abrir modal de modificación y corrección */
+  onModificar?: (formato: {
+    tipo: string;
+    nombre: string;
+    version: number;
+    pendientes: string[];
+  }) => void;
 }
 
 const PERSONAL = ["ADMIN_FIPS", "SECRETARIA", "DECANO"];
@@ -165,6 +173,14 @@ export function DocumentoCard(p: Props) {
     void ejecutar(file);
   }
 
+  async function descargarFormato(url: string, nombreSugerido: string): Promise<void> {
+    try {
+      await descargarArchivoProtegido(url, nombreSugerido);
+    } catch (e) {
+      avisar(e instanceof Error ? e.message : "No se pudo descargar el documento", "error");
+    }
+  }
+
   return (
     <Card
       className={cn(
@@ -189,10 +205,17 @@ export function DocumentoCard(p: Props) {
             <FileText size={18} aria-hidden />
           </span>
           <div className="min-w-0">
-            <h3 className="truncate text-sm font-bold text-navy-950">{p.nombre}</h3>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="truncate text-sm font-bold text-navy-950">{p.nombre}</h3>
+              {p.formato && (
+                <span className="inline-flex items-center rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-700 border border-emerald-200">
+                  v{p.formato.version}
+                </span>
+              )}
+            </div>
             <p className="text-xs text-grafito-600">
               {p.tipo}
-              {p.version !== null ? ` · v${p.version}` : ""}
+              {p.version !== null && !p.formato ? ` · v${p.version}` : ""}
             </p>
           </div>
         </div>
@@ -244,20 +267,44 @@ export function DocumentoCard(p: Props) {
           </span>
         )}
         {p.formato && (
-          <Button
-            tamano="sm"
-            variante="contorno"
-            onClick={() => void abrir(formatoDescargaUrl(p.formato?.id ?? ""))}
-            title={
-              p.formato.pendientes.length > 0
-                ? `Campos pendientes: ${p.formato.pendientes.join(", ")}`
-                : "Formato con todos los datos insertados"
-            }
-            type="button"
-          >
-            <FileDown size={14} />
-            FORMATO v{p.formato.version}
-          </Button>
+          <>
+            <Button
+              tamano="sm"
+              variante="contorno"
+              onClick={() =>
+                void descargarFormato(formatoDescargaUrl(p.formato?.id ?? ""), `${p.nombre}.docx`)
+              }
+              title={
+                p.formato.pendientes.length > 0
+                  ? `Descargar Word editable (.docx) — Faltan: ${p.formato.pendientes.join(", ")}`
+                  : "Descargar documento Word (.docx) con todos los datos"
+              }
+              type="button"
+            >
+              <FileDown size={14} />
+              Descargar
+            </Button>
+            {esPersonal && p.onModificar && p.formato && (
+              <Button
+                tamano="sm"
+                variante="contorno"
+                onClick={() => {
+                  if (!p.formato) return;
+                  p.onModificar?.({
+                    tipo: p.tipo,
+                    nombre: p.nombre,
+                    version: p.formato.version,
+                    pendientes: p.formato.pendientes,
+                  });
+                }}
+                title="Corregir datos de este formato y regenerar en PostgreSQL"
+                type="button"
+              >
+                <Edit3 size={14} />
+                CORREGIR
+              </Button>
+            )}
+          </>
         )}
         {puedeCargar ? (
           <button
@@ -302,7 +349,7 @@ export function DocumentoCard(p: Props) {
           </span>
         )}
         <input
-          accept="application/pdf"
+          accept="application/pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
           className="hidden"
           ref={inputRef}
           type="file"

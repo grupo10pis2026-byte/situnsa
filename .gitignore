@@ -8,6 +8,10 @@ coverage/
 .env
 .env.local
 .env.*.local
+secrets/
+**/secrets/
+*.pem
+*.key
 # Drizzle (las migraciones SQL SÍ se versionan: AGENTS.md lo exige)
 packages/db/drizzle/*.log
 # Uploads locales (volumen documental)
@@ -35,3 +39,10 @@ deploy/backups/
 3EB0EC327469963279D237-INTERFACES (1)_1.pdf
 Entrevista 1 Sep 8, 14.17.docx.md
 RESUMEN_Entrevista 1 Sep 8, 14.17.docx.md
+
+# Agent IDE
+.agents/
+skills-lock.json
+
+# Google Apps Script
+googlescriptsitunsa/

@@ -98,7 +98,7 @@ export class SubirDocumentoUseCase {
       return fail(new DomainError("DOCUMENTO_INVALIDO", `Tipo desconocido: ${input.tipo}`));
     }
     const uow = new DrizzleUnitOfWork(db);
-    return uow.run(async (tx) => {
+    const r = await uow.run(async (tx) => {
       // Serializa versiones del mismo tipo dentro del expediente.
       await tx.execute(
         sql`select pg_advisory_xact_lock(hashtextextended(${`${input.expedienteId}:${input.tipo}`}, 0))`,
@@ -164,6 +164,8 @@ export class SubirDocumentoUseCase {
           version,
           sha256,
           estado: "CARGADO",
+          origen: "WEB",
+          driveSyncEstado: process.env.GOOGLE_DRIVE_ENABLED === "true" ? "PENDIENTE" : "NO_APLICA",
         })
         .returning({ id: documentos.id });
       const doc = inserted[0];
@@ -183,5 +185,20 @@ export class SubirDocumentoUseCase {
       });
       return ok({ id: doc.id, tipo: input.tipo, version, sha256, estado: "CARGADO" });
     });
+    if (r.ok && process.env.GOOGLE_DRIVE_ENABLED === "true") {
+      try {
+        const { getBoss } = await import("../../../../infra/jobs/pg-boss.client.js");
+        const { COLAS } = await import("../../../../infra/jobs/colas.js");
+        const boss = await getBoss();
+        await boss.send(
+          COLAS.SYNC_DRIVE_INSTITUCIONAL,
+          { documentoId: r.value.id, expedienteId: input.expedienteId },
+          { retryLimit: 5, retryDelay: 30, retryBackoff: true },
+        );
+      } catch (err) {
+        console.error("[SubirDocumentoUseCase] no se pudo encolar sync drive", err);
+      }
+    }
+    return r;
   }
 }

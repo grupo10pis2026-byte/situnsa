@@ -44,6 +44,10 @@ export const SubirDocumentoResponseSchema = z.object({
 export const GenerarDocumentosSchema = z.object({
   /** E1/E2: formatos del tesista · E6: informe para Secretaría Académica (HU-0045). */
   etapa: z.enum(["E1", "E2", "E6"]),
+  /** Si se omite, se generan todas las plantillas de la etapa; si se indica, solo este tipo específico. */
+  tipo: z.string().optional(),
+  /** Valores personalizados para reemplazar o corregir etiquetas específicas en este documento. */
+  overrides: z.record(z.string()).optional(),
 });
 
 export const GenerarDocumentosDTOSchema = z.object({

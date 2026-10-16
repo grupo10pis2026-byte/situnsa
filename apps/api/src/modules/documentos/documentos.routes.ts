@@ -4,7 +4,8 @@
  * También genera por POST /api/expedientes/:id/documentos/generar y descarga formatos generados.
  */
 import { GenerarDocumentosSchema, VistoBuenoSchema } from "@pis/contracts";
-import { db, documentoRevisiones, documentos, documentosGenerados } from "@pis/db";
+import { db, documentoRevisiones, documentos, documentosGenerados, expedientes } from "@pis/db";
+import { resolverNombreArchivoDescarga } from "@pis/domain";
 import { desc, eq } from "drizzle-orm";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { autorizar, esPersonal } from "../../infra/auth/autorizacion.js";
@@ -253,6 +254,8 @@ export function registerDocumentosRoutes(app: FastifyInstance): void {
         req.params.id,
         parsed.data.etapa,
         actor,
+        new Date(),
+        { tipo: parsed.data.tipo, overrides: parsed.data.overrides },
       );
       if (!r.ok) {
         await reply
@@ -287,9 +290,41 @@ export function registerDocumentosRoutes(app: FastifyInstance): void {
         await reply.status(a.status).send(a.body);
         return;
       }
+      const exp = await db
+        .select({
+          codigo: expedientes.codigo,
+          participante2Id: expedientes.participante2Id,
+        })
+        .from(expedientes)
+        .where(eq(expedientes.id, gen.expedienteId))
+        .limit(1);
+      const codigoExp = exp[0]?.codigo ?? "EXP";
+      const esDocx = gen.ruta.endsWith(".docx") || gen.archivoContenido !== null;
+      const ext = esDocx ? "docx" : "pdf";
+      const nombreDescarga = resolverNombreArchivoDescarga(codigoExp, gen.tipo, ext);
+
+      if (gen.archivoContenido) {
+        const mimeType = esDocx
+          ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          : "application/pdf";
+        const asciiSafe = nombreDescarga
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^A-Za-z0-9._ -]/g, "_");
+        void reply
+          .header("Content-Type", mimeType)
+          .header(
+            "Content-Disposition",
+            `attachment; filename="${asciiSafe}"; filename*=UTF-8''${encodeURIComponent(nombreDescarga)}`,
+          )
+          .header("Content-Length", gen.archivoContenido.length)
+          .send(gen.archivoContenido);
+        return;
+      }
+
       await entregarArchivo(reply, storage, gen.ruta, {
-        nombre: `${gen.tipo}_v${gen.version}.pdf`,
-        inline: true,
+        nombre: nombreDescarga,
+        inline: false,
       });
     },
   );
