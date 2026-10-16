@@ -106,6 +106,13 @@ export const CHECKLIST_E2: readonly ChecklistDef[] = [
     requeridoEn: "E2_CARGA_DOCUMENTOS",
   },
   {
+    tipo: "ANEXO_02_DJ",
+    nombre: "Anexo N° 02 — DJ no antecedentes penales y terrorismo",
+    etapa: "E2",
+    obligatorio: true,
+    requeridoEn: "E2_CARGA_DOCUMENTOS",
+  },
+  {
     tipo: "ANEXO_32_VERACIDAD",
     nombre: "Anexo N° 32 — DJ veracidad de la información",
     etapa: "E2",
