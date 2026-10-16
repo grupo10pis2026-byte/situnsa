@@ -3,6 +3,7 @@ import { enqueue } from "./pg-boss.client.js";
 /** Colas del sistema (pg-boss sobre Postgres, sin Redis — Lean). */
 export const COLA_CORREOS = "correos";
 export const COLA_RECORDATORIOS = "recordatorios";
+export const COLA_REVISION_DOCUMENTOS = "revision-documentos"; // <-- 1. Nueva cola registrada
 
 /**
  * Correo a encolar (HU-0058/0061/0062). Los destinatarios del expediente se
@@ -27,6 +28,11 @@ export interface RecordatorioPayload {
   tipo: "revision-manual";
   notadoEn: string;
 }
+export interface RevisionDocumentoPayload {
+  documentoId: string;
+  rutaPdf: string;
+  expedienteId: string;
+}
 
 /**
  * Encola un correo (best-effort: si la cola cae, el flujo principal ya hizo
@@ -37,5 +43,13 @@ export async function enqueueCorreo(payload: CorreoPayload): Promise<void> {
     await enqueue(COLA_CORREOS, payload, { retryLimit: 3, retryDelay: 60 });
   } catch (err) {
     console.error("[colas] no se pudo encolar correo", err);
+  }
+}
+export async function enqueueRevisionDocumento(payload: RevisionDocumentoPayload): Promise<void> {
+  try {
+    // retryLimit: 3 intentará procesar el archivo 3 veces si hay un error transitorio
+    await enqueue(COLA_REVISION_DOCUMENTOS, payload, { retryLimit: 3, retryDelay: 60 });
+  } catch (err) {
+    console.error("[colas] no se pudo encolar la revisión del documento", err);
   }
 }
