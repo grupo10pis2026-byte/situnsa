@@ -3,6 +3,15 @@ import { enqueue } from "./pg-boss.client.js";
 /** Colas del sistema (pg-boss sobre Postgres, sin Redis — Lean). */
 export const COLA_CORREOS = "correos";
 export const COLA_RECORDATORIOS = "recordatorios";
+export const COLA_SYNC_DRIVE = "sync-drive-institucional";
+export const COLA_INBOUND_EMAIL = "inbound-email-check";
+
+export const COLAS = {
+  NOTIFICACIONES_CORREO: COLA_CORREOS,
+  RECORDATORIOS: COLA_RECORDATORIOS,
+  SYNC_DRIVE_INSTITUCIONAL: COLA_SYNC_DRIVE,
+  INBOUND_EMAIL: COLA_INBOUND_EMAIL,
+} as const;
 
 /**
  * Correo a encolar (HU-0058/0061/0062). Los destinatarios del expediente se

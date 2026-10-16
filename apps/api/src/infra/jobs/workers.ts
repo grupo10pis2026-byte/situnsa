@@ -3,14 +3,22 @@ import { evaluarPlazo } from "@pis/domain";
 import { and, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import { enviarCorreo, urlPortal } from "../mail/correo.service.js";
 import { renderizarCorreo } from "../mail/plantilla-correo.js";
-import { COLA_CORREOS, COLA_RECORDATORIOS, type CorreoPayload, enqueueCorreo } from "./colas.js";
+import {
+  COLA_CORREOS,
+  COLA_INBOUND_EMAIL,
+  COLA_RECORDATORIOS,
+  COLA_SYNC_DRIVE,
+  type CorreoPayload,
+  enqueueCorreo,
+} from "./colas.js";
 import { getBoss } from "./pg-boss.client.js";
+import { registrarWorkerSyncDrive } from "./sync-drive.worker.js";
 
 let registrados = false;
 
 /**
  * Workers pg-boss: correos (SMTP real vía nodemailer) + revisión diaria de
- * plazos (HU-0055). Idempotentes y best-effort: nunca tumban la API.
+ * plazos (HU-0055) + sincronización Google Drive. Idempotentes y best-effort: nunca tumban la API.
  */
 export async function iniciarWorkers(): Promise<void> {
   if (registrados) return;
@@ -25,6 +33,7 @@ export async function iniciarWorkers(): Promise<void> {
   // cola inexistente = "Queue not found"). createQueue es idempotente.
   await boss.createQueue(COLA_CORREOS);
   await boss.createQueue(COLA_RECORDATORIOS);
+  await boss.createQueue(COLA_SYNC_DRIVE);
   await boss.work<CorreoPayload>(COLA_CORREOS, async (jobs) => {
     // Un error aquí hace que pg-boss reintente el job (retryLimit al encolar).
     for (const job of jobs) await procesarCorreo(job.data);
@@ -32,13 +41,27 @@ export async function iniciarWorkers(): Promise<void> {
   await boss.work(COLA_RECORDATORIOS, async () => {
     await revisarPlazos();
   });
+  await registrarWorkerSyncDrive(boss);
+  if (process.env.INBOUND_EMAIL_ENABLED === "true") {
+    await boss.createQueue(COLA_INBOUND_EMAIL);
+    const { InboundEmailService } = await import("../email/inbound-email.service.js");
+    const inboundService = new InboundEmailService(boss);
+    await boss.work(COLA_INBOUND_EMAIL, async () => {
+      await inboundService.procesarBandejaEntrada();
+    });
+    try {
+      await boss.schedule(COLA_INBOUND_EMAIL, "*/5 * * * *", undefined);
+    } catch (err) {
+      console.error("[workers] no se pudo programar sondeo de correo inbound", err);
+    }
+  }
   try {
     await boss.schedule(COLA_RECORDATORIOS, "0 7 * * 1-5", undefined, { tz: "America/Lima" });
   } catch (err) {
     console.error("[workers] no se pudo programar recordatorios", err);
   }
   registrados = true;
-  console.log("[workers] correos + recordatorios activos");
+  console.log("[workers] correos + recordatorios + sync drive activos");
 }
 
 /** Normaliza payloads antiguos (`{ expedienteId, codigo, texto }`) en cola. */
