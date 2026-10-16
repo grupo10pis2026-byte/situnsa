@@ -1,6 +1,7 @@
 import { DomainError, fail, ok, type Result } from "@pis/domain";
 import { verificarClave } from "../../hash.js";
 import {
+  ACCESO_MINUTOS,
   estaBloqueado,
   expiracionRefresh,
   firmarAcceso,
@@ -77,7 +78,7 @@ export class LoginLocalUseCase {
       },
       accessToken: firmarAcceso({ sub: cuenta.id, dni: cuenta.dni, rol: cuenta.rol }),
       refreshToken: refresh.token,
-      expiraEn: 15 * 60,
+      expiraEn: ACCESO_MINUTOS * 60,
     });
   }
 }

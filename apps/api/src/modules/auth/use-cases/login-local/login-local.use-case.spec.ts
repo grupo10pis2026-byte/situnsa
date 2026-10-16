@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { hashearClaveTest } from "../../hash.js";
+import { ACCESO_MINUTOS } from "../../sesiones.js";
 import type { CuentaAuth, RepositorioCuentas, RepositorioSesiones } from "../repositorios.js";
 import { LoginLocalUseCase } from "./login-local.use-case.js";
 
@@ -52,7 +53,7 @@ describe("LoginLocalUseCase", () => {
       expect(r.value.usuario.dni).toBe("00000001");
       expect(r.value.accessToken.length).toBeGreaterThan(20);
       expect(r.value.refreshToken.length).toBeGreaterThan(32);
-      expect(r.value.expiraEn).toBe(900);
+      expect(r.value.expiraEn).toBe(ACCESO_MINUTOS * 60);
     }
     expect(repo.guardados).toEqual([["u1", 0, null]]);
   });

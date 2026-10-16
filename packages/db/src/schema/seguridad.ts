@@ -70,5 +70,5 @@ export type Sesion = typeof sesiones.$inferSelect;
 /** Política de acceso (S-FIPS SEGURIDAD.md §Autenticación). */
 export const MAX_INTENTOS = 5;
 export const BLOQUEO_MINUTOS = 15;
-export const ACCESO_MINUTOS = 15;
+export const ACCESO_MINUTOS = 480; // 8 horas (480 min): sesión continua durante la jornada laboral
 export const REFRESH_HORAS = 8;
