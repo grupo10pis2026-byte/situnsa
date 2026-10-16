@@ -1,16 +1,33 @@
-import { db, expedientes, subetapas, usuarios } from "@pis/db";
+import {
+  db,
+  documentoRevisiones,
+  documentos,
+  expedientes,
+  type HallazgoRevisionDb,
+  subetapas,
+  usuarios,
+} from "@pis/db";
 import { evaluarPlazo } from "@pis/domain";
 import { and, eq, inArray, isNotNull, isNull } from "drizzle-orm";
+import { AnalizarDocumentoUseCase } from "../../modules/documentos/use-cases/analizar-documento/analizar-documento.use-case.js";
 import { enviarCorreo, urlPortal } from "../mail/correo.service.js";
 import { renderizarCorreo } from "../mail/plantilla-correo.js";
-import { COLA_CORREOS, COLA_RECORDATORIOS, type CorreoPayload, enqueueCorreo } from "./colas.js";
+import {
+  COLA_CORREOS,
+  COLA_RECORDATORIOS,
+  COLA_REVISION_DOCUMENTOS,
+  type CorreoPayload,
+  enqueueCorreo,
+  type RevisionDocumentoPayload,
+} from "./colas.js";
 import { getBoss } from "./pg-boss.client.js";
 
 let registrados = false;
 
 /**
  * Workers pg-boss: correos (SMTP real vía nodemailer) + revisión diaria de
- * plazos (HU-0055). Idempotentes y best-effort: nunca tumban la API.
+ * plazos (HU-0055) + revisión automática de documentos en segundo plano (Tarea 3).
+ * Idempotentes y best-effort: nunca tumban la API.
  */
 export async function iniciarWorkers(): Promise<void> {
   if (registrados) return;
@@ -25,9 +42,13 @@ export async function iniciarWorkers(): Promise<void> {
   // cola inexistente = "Queue not found"). createQueue es idempotente.
   await boss.createQueue(COLA_CORREOS);
   await boss.createQueue(COLA_RECORDATORIOS);
+  await boss.createQueue(COLA_REVISION_DOCUMENTOS);
   await boss.work<CorreoPayload>(COLA_CORREOS, async (jobs) => {
     // Un error aquí hace que pg-boss reintente el job (retryLimit al encolar).
     for (const job of jobs) await procesarCorreo(job.data);
+  });
+  await boss.work<RevisionDocumentoPayload>(COLA_REVISION_DOCUMENTOS, async (jobs) => {
+    for (const job of jobs) await procesarRevisionDocumento(job.data);
   });
   await boss.work(COLA_RECORDATORIOS, async () => {
     await revisarPlazos();
@@ -38,7 +59,7 @@ export async function iniciarWorkers(): Promise<void> {
     console.error("[workers] no se pudo programar recordatorios", err);
   }
   registrados = true;
-  console.log("[workers] correos + recordatorios activos");
+  console.log("[workers] correos + recordatorios + revisión de documentos activos");
 }
 
 /** Normaliza payloads antiguos (`{ expedienteId, codigo, texto }`) en cola. */
@@ -147,5 +168,126 @@ export async function revisarPlazos(ahora: Date = new Date()): Promise<number> {
   } catch (err) {
     console.error("[workers] revisarPlazos falló", err);
     return 0;
+  }
+}
+
+/**
+ * Worker para la revisión automática de documentos (Tarea 3).
+ * Extrae texto, evalúa reglas sintácticas y actualiza la tabla documento_revisiones.
+ */
+export async function procesarRevisionDocumento(payload: RevisionDocumentoPayload): Promise<void> {
+  const { documentoId, expedienteId } = payload;
+  try {
+    console.log(`[workers] Iniciando análisis del documento ${documentoId}`);
+
+    const [doc] = await db.select().from(documentos).where(eq(documentos.id, documentoId)).limit(1);
+
+    if (!doc) {
+      console.warn(`[workers] Documento ${documentoId} no encontrado para revisión`);
+      return;
+    }
+
+    if (doc.tipo !== "PLAN_ESTRUCTURADO") {
+      return;
+    }
+
+    // Asegurar que existe registro de revisión en estado EN_PROCESO
+    const [existente] = await db
+      .select({ id: documentoRevisiones.id })
+      .from(documentoRevisiones)
+      .where(eq(documentoRevisiones.documentoId, documentoId))
+      .limit(1);
+
+    if (existente) {
+      await db
+        .update(documentoRevisiones)
+        .set({ estado: "EN_PROCESO", updatedAt: new Date() })
+        .where(eq(documentoRevisiones.id, existente.id));
+    } else {
+      await db.insert(documentoRevisiones).values({
+        documentoId,
+        expedienteId,
+        estado: "EN_PROCESO",
+      });
+    }
+
+    const [exp] = await db
+      .select()
+      .from(expedientes)
+      .where(eq(expedientes.id, expedienteId))
+      .limit(1);
+
+    if (!exp) {
+      console.warn(`[workers] Expediente ${expedienteId} no encontrado para revisión`);
+      return;
+    }
+
+    const ids = [exp.participante1Id, exp.participante2Id, exp.asesorId].filter(
+      (id): id is string => !!id,
+    );
+    const personas = ids.length
+      ? await db.select().from(usuarios).where(inArray(usuarios.id, ids))
+      : [];
+    const persona = (id: string | null) => personas.find((p) => p.id === id);
+    const tesistas = [persona(exp.participante1Id), persona(exp.participante2Id)]
+      .filter((p) => p !== undefined)
+      .map((p) => ({ nombre: `${p.nombres} ${p.apellidos}`, dni: p.dni }));
+    const asesor = persona(exp.asesorId);
+
+    const base = process.env.DOCS_VOLUME_PATH ?? "./var/data/titulacion-docs";
+    const useCase = new AnalizarDocumentoUseCase();
+    const resultado = await useCase.execute(
+      doc,
+      {
+        titulo: exp.titulo,
+        tesistas,
+        asesor: asesor
+          ? { nombre: `${asesor.nombres} ${asesor.apellidos}`, dni: asesor.dni }
+          : exp.asesorNombre
+            ? { nombre: exp.asesorNombre }
+            : null,
+      },
+      base,
+      false,
+    );
+
+    const hallazgosDb: HallazgoRevisionDb[] = resultado.hallazgos.map((h) => ({
+      campo: h.tipo,
+      mensaje: h.mensaje,
+      severidad: h.severidad === "ADVERTENCIA" ? "ADVERTENCIA" : "INFO",
+      ...(h.sugerencia ? { esperado: h.sugerencia } : {}),
+      ...(h.evidencia ? { encontrado: h.evidencia } : {}),
+    }));
+
+    await db
+      .update(documentoRevisiones)
+      .set({
+        estado: "COMPLETADO",
+        hallazgos: hallazgosDb,
+        paginasAnalizadas: resultado.paginasAnalizadas.length,
+        updatedAt: new Date(),
+      })
+      .where(eq(documentoRevisiones.documentoId, documentoId));
+
+    console.log(`[workers] Análisis completado con éxito para documento ${documentoId}`);
+  } catch (err) {
+    console.error(
+      `[workers] Error al procesar documento ${documentoId}. Marcando como FALLIDO.`,
+      err,
+    );
+    await db
+      .update(documentoRevisiones)
+      .set({
+        estado: "FALLIDO",
+        hallazgos: [
+          {
+            campo: "SISTEMA",
+            mensaje: err instanceof Error ? err.message : "Error durante el análisis",
+            severidad: "ERROR",
+          },
+        ],
+        updatedAt: new Date(),
+      })
+      .where(eq(documentoRevisiones.documentoId, documentoId));
   }
 }

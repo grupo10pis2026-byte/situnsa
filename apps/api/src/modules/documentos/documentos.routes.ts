@@ -10,6 +10,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { autorizar, esPersonal } from "../../infra/auth/autorizacion.js";
 import { entregarArchivo } from "../../infra/http/entrega-archivo.js";
 import { errorEnvelope, estadoHttp, PATRON_UUID } from "../../infra/http/errores.js";
+import { enqueueRevisionDocumento } from "../../infra/jobs/colas.js";
 import { LocalStorageService } from "../../infra/storage/local-storage.service.js";
 import { requireAuth } from "../../middleware/require-auth.js";
 import { leerChecklist } from "../expedientes/expedientes.repository.js";
@@ -101,6 +102,21 @@ export function registerDocumentosRoutes(app: FastifyInstance): void {
           return;
         }
         conservar = true;
+        if (tipo === "PLAN_ESTRUCTURADO") {
+          await db
+            .insert(documentoRevisiones)
+            .values({
+              documentoId: r.value.id,
+              expedienteId,
+              estado: "PENDIENTE",
+            })
+            .catch((e) => req.log.error(e, "Error al registrar revisión pendiente"));
+
+          await enqueueRevisionDocumento({
+            documentoId: r.value.id,
+            expedienteId,
+          });
+        }
         await reply.status(201).send(r.value);
       } finally {
         await contenido.limpiar(conservar);
