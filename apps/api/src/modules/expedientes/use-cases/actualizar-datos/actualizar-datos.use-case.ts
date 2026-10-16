@@ -3,6 +3,8 @@ import { db, expedientes, usuarios } from "@pis/db";
 import {
   DomainError,
   fail,
+  fechaIso,
+  horaLimpia,
   modalidadACanon,
   normalizarAdministrativo,
   ok,
@@ -129,7 +131,21 @@ export class ActualizarDatosUseCase {
       const patchExp: Record<string, unknown> = { updatedAt: new Date() };
       for (const k of CAMPOS_EXPEDIENTE) {
         const v = patch[k];
-        if (v !== undefined) patchExp[k] = v === "" ? null : normalizarAdministrativo(k, v);
+        if (v !== undefined) {
+          if (v === "") {
+            patchExp[k] = null;
+          } else if (k === "fechaApertura" || k === "fechaPresentacion" || k === "fechaSustentacion") {
+            patchExp[k] = fechaIso(v) || null;
+          } else if (k === "horaSustentacion") {
+            patchExp[k] = horaLimpia(v) || v.trim();
+          } else {
+            patchExp[k] = normalizarAdministrativo(k, v);
+          }
+        }
+      }
+      if (patch.titulo !== undefined) {
+        // En tesis de 2 personas comparten título de tesis: sincronizar titulo02
+        patchExp.titulo02 = patchExp.titulo;
       }
       if (canon) patchExp.modalidad = canon;
       await tx.update(expedientes).set(patchExp).where(eq(expedientes.id, id));

@@ -32,7 +32,11 @@ const PORT = Number(process.env.PORT ?? 3001);
 
 export async function buildServer() {
   const app = Fastify({ logger: true });
-  await app.register(cors);
+  await app.register(cors, {
+    origin: true,
+    credentials: true,
+    exposedHeaders: ["Content-Disposition"],
+  });
   await app.register(helmet);
   await app.register(cookie);
   await app.register(multipart, { limits: { fileSize: 50 * 1024 * 1024 } });
