@@ -9,6 +9,7 @@ import {
   abrirArchivoProtegido,
   documentoDescargaUrl,
   formatoDescargaUrl,
+  useRevisionDocumento,
   useSubirDocumento,
 } from "../../api/expedientes.js";
 import { useVistoBueno } from "../../api/seguimiento.js";
@@ -17,6 +18,7 @@ import { cn } from "../../utils/cn.js";
 import { Button, botonClases } from "../ui/button.js";
 import { Card } from "../ui/card.js";
 import { ConfirmDialog } from "../ui/confirm-dialog.js";
+import { Dialogo } from "../ui/dialog.js";
 import { StatusBadge } from "../ui/status-badge.js";
 import { useToast } from "../ui/toast.js";
 import { AnalisisDocumentalPanel } from "./analisis-documental-panel.js";
@@ -39,6 +41,47 @@ interface Props {
 
 const PERSONAL = ["ADMIN_FIPS", "SECRETARIA", "DECANO"];
 
+function RevisionBadge({
+  estado,
+  hallazgos,
+  onAbrir,
+}: {
+  estado: "PENDIENTE" | "EN_PROCESO" | "COMPLETADO" | "FALLIDO" | string | null;
+  hallazgos: Array<{ campo: string; mensaje: string }> | undefined;
+  onAbrir: () => void;
+}) {
+  const texto =
+    !estado || estado === "PENDIENTE" || estado === "EN_PROCESO"
+      ? "Analizando..."
+      : hallazgos && hallazgos.length > 0
+        ? `${hallazgos.length} observación${hallazgos.length > 1 ? "es" : ""} detectada${hallazgos.length > 1 ? "s" : ""}`
+        : "Carátula conforme";
+
+  const clase =
+    !estado || estado === "PENDIENTE" || estado === "EN_PROCESO"
+      ? "border-slate-300 bg-slate-200 text-slate-600 animate-pulse"
+      : hallazgos && hallazgos.length > 0
+        ? "border-amber-300 bg-amber-100 text-amber-800"
+        : "border-green-300 bg-verde-inst-100 text-verde-inst-700";
+
+  return (
+    <button
+      type="button"
+      onClick={onAbrir}
+      disabled={!estado || estado === "PENDIENTE" || estado === "EN_PROCESO"}
+      className={[
+        "inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold",
+        clase,
+        !estado || estado === "PENDIENTE" || estado === "EN_PROCESO"
+          ? "cursor-default"
+          : "cursor-pointer hover:brightness-95",
+      ].join(" ")}
+    >
+      {texto}
+    </button>
+  );
+}
+
 /**
  * Tarjeta de /expedientes/$id y /mi-tramite: carga, descarga y visto bueno del documento.
  * PLAN_ESTRUCTURADO incorpora AnalisisDocumentalPanel cuando hay documentoId.
@@ -48,11 +91,13 @@ export function DocumentoCard(p: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const subir = useSubirDocumento(p.expedienteId);
   const vistoBueno = useVistoBueno(p.expedienteId);
+  const revision = useRevisionDocumento(p.documentoId ?? null);
   const { sesion } = useSession();
   const avisar = useToast();
   const [error, setError] = useState<string | null>(null);
   const [arrastrando, setArrastrando] = useState(false);
   const [pendiente, setPendiente] = useState<File | null>(null);
+  const [revisionAbierta, setRevisionAbierta] = useState(false);
   const esPersonal = !!sesion && PERSONAL.includes(sesion.rol);
   const esTesista = sesion?.rol === "TESISTA";
   // RN-06: el tesista solo carga lo de su subetapa activa (o lo observado) y
@@ -151,7 +196,16 @@ export function DocumentoCard(p: Props) {
             </p>
           </div>
         </div>
-        <StatusBadge estado={p.estado} />
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <StatusBadge estado={p.estado} />
+          {p.documentoId && (
+            <RevisionBadge
+              estado={revision.data?.estado ?? null}
+              hallazgos={revision.data?.hallazgos}
+              onAbrir={() => setRevisionAbierta(true)}
+            />
+          )}
+        </div>
       </div>
       {p.faltantes.length > 0 && (
         <p className="mt-2.5 flex items-start gap-1.5 rounded-lg bg-aviso-100 px-2.5 py-2 text-xs text-aviso-800">
@@ -258,6 +312,79 @@ export function DocumentoCard(p: Props) {
           }}
         />
       </div>
+      {p.documentoId && (
+        <Dialogo
+          abierto={revisionAbierta}
+          onAbierto={setRevisionAbierta}
+          titulo={
+            revision.data && revision.data.hallazgos.length > 0
+              ? "Alertas detectadas"
+              : "Revisión del documento"
+          }
+          descripcion={
+            revision.data && revision.data.hallazgos.length > 0
+              ? "Se encontraron inconsistencias en la carátula o el contenido del documento."
+              : "La revisión no detectó observaciones en la carátula."
+          }
+          ancho="max-w-lg"
+        >
+          {revision.isPending ? (
+            <p className="text-sm text-grafito-600">Analizando el documento…</p>
+          ) : revision.data ? (
+            <div className="space-y-3">
+              {revision.data.hallazgos.length === 0 ? (
+                <p className="text-sm text-grafito-700">
+                  La carátula y el resumen cumplen con los controles básicos del trámite.
+                </p>
+              ) : (
+                <ul className="space-y-3">
+                  {revision.data.hallazgos.map((hallazgo, index) => (
+                    <li
+                      key={`${hallazgo.campo}-${index}`}
+                      className="rounded-xl border border-amber-200 bg-amber-50 p-3"
+                    >
+                      <p className="text-sm font-bold text-amber-900">{hallazgo.campo}</p>
+                      <p className="mt-1 text-sm text-amber-800">{hallazgo.mensaje}</p>
+                      {hallazgo.esperado && (
+                        <p className="mt-1 text-xs text-amber-700">Esperado: {hallazgo.esperado}</p>
+                      )}
+                      {hallazgo.encontrado && (
+                        <p className="text-xs text-amber-700">Encontrado: {hallazgo.encontrado}</p>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-grafito-600">
+              Todavía no hay revisión disponible para este documento.
+            </p>
+          )}
+          <div className="mt-5 flex justify-end gap-2">
+            <Button
+              tamano="sm"
+              variante="contorno"
+              type="button"
+              onClick={() => setRevisionAbierta(false)}
+            >
+              Cerrar
+            </Button>
+            <Button
+              tamano="sm"
+              variante="oscuro"
+              type="button"
+              onClick={() => {
+                setRevisionAbierta(false);
+                inputRef.current?.click();
+              }}
+            >
+              <UploadCloud size={14} />
+              Volver a subir documento corregido
+            </Button>
+          </div>
+        </Dialogo>
+      )}
       {p.documentoId && p.tipo === "PLAN_ESTRUCTURADO" && (
         <AnalisisDocumentalPanel key={p.documentoId} documentoId={p.documentoId} />
       )}

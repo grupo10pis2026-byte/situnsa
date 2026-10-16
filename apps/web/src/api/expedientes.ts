@@ -1,5 +1,7 @@
 import {
   type ActualizarDatosInput,
+  type DocumentoRevisionDTO,
+  DocumentoRevisionDTOSchema,
   type ExpedienteDetalleDTO,
   ExpedienteDetalleDTOSchema,
   type InscribirPlanInput,
@@ -12,6 +14,7 @@ import { apiFetch } from "./session.js";
 
 export const expedienteKey = (id: string) => ["expediente", id] as const;
 export const expedientesKey = ["expedientes"] as const;
+export const documentoRevisionKey = (id: string) => ["documento-revision", id] as const;
 
 /** Lee el mensaje legible de un error API (envelope nuevo `{error.mensaje}` o legacy `{message}`). */
 export const leerMensajeError = mensajeDeCuerpo;
@@ -28,6 +31,26 @@ export function useExpedienteDetalle(id: string, enabled = true) {
     enabled,
     queryFn: async (): Promise<ExpedienteDetalleDTO> =>
       leerDetalle(await apiFetch(`${apiBaseUrl}/api/expedientes/${id}`)),
+  });
+}
+
+async function leerRevisionDocumento(res: Response): Promise<DocumentoRevisionDTO | null> {
+  if (!res.ok) throw await errorDeRespuesta(res, "No se pudo cargar la revisión del documento");
+  const body = await res.json();
+  return body === null ? null : DocumentoRevisionDTOSchema.parse(body);
+}
+
+/** GET /api/documentos/:id/revision. */
+export function useRevisionDocumento(documentoId: string | null | undefined) {
+  return useQuery({
+    queryKey: documentoRevisionKey(documentoId ?? "__sin-documento__"),
+    enabled: !!documentoId,
+    queryFn: async (): Promise<DocumentoRevisionDTO | null> => {
+      if (!documentoId) return null;
+      return leerRevisionDocumento(
+        await apiFetch(`${apiBaseUrl}/api/documentos/${documentoId}/revision`),
+      );
+    },
   });
 }
 
