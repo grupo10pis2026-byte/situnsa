@@ -3,7 +3,7 @@ import { evaluarPlazo } from "@pis/domain";
 import { and, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import { enviarCorreo, urlPortal } from "../mail/correo.service.js";
 import { renderizarCorreo } from "../mail/plantilla-correo.js";
-import { COLA_CORREOS, COLA_RECORDATORIOS, type CorreoPayload, enqueueCorreo } from "./colas.js";
+import { COLA_CORREOS, COLA_RECORDATORIOS, COLA_REVISION_DOCUMENTOS, type CorreoPayload, type RevisionDocumentoPayload, enqueueCorreo } from "./colas.js";
 import { getBoss } from "./pg-boss.client.js";
 
 let registrados = false;
@@ -25,9 +25,15 @@ export async function iniciarWorkers(): Promise<void> {
   // cola inexistente = "Queue not found"). createQueue es idempotente.
   await boss.createQueue(COLA_CORREOS);
   await boss.createQueue(COLA_RECORDATORIOS);
+  await boss.createQueue(COLA_REVISION_DOCUMENTOS);
   await boss.work<CorreoPayload>(COLA_CORREOS, async (jobs) => {
     // Un error aquí hace que pg-boss reintente el job (retryLimit al encolar).
     for (const job of jobs) await procesarCorreo(job.data);
+  });
+  await boss.work<RevisionDocumentoPayload>(COLA_REVISION_DOCUMENTOS, async (jobs) => {
+    for (const job of jobs) {
+      await procesarRevisionDocumento(job.data);
+    }
   });
   await boss.work(COLA_RECORDATORIOS, async () => {
     await revisarPlazos();
@@ -147,5 +153,25 @@ export async function revisarPlazos(ahora: Date = new Date()): Promise<number> {
   } catch (err) {
     console.error("[workers] revisarPlazos falló", err);
     return 0;
+  }
+}
+export async function procesarRevisionDocumento(payload: RevisionDocumentoPayload): Promise<void> {
+  const { documentoId, rutaPdf, expedienteId } = payload;
+  
+  try {
+    console.log(`[workers] Iniciando análisis del documento ${documentoId}`);
+    
+    // TODO: 1. Importar y ejecutar el motor de análisis (Tarea 2)
+    // const resultado = await motorAnalisisPdf(rutaPdf);
+
+    // TODO: 2. Guardar el informe resultante con Drizzle ORM (Tarea 1)
+    // await db.update(tablaTarea1).set({ informe: resultado }).where(eq(tablaTarea1.documentoId, documentoId));
+
+    console.log(`[workers] Análisis completado para documento ${documentoId}`);
+  } catch (err) {
+    console.error(`[workers] Error al procesar documento ${documentoId}. Marcando como FALLIDO.`, err);
+    
+    // TODO: 3. Actualizar el estado a FALLIDO en Drizzle
+    // await db.update(documentos).set({ estado: 'FALLIDO' }).where(eq(documentos.id, documentoId));
   }
 }
