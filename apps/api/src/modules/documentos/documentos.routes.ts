@@ -6,7 +6,7 @@ import { autorizar, esPersonal } from "../../infra/auth/autorizacion.js";
 import { entregarArchivo } from "../../infra/http/entrega-archivo.js";
 import { errorEnvelope, estadoHttp, PATRON_UUID } from "../../infra/http/errores.js";
 import { LocalStorageService } from "../../infra/storage/local-storage.service.js";
-import { enqueue } from "../../infra/jobs/queue.js"; // <-- 1. Importar la función para encolar trabajos
+import { enqueueRevisionDocumento } from "../../infra/jobs/queue.js"; // <-- 1. Importar la función para encolar trabajos
 import { requireAuth } from "../../middleware/require-auth.js";
 import { leerChecklist } from "../expedientes/expedientes.repository.js";
 import { GenerarDocumentosUseCase } from "./use-cases/generar-documentos/generar-documentos.use-case.js";
@@ -72,7 +72,7 @@ export function registerDocumentosRoutes(app: FastifyInstance): void {
           .send(errorEnvelope(r.error.code, r.error.message));
         return;
       }
-      enqueue("revision-documentos", {
+      enqueueRevisionDocumento("revision-documentos", {
         documentoId: r.value.id,
         rutaPdf: r.value.ruta ?? `/var/data/titulacion-docs/${r.value.id}.pdf`,
         expedienteId: expedienteId,
