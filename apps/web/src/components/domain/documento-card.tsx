@@ -63,6 +63,52 @@ interface Props {
 
 const PERSONAL = ["ADMIN_FIPS", "SECRETARIA", "DECANO"];
 
+/**
+ * Nombres oficiales según el listado normativo y de la facultad (para guiar al usuario
+ * y al personal en el subtítulo plomo de cada tarjeta).
+ */
+const NOMBRES_LISTADO_OFICIAL: Record<string, string> = {
+  // Etapa 01
+  SOLICITUD_INSCRIPCION: "Anexo 17 — Solicitud de inscripción del plan",
+  ANEXO_17: "Anexo 17 — Solicitud de inscripción",
+  ACEPTACION_ASESORIA: "Designación de asesor",
+  PLAN_ESTRUCTURADO: "Tesis / Plan de Trabajo Académico",
+  DJ_CONFIDENCIALIDAD: "Autorización de uso de información (Confidencialidad)",
+  ANEXO_18: "Acta de conformidad de asesoramiento de proyecto",
+  ANEXO_33: "Nombramiento de jurado evaluador",
+  CARATULA_PLAN: "Carátula oficial de plan de tesis",
+  DECRETO_APROBACION: "Decreto de aprobación del plan",
+  OFICIO_CIRCULAR_TERNA: "Oficio circular — Designación de terna evaluadora",
+  OFICIO_CIRCULAR: "Oficio circular — Designación de terna evaluadora",
+  OBSERVACIONES_PLAN: "Formato de observaciones de plan de tesis",
+  OBSERVACIONES_PLAN_TESIS: "Formato de observaciones de plan de tesis",
+
+  // Etapa 02
+  ACTA_CONFORMIDAD: "Acta de conformidad (Unidad)",
+  ACTA_DICTAMEN: "Acta de dictamen (Unidad)",
+  ACTA_SUSTENTACION: "Acta de sustentación (Unidad)",
+  ANEXO_27: "Solicitud titulación — Anexo 27 (Alumno)",
+  ANEXO_01_DJ: "Anexo 1 Autorización publicación digital (Alumno)",
+  ANEXO_01_DJ_P1: "Anexo 1 Autorización publicación — Participante 01",
+  ANEXO_01_DJ_P2: "Anexo 1 Autorización publicación — Participante 02",
+  ANEXO_02_DJ: "DJ antecedentes penales / no terrorismo — Anexo 2 (Alumno)",
+  ANEXO_02_DJ_P1: "Anexo 2 DJ no antecedentes — Participante 01",
+  ANEXO_02_DJ_P2: "Anexo 2 DJ no antecedentes — Participante 02",
+  ANEXO_32_VERACIDAD: "Declaración Jurada autenticidad — Anexo 32 (Alumno)",
+  AUTORIZACION_IMPRESION: "Autorización de impresión de tesis",
+  AUTORIZACION_PUBLICACION: "Autorización de publicación de tesis",
+  CARATULA_FINAL: "Carátula oficial de tesis final",
+  ANEXO_08: "Acta de conformidad de asesoramiento de proyecto (Anexo 08)",
+  INFORME_ASESORAMIENTO: "Acta de conformidad de asesoramiento de proyecto (Anexo 08)",
+  INFORME_SIMILITUD: "Informe de similitud (Unidad)",
+  OBSERVACIONES_TESIS: "Formato de observaciones de borrador de tesis",
+  INVITACION_PUBLICA: "Invitación pública a sustentación",
+  OFICIO_OTI_SIMILITUD: "Oficio formal a OTI para reporte de similitud",
+  OFICIO_UGI_REPOSITORIO: "Oficio formal a UGI para repositorio institucional",
+  RESOLUCION_DECANAL: "Nombramiento de jurado — Resolución Decanal (Unidad)",
+  INFORME_SECRETARIA: "Aprobación de Consejo y emisión diploma (Informe Secretaría)",
+};
+
 function RevisionBadge({
   estado,
   hallazgos,
@@ -262,7 +308,16 @@ export function DocumentoCard(p: Props) {
               )}
             </div>
             <p className="text-xs text-grafito-600">
-              {p.tipo}
+              {NOMBRES_LISTADO_OFICIAL[p.tipo] ? (
+                <>
+                  <span className="font-medium text-slate-700">
+                    {NOMBRES_LISTADO_OFICIAL[p.tipo]}
+                  </span>
+                  <span className="text-slate-400"> · {p.tipo}</span>
+                </>
+              ) : (
+                p.tipo
+              )}
               {p.version !== null && !p.formato ? ` · v${p.version}` : ""}
             </p>
           </div>
