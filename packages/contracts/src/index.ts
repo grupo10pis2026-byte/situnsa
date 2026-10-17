@@ -9,12 +9,14 @@ import { gruposContract, reportesContract } from "./grupos-pagos.contract.js";
 import { programasContract } from "./programas.contract.js";
 import { seguimientoContract } from "./seguimiento.contract.js";
 import { seguridadContract } from "./seguridad.contract.js";
+import { solicitudesContract } from "./solicitudes.contract.js";
 import { asesoresContract, talleresContract } from "./talleres.contract.js";
 
 const c = initContract();
 
 export const appContract = c.router({
   expedientes: expedientesContract,
+  solicitudes: solicitudesContract,
   auth: authContract,
   documentos: documentosContract,
   talleres: talleresContract,
@@ -46,4 +48,5 @@ export * from "./programas.contract.js";
 export * from "./reportes.contract.js";
 export * from "./seguimiento.contract.js";
 export * from "./seguridad.contract.js";
+export * from "./solicitudes.contract.js";
 export * from "./talleres.contract.js";

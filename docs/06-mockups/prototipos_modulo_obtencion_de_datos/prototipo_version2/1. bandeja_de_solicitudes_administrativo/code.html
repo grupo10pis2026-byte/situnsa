@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+
+<html lang="es"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_dashboard" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "surface-bright": "#f8f9ff", "primary-fixed": "#ffdada", "primary-fixed-dim": "#ffb2b6", "surface-tint": "#a23b47", "tertiary-fixed-dim": "#6bd8cb", "on-tertiary-container": "#42b4a7", "on-surface": "#0b1c30", "surface-container-lowest": "#ffffff", "outline-variant": "#dcc0c0", "on-surface-variant": "#564242", "inverse-on-surface": "#eaf1ff", "tertiary": "#002925", "outline": "#897172", "surface-dim": "#cbdbf5", "on-primary-container": "#f97d87", "on-primary": "#ffffff", "on-secondary-fixed": "#131b2e", "primary": "#4f0012", "surface-container-highest": "#d3e4fe", "inverse-surface": "#213145", "on-error-container": "#93000a", "surface": "#f8f9ff", "tertiary-container": "#00413b", "on-background": "#0b1c30", "error": "#ba1a1a", "inverse-primary": "#ffb2b6", "secondary-fixed-dim": "#bec6e0", "secondary-fixed": "#dae2fd", "secondary": "#565e74", "on-error": "#ffffff", "primary-container": "#701424", "on-secondary-fixed-variant": "#3f465c", "tertiary-fixed": "#89f5e7", "surface-container": "#e5eeff", "on-primary-fixed": "#40000d", "on-secondary-container": "#5c647a", "error-container": "#ffdad6", "surface-container-low": "#eff4ff", "background": "#f8f9ff", "surface-container-high": "#dce9ff", "on-tertiary": "#ffffff", "on-primary-fixed-variant": "#832331", "on-tertiary-fixed-variant": "#005049", "on-tertiary-fixed": "#00201d", "on-secondary": "#ffffff", "surface-variant": "#d3e4fe", "secondary-container": "#dae2fd" }, "borderRadius": { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, "spacing": { "margin-mobile": "1rem", "gutter-mobile": "0.75rem", "gutter": "1.25rem", "space-lg": "1.5rem", "space-xs": "0.25rem", "space-sm": "0.5rem", "space-md": "1rem", "space-xl": "2rem", "margin": "2rem" }, "fontFamily": { "label-md": ["Inter"], "label-sm": ["Inter"], "body-lg": ["Inter"], "headline-lg": ["Inter"], "label-lg": ["Inter"], "headline-xl": ["Inter"], "body-md": ["Inter"], "body-sm": ["Inter"], "headline-md": ["Inter"] }, "fontSize": { "label-md": ["11px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700" }], "label-sm": ["10px", { "lineHeight": "14px", "letterSpacing": "0.06em", "fontWeight": "600" }], "body-lg": ["15px", { "lineHeight": "22px", "fontWeight": "400" }], "headline-lg": ["22px", { "lineHeight": "28px", "letterSpacing": "-0.015em", "fontWeight": "700" }], "label-lg": ["13px", { "lineHeight": "18px", "fontWeight": "600" }], "headline-xl": ["28px", { "lineHeight": "36px", "letterSpacing": "-0.02em", "fontWeight": "700" }], "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }], "body-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }], "headline-md": ["18px", { "lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600" }] } } } }</script></head><body class="bg-surface font-body-md text-body-md text-on-surface"><aside class="fixed left-0 top-0 h-full w-[260px] bg-[#0f172a] z-50 flex flex-col justify-between text-slate-100 shadow-[0_1px_8px_rgba(0,0,0,0.1)]"><div class="flex flex-col"><div class="h-16 px-space-md flex items-center justify-between border-b border-slate-800"><div class="flex flex-col"><span class="font-label-md text-label-md tracking-wider text-slate-200 uppercase">SISTEMA DE TITULACIÓN</span><span class="font-label-sm text-label-sm text-slate-400">Segunda Especialidad · FIPS UNSA</span></div><button class="text-slate-400 hover:text-white transition-colors p-space-xs rounded-lg hover:bg-slate-800 flex items-center justify-center"><span class="material-symbols-outlined text-[20px]">menu_open</span></button></div><div class="px-space-md pt-space-md"><div class="w-full flex items-center justify-between bg-slate-800/80 rounded-lg px-space-sm py-1.5 text-slate-400 text-body-sm font-body-sm border border-slate-700/60"><div class="flex items-center gap-space-xs"><span class="material-symbols-outlined text-[18px]">search</span><span>Buscar...</span></div><kbd class="bg-slate-700 text-slate-300 font-label-sm text-label-sm px-1.5 py-0.5 rounded">⌘K</kbd></div></div><nav class="flex flex-col gap-1 px-space-md pt-space-md" data-active-classes="bg-primary-container text-on-primary font-bold rounded-lg shadow-sm"><a class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors font-body-sm text-body-sm" data-path="listado-de-expedientes" href="#"><span class="material-symbols-outlined text-[20px]">folder_shared</span><span class="flex-1">Listado de Expedientes</span></a><a aria-current="page" class="flex items-center justify-between px-space-sm py-2 transition-colors bg-primary-container text-on-primary font-bold rounded-lg shadow-sm" data-path="bandeja-de-solicitudes" href="#"><div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-[20px]">inbox</span><span>Bandeja de Solicitudes</span></div><span class="bg-primary-container text-on-primary font-label-sm text-label-sm px-2 py-0.5 rounded-full">3</span></a><a class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors font-body-sm text-body-sm" data-path="nuevo-expediente" href="#"><span class="material-symbols-outlined text-[20px]">note_add</span><span class="flex-1">Nuevo Expediente</span></a><a class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors font-body-sm text-body-sm" data-path="validacion" href="#"><span class="material-symbols-outlined text-[20px]">verified</span><span class="flex-1">Validación</span></a><a class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors font-body-sm text-body-sm" data-path="taller-de-tesis" href="#"><span class="material-symbols-outlined text-[20px]">school</span><span class="flex-1">Taller de Tesis</span></a><a class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors font-body-sm text-body-sm" data-path="asesores" href="#"><span class="material-symbols-outlined text-[20px]">group</span><span class="flex-1">Asesores</span></a><a class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors font-body-sm text-body-sm" data-path="configuracion" href="#"><span class="material-symbols-outlined text-[20px]">settings</span><span class="flex-1">Configuración</span></a></nav></div><div class="p-space-md border-t border-slate-800 bg-[#0f172a]"><div class="flex items-center gap-space-sm mb-space-sm"><div class="w-9 h-9 rounded-full bg-primary-container text-on-primary flex items-center justify-center font-label-md text-label-md shrink-0">AA</div><div class="flex flex-col min-w-0"><span class="text-white font-label-md text-label-md truncate">Angela Administrativa</span><span class="text-slate-400 font-label-sm text-label-sm truncate">DNI 00000001 · ADMIN FIPS</span></div></div><a class="w-full flex items-center justify-center gap-space-xs py-1.5 px-space-sm rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors font-label-sm text-label-sm" data-path="login" href="#"><span class="material-symbols-outlined text-[16px]">logout</span><span>Cerrar sesión</span></a></div></aside><div class="pl-[260px]"><header class="fixed top-0 left-[260px] right-0 h-16 bg-surface/80 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-space-xl"><div class="flex items-center gap-space-sm text-on-surface-variant font-label-md text-label-md uppercase tracking-wider"><span class="hover:text-on-surface cursor-pointer">FIPS UNSA</span><span>/</span><span class="text-on-surface font-headline-md text-headline-md normal-case font-semibold">Gestión de Grados y Títulos</span></div><div class="flex items-center gap-space-md"><button class="relative p-space-xs rounded-full text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors flex items-center justify-center"><span class="material-symbols-outlined text-[22px]">notifications</span><span class="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary"></span></button><button class="p-space-xs rounded-full text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors flex items-center justify-center"><span class="material-symbols-outlined text-[22px]">help_outline</span></button><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></header><main class="w-full pt-16 bg-surface min-h-screen"><div class="flex flex-col w-full">
+<!-- Content Canvas Area -->
+<div class="px-space-xl py-space-lg flex flex-col gap-space-lg">
+<!-- Page Header with Subtitle and Top Utilities -->
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-space-md">
+<div class="flex flex-col">
+<h1 class="font-headline-xl text-headline-xl text-on-surface tracking-tight">
+          Bandeja de Solicitudes de Titulación
+        </h1>
+<p class="font-body-md text-body-md text-secondary mt-1">
+          Gestión y dictamen de solicitudes remitidas desde la mesa de partes virtual (Vía Regular y Taller de Tesis).
+        </p>
+</div>
+<!-- Action Tools -->
+<div class="flex items-center gap-space-sm flex-wrap">
+<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container-high/60 text-secondary font-label-sm text-label-sm">
+<span class="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></span>
+<span>Última actualización: <strong class="text-on-surface font-semibold">Hoy, 10:45 AM</strong></span>
+</div>
+<button class="flex items-center gap-space-xs px-3.5 py-2 rounded-lg bg-surface-container-lowest text-on-surface font-label-md text-label-md shadow-sm hover:bg-surface-container transition-all active:scale-95" id="btn-sync" onclick="refreshTray()" title="Sincronizar bandeja">
+<span class="material-symbols-outlined text-[18px] text-secondary transition-transform duration-500" id="refresh-icon">sync</span>
+<span>Actualizar bandeja</span>
+</button>
+<button class="flex items-center gap-space-xs px-3.5 py-2 rounded-lg bg-surface-container-lowest text-on-surface font-label-md text-label-md shadow-sm hover:bg-surface-container transition-all" onclick="exportTableToCSV()">
+<span class="material-symbols-outlined text-[18px] text-emerald-700">table_view</span>
+<span>Exportar a XLS</span>
+</button>
+</div>
+</div>
+<!-- KPI Metric Cards Grid -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-gutter">
+<!-- Card 1: Nuevas Solicitudes -->
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col justify-between relative overflow-hidden group hover:shadow-md transition-all">
+<div class="flex items-start justify-between">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-secondary uppercase tracking-wider">Nuevas Solicitudes</span>
+<div class="flex items-baseline gap-2 mt-1">
+<span class="font-headline-xl text-headline-xl text-on-surface" id="count-nuevas">8</span>
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-label-sm font-label-sm bg-blue-100 text-blue-800">
+                Por atender
+              </span>
+</div>
+</div>
+<div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center">
+<span class="material-symbols-outlined text-[22px]">move_to_inbox</span>
+</div>
+</div>
+<div class="mt-3 pt-2.5 flex items-center justify-between text-secondary font-label-sm text-label-sm">
+<span>Tiempo prom. espera: <strong>1.4 hrs</strong></span>
+<span class="text-blue-700 font-semibold cursor-pointer hover:underline" onclick="filterByState('NUEVA')">Ver todas →</span>
+</div>
+</div>
+<!-- Card 2: En Revisión -->
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col justify-between relative overflow-hidden group hover:shadow-md transition-all">
+<div class="flex items-start justify-between">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-secondary uppercase tracking-wider">En Revisión</span>
+<div class="flex items-baseline gap-2 mt-1">
+<span class="font-headline-xl text-headline-xl text-on-surface">5</span>
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-label-sm font-label-sm bg-amber-100 text-amber-900">
+                En evaluación
+              </span>
+</div>
+</div>
+<div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center">
+<span class="material-symbols-outlined text-[22px]">hourglass_top</span>
+</div>
+</div>
+<div class="mt-3 pt-2.5 flex items-center justify-between text-secondary font-label-sm text-label-sm">
+<span>Dictaminadas: <strong>3/5</strong></span>
+<span class="text-amber-800 font-semibold cursor-pointer hover:underline" onclick="filterByState('EN REVISIÓN')">Filtrar →</span>
+</div>
+</div>
+<!-- Card 3: Expedientes Creados -->
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col justify-between relative overflow-hidden group hover:shadow-md transition-all">
+<div class="flex items-start justify-between">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-secondary uppercase tracking-wider">Expedientes Creados</span>
+<div class="flex items-baseline gap-2 mt-1">
+<span class="font-headline-xl text-headline-xl text-on-surface">42</span>
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-label-sm font-label-sm bg-emerald-100 text-emerald-800">
+                +12% este mes
+              </span>
+</div>
+</div>
+<div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center">
+<span class="material-symbols-outlined text-[22px]">folder_special</span>
+</div>
+</div>
+<div class="mt-3 pt-2.5 flex items-center justify-between text-secondary font-label-sm text-label-sm">
+<span>Convertidos exitosamente</span>
+<span class="text-emerald-800 font-semibold cursor-pointer hover:underline" onclick="filterByState('EXPEDIENTE CREADO')">Consultar →</span>
+</div>
+</div>
+<!-- Card 4: Observadas -->
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col justify-between relative overflow-hidden group hover:shadow-md transition-all">
+<div class="flex items-start justify-between">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-secondary uppercase tracking-wider">Observadas</span>
+<div class="flex items-baseline gap-2 mt-1">
+<span class="font-headline-xl text-headline-xl text-on-surface">3</span>
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-label-sm font-label-sm bg-rose-100 text-rose-900">
+                Subsanación
+              </span>
+</div>
+</div>
+<div class="w-10 h-10 rounded-xl bg-rose-50 text-rose-800 flex items-center justify-center">
+<span class="material-symbols-outlined text-[22px]">assignment_late</span>
+</div>
+</div>
+<div class="mt-3 pt-2.5 flex items-center justify-between text-secondary font-label-sm text-label-sm">
+<span>Plazo vigente de envío</span>
+<span class="text-rose-800 font-semibold cursor-pointer hover:underline" onclick="filterByState('OBSERVADA')">Revisar →</span>
+</div>
+</div>
+</div>
+<!-- Main Workspace Container: Filters and Data Table -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden flex flex-col">
+<!-- Operational Header / Search Bar -->
+<div class="p-space-md bg-surface-container-lowest flex flex-col gap-space-md">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-space-sm">
+<div class="flex items-center gap-space-xs">
+<span class="font-headline-md text-headline-md text-on-surface">Solicitudes Entrantes</span>
+<span class="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 font-label-sm text-label-sm" id="badge-total">
+              16 solicitudes encontradas
+            </span>
+</div>
+<div class="flex items-center gap-space-xs text-secondary font-label-sm text-label-sm">
+<span>FIPS · Unidad de Grados y Títulos</span>
+</div>
+</div>
+<!-- Filter Form Controls -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-space-sm">
+<!-- Search input -->
+<div class="md:col-span-5 relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-secondary text-[20px]">search</span>
+<input class="w-full bg-surface-container-low pl-10 pr-4 py-2 rounded-lg text-body-md font-body-md text-on-surface placeholder:text-secondary focus:bg-surface-container-lowest focus:outline-none transition-colors" id="search-input" onkeyup="applyFilters()" placeholder="Buscar por DNI, Apellidos, CUI o Código de solicitud..." type="text"/>
+</div>
+<!-- Select Trámite -->
+<div class="md:col-span-2">
+<select class="w-full bg-surface-container-low px-3 py-2 rounded-lg text-body-sm font-body-sm text-on-surface focus:outline-none cursor-pointer" id="filter-tramite" onchange="applyFilters()">
+<option value="ALL">Todos los trámites</option>
+<option value="Vía Regular">Vía Regular</option>
+<option value="Taller de Tesis">Taller de Tesis</option>
+</select>
+</div>
+<!-- Select Estado -->
+<div class="md:col-span-2">
+<select class="w-full bg-surface-container-low px-3 py-2 rounded-lg text-body-sm font-body-sm text-on-surface focus:outline-none cursor-pointer" id="filter-estado" onchange="applyFilters()">
+<option value="ALL">Todos los estados</option>
+<option value="NUEVA">NUEVA</option>
+<option value="EN REVISIÓN">EN REVISIÓN</option>
+<option value="OBSERVADA">OBSERVADA</option>
+<option value="EXPEDIENTE CREADO">EXPEDIENTE CREADO</option>
+</select>
+</div>
+<!-- Select Programa -->
+<div class="md:col-span-3">
+<select class="w-full bg-surface-container-low px-3 py-2 rounded-lg text-body-sm font-body-sm text-on-surface focus:outline-none cursor-pointer truncate" id="filter-programa" onchange="applyFilters()">
+<option value="ALL">Todos los programas</option>
+<option value="Sistemas">Segunda Especialidad en Sistemas</option>
+<option value="Producción">Segunda Especialidad en Producción</option>
+<option value="Seguridad TI">Segunda Especialidad en Seguridad de la Info</option>
+</select>
+</div>
+</div>
+</div>
+<!-- Data Table -->
+<div class="w-full overflow-x-auto">
+<table class="w-full text-left border-collapse" id="solicitudes-table">
+<thead>
+<tr class="bg-[#0f172a] text-slate-100 font-label-md text-label-md uppercase tracking-wider">
+<th class="py-3 px-space-md whitespace-nowrap">Código / Fecha</th>
+<th class="py-3 px-space-md whitespace-nowrap">Tesista(s)</th>
+<th class="py-3 px-space-md whitespace-nowrap">Programa & Modalidad</th>
+<th class="py-3 px-space-md whitespace-nowrap text-center">Tipo Trámite</th>
+<th class="py-3 px-space-md whitespace-nowrap text-center">Documentos</th>
+<th class="py-3 px-space-md whitespace-nowrap text-center">Estado</th>
+<th class="py-3 px-space-md whitespace-nowrap text-right">Acción</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container/60 font-body-md text-body-md text-on-surface" id="table-rows">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-container-low/70 transition-colors group" data-estado="NUEVA" data-programa="Sistemas" data-tramite="Vía Regular">
+<td class="py-3.5 px-space-md align-middle">
+<div class="flex flex-col">
+<span class="font-label-lg text-label-lg font-bold text-on-surface tracking-tight">SOL-2024-0089</span>
+<span class="font-body-sm text-body-sm text-secondary">Hoy, 09:15 AM</span>
+</div>
+</td>
+<td class="py-3.5 px-space-md align-middle">
+<div class="flex flex-col min-w-[210px]">
+<span class="font-semibold text-on-surface">María Torres Flores</span>
+<div class="flex items-center gap-1 font-body-sm text-body-sm text-secondary">
+<span class="font-label-sm text-label-sm text-slate-500 uppercase">DNI</span>
+<span>11223344</span>
+</div>
+<span class="text-[11px] text-primary font-medium mt-0.5">Carlos Quispe H. (Co-tesista)</span>
+</div>
+</td>
+<td class="py-3.5 px-space-md align-middle">
+<div class="flex flex-col max-w-[280px]">
+<span class="font-medium text-on-surface truncate">Segunda Especialidad en Ingeniería de Sistemas</span>
+<span class="font-body-sm text-body-sm text-secondary truncate">Plan de Tesis Formato Artículo Científico</span>
+</div>
+</td>
+<td class="py-3.5 px-space-md align-middle text-center">
+<span class="inline-flex items-center px-2.5 py-1 rounded-md text-label-sm font-label-sm bg-slate-100 text-slate-800">
+                  Vía Regular
+                </span>
+</td>
+<td class="py-3.5 px-space-md align-middle">
+<div class="flex items-center justify-center gap-1 text-slate-600">
+<span class="p-1 rounded bg-slate-100 text-emerald-700 hover:bg-slate-200 transition-colors cursor-pointer" title="FUD y Pago Verificado">
+<span class="material-symbols-outlined text-[17px] block">description</span>
+</span>
+<span class="p-1 rounded bg-slate-100 text-emerald-700 hover:bg-slate-200 transition-colors cursor-pointer" title="Plan de Tesis / Carátula OK">
+<span class="material-symbols-outlined text-[17px] block">article</span>
+</span>
+<span class="p-1 rounded bg-slate-100 text-emerald-700 hover:bg-slate-200 transition-colors cursor-pointer" title="Constancia de Egresado OK">
+<span class="material-symbols-outlined text-[17px] block">verified</span>
+</span>
+</div>
+</td>
+<td class="py-3.5 px-space-md align-middle text-center">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full font-label-sm text-label-sm bg-blue-100 text-blue-800 uppercase tracking-wide">
+                  NUEVA
+                </span>
+</td>
+<td class="py-3.5 px-space-md align-middle text-right">
+<button class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary-container text-on-primary font-label-md text-label-md hover:bg-primary transition-all shadow-sm" onclick="openDetail('SOL-2024-0089', 'María Torres Flores')">
+<span>REVISAR SOLICITUD</span>
+<span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-container-low/70 transition-colors group" data-estado="EN REVISIÓN" data-programa="Producción" data-tramite="Taller de Tesis">
+<td class="py-3.5 px-space-md align-middle">
+<div class="flex flex-col">
+<span class="font-label-lg text-label-lg font-bold text-on-surface tracking-tight">SOL-2024-0088</span>
+<span class="font-body-sm text-body-sm text-secondary">Ayer, 16:40 PM</span>
+</div>
+</td>
+<td class="py-3.5 px-space-md align-middle">
+<div class="flex flex-col min-w-[210px]">
+<span class="font-semibold text-on-surface">Renzo Valdivia Cano</span>
+<div class="flex items-center gap-1 font-body-sm text-body-sm text-secondary">
+<span class="font-label-sm text-label-sm text-slate-500 uppercase">DNI</span>
+<span>45892100</span>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-space-md align-middle">
+<div class="flex flex-col max-w-[280px]">
+<span class="font-medium text-on-surface truncate">Segunda Especialidad en Ingeniería de Producción</span>
+<span class="font-body-sm text-body-sm text-secondary truncate">Tesis Tradicional Experimental</span>
+</div>
+</td>
+<td class="py-3.5 px-space-md align-middle text-center">
+<span class="inline-flex items-center px-2.5 py-1 rounded-md text-label-sm font-label-sm bg-purple-100 text-purple-900">
+                  Taller de Tesis
+                </span>
+</td>
+<td class="py-3.5 px-space-md align-middle">
+<div class="flex items-center justify-center gap-1 text-slate-600">
+<span class="p-1 rounded bg-slate-100 text-emerald-700 hover:bg-slate-200 transition-colors cursor-pointer" title="FUD y Pago Verificado">
+<span class="material-symbols-outlined text-[17px] block">description</span>
+</span>
+<span class="p-1 rounded bg-slate-100 text-emerald-700 hover:bg-slate-200 transition-colors cursor-pointer" title="Plan de Tesis OK">
+<span class="material-symbols-outlined text-[17px] block">article</span>
+</span>
+<span class="p-1 rounded bg-slate-100 text-slate-400" title="Pendiente firma asesor">
+<span class="material-symbols-outlined text-[17px] block">pending</span>
+</span>
+</div>
+</td>
+<td class="py-3.5 px-space-md align-middle text-center">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full font-label-sm text-label-sm bg-amber-100 text-amber-900 uppercase tracking-wide">
+                  EN REVISIÓN
+                </span>
+</td>
+<td class="py-3.5 px-space-md align-middle text-right">
+<button class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary-container text-on-primary font-label-md text-label-md hover:bg-primary transition-all shadow-sm" onclick="openDetail('SOL-2024-0088', 'Renzo Valdivia Cano')">
+<span>REVISAR SOLICITUD</span>
+<span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface-container-low/70 transition-colors group" data-estado="OBSERVADA" data-programa="Sistemas" data-tramite="Vía Regular">
+<td class="py-3.5 px-space-md align-middle">
+<div class="flex flex-col">
+<span class="font-label-lg text-label-lg font-bold text-on-surface tracking-tight">SOL-2024-0085</span>
+<span class="font-body-sm text-body-sm text-secondary">22 Oct, 11:10 AM</span>
+</div>
+</td>
+<td class="py-3.5 px-space-md align-middle">
+<div class="flex flex-col min-w-[210px]">
+<span class="font-semibold text-on-surface">Beatriz Mendoza Ramos</span>
+<div class="flex items-center gap-1 font-body-sm text-body-sm text-secondary">
+<span class="font-label-sm text-label-sm text-slate-500 uppercase">DNI</span>
+<span>29881726</span>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-space-md align-middle">
+<div class="flex flex-col max-w-[280px]">
+<span class="font-medium text-on-surface truncate">Segunda Especialidad en Ingeniería de Sistemas</span>
+<span class="font-body-sm text-body-sm text-secondary truncate">Trabajo de Suficiencia Profesional</span>
+</div>
+</td>
+<td class="py-3.5 px-space-md align-middle text-center">
+<span class="inline-flex items-center px-2.5 py-1 rounded-md text-label-sm font-label-sm bg-slate-100 text-slate-800">
+                  Vía Regular
+                </span>
+</td>
+<td class="py-3.5 px-space-md align-middle">
+<div class="flex items-center justify-center gap-1 text-slate-600">
+<span class="p-1 rounded bg-slate-100 text-emerald-700" title="Documento aprobado">
+<span class="material-symbols-outlined text-[17px] block">description</span>
+</span>
+<span class="p-1 rounded bg-rose-50 text-rose-700" title="Carátula con formato no reglamentario">
+<span class="material-symbols-outlined text-[17px] block">error</span>
+</span>
+<span class="p-1 rounded bg-slate-100 text-emerald-700" title="Constancia OK">
+<span class="material-symbols-outlined text-[17px] block">verified</span>
+</span>
+</div>
+</td>
+<td class="py-3.5 px-space-md align-middle text-center">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full font-label-sm text-label-sm bg-rose-100 text-rose-900 uppercase tracking-wide">
+                  OBSERVADA
+                </span>
+</td>
+<td class="py-3.5 px-space-md align-middle text-right">
+<button class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary-container text-on-primary font-label-md text-label-md hover:bg-primary transition-all shadow-sm" onclick="openDetail('SOL-2024-0085', 'Beatriz Mendoza Ramos')">
+<span>REVISAR SOLICITUD</span>
+<span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</button>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-surface-container-low/70 transition-colors group" data-estado="EXPEDIENTE CREADO" data-programa="Seguridad TI" data-tramite="Taller de Tesis">
+<td class="py-3.5 px-space-md align-middle">
+<div class="flex flex-col">
+<span class="font-label-lg text-label-lg font-bold text-on-surface tracking-tight">SOL-2024-0081</span>
+<span class="font-body-sm text-body-sm text-secondary">20 Oct, 08:30 AM</span>
+</div>
+</td>
+<td class="py-3.5 px-space-md align-middle">
+<div class="flex flex-col min-w-[210px]">
+<span class="font-semibold text-on-surface">Gonzalo Apaza Paredes</span>
+<div class="flex items-center gap-1 font-body-sm text-body-sm text-secondary">
+<span class="font-label-sm text-label-sm text-slate-500 uppercase">DNI</span>
+<span>70192834</span>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-space-md align-middle">
+<div class="flex flex-col max-w-[280px]">
+<span class="font-medium text-on-surface truncate">Segunda Especialidad en Seguridad de la Info</span>
+<span class="font-body-sm text-body-sm text-secondary truncate">Plan de Tesis Aprobado · Exp. SET006</span>
+</div>
+</td>
+<td class="py-3.5 px-space-md align-middle text-center">
+<span class="inline-flex items-center px-2.5 py-1 rounded-md text-label-sm font-label-sm bg-purple-100 text-purple-900">
+                  Taller de Tesis
+                </span>
+</td>
+<td class="py-3.5 px-space-md align-middle">
+<div class="flex items-center justify-center gap-1 text-emerald-700">
+<span class="p-1 rounded bg-emerald-50" title="Verificado y sellado">
+<span class="material-symbols-outlined text-[17px] block">check_circle</span>
+</span>
+<span class="p-1 rounded bg-emerald-50" title="Plan migrado a expediente">
+<span class="material-symbols-outlined text-[17px] block">task</span>
+</span>
+<span class="p-1 rounded bg-emerald-50" title="Dictamen favorable">
+<span class="material-symbols-outlined text-[17px] block">verified</span>
+</span>
+</div>
+</td>
+<td class="py-3.5 px-space-md align-middle text-center">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full font-label-sm text-label-sm bg-emerald-100 text-emerald-800 uppercase tracking-wide">
+                  EXPEDIENTE CREADO
+                </span>
+</td>
+<td class="py-3.5 px-space-md align-middle text-right">
+<button class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-900 text-white font-label-md text-label-md hover:bg-slate-800 transition-all shadow-sm" onclick="openDetail('SOL-2024-0081', 'Gonzalo Apaza Paredes')">
+<span>VER EXPEDIENTE</span>
+<span class="material-symbols-outlined text-[16px]">folder_open</span>
+</button>
+</td>
+</tr>
+<!-- Row 5 -->
+<tr class="hover:bg-surface-container-low/70 transition-colors group" data-estado="NUEVA" data-programa="Sistemas" data-tramite="Vía Regular">
+<td class="py-3.5 px-space-md align-middle">
+<div class="flex flex-col">
+<span class="font-label-lg text-label-lg font-bold text-on-surface tracking-tight">SOL-2024-0080</span>
+<span class="font-body-sm text-body-sm text-secondary">19 Oct, 15:20 PM</span>
+</div>
+</td>
+<td class="py-3.5 px-space-md align-middle">
+<div class="flex flex-col min-w-[210px]">
+<span class="font-semibold text-on-surface">Dora Patricia Zegarra</span>
+<div class="flex items-center gap-1 font-body-sm text-body-sm text-secondary">
+<span class="font-label-sm text-label-sm text-slate-500 uppercase">DNI</span>
+<span>10884912</span>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-space-md align-middle">
+<div class="flex flex-col max-w-[280px]">
+<span class="font-medium text-on-surface truncate">Segunda Especialidad en Ingeniería de Sistemas</span>
+<span class="font-body-sm text-body-sm text-secondary truncate">Plan de Tesis en Gestión de Software</span>
+</div>
+</td>
+<td class="py-3.5 px-space-md align-middle text-center">
+<span class="inline-flex items-center px-2.5 py-1 rounded-md text-label-sm font-label-sm bg-slate-100 text-slate-800">
+                  Vía Regular
+                </span>
+</td>
+<td class="py-3.5 px-space-md align-middle">
+<div class="flex items-center justify-center gap-1 text-slate-600">
+<span class="p-1 rounded bg-slate-100 text-emerald-700" title="FUD y Pago Verificado">
+<span class="material-symbols-outlined text-[17px] block">description</span>
+</span>
+<span class="p-1 rounded bg-slate-100 text-emerald-700" title="Plan de Tesis OK">
+<span class="material-symbols-outlined text-[17px] block">article</span>
+</span>
+<span class="p-1 rounded bg-slate-100 text-emerald-700" title="Constancia OK">
+<span class="material-symbols-outlined text-[17px] block">verified</span>
+</span>
+</div>
+</td>
+<td class="py-3.5 px-space-md align-middle text-center">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full font-label-sm text-label-sm bg-blue-100 text-blue-800 uppercase tracking-wide">
+                  NUEVA
+                </span>
+</td>
+<td class="py-3.5 px-space-md align-middle text-right">
+<button class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary-container text-on-primary font-label-md text-label-md hover:bg-primary transition-all shadow-sm" onclick="openDetail('SOL-2024-0080', 'Dora Patricia Zegarra')">
+<span>REVISAR SOLICITUD</span>
+<span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Table Footer & Pagination -->
+<div class="p-space-md bg-surface-container-low/40 flex flex-col sm:flex-row items-center justify-between gap-space-sm">
+<span class="font-body-sm text-body-sm text-secondary" id="pagination-info">
+          Mostrando <strong class="text-on-surface">1</strong> a <strong class="text-on-surface">5</strong> de <strong class="text-on-surface">16</strong> resultados
+        </span>
+<div class="flex items-center gap-1">
+<button class="px-3 py-1.5 rounded-lg bg-surface-container-lowest text-secondary font-label-sm text-label-sm hover:text-on-surface hover:bg-surface-container-high transition-colors disabled:opacity-40" disabled="">
+            Anterior
+          </button>
+<button class="w-8 h-8 rounded-lg bg-primary-container text-on-primary font-label-sm text-label-sm font-bold flex items-center justify-center shadow-sm">
+            1
+          </button>
+<button class="w-8 h-8 rounded-lg bg-surface-container-lowest text-on-surface font-label-sm text-label-sm hover:bg-surface-container transition-colors flex items-center justify-center">
+            2
+          </button>
+<button class="w-8 h-8 rounded-lg bg-surface-container-lowest text-on-surface font-label-sm text-label-sm hover:bg-surface-container transition-colors flex items-center justify-center">
+            3
+          </button>
+<span class="text-secondary px-1 font-label-sm text-label-sm">...</span>
+<button class="w-8 h-8 rounded-lg bg-surface-container-lowest text-on-surface font-label-sm text-label-sm hover:bg-surface-container transition-colors flex items-center justify-center">
+            4
+          </button>
+<button class="px-3 py-1.5 rounded-lg bg-surface-container-lowest text-secondary font-label-sm text-label-sm hover:text-on-surface hover:bg-surface-container-high transition-colors">
+            Siguiente
+          </button>
+</div>
+</div>
+</div>
+<!-- Quick Action / Status Helper Panel -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-gutter">
+<!-- Box 1: Requisitos de Mesa de Partes -->
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col justify-between">
+<div>
+<div class="flex items-center gap-space-xs text-primary font-label-md text-label-md uppercase mb-2">
+<span class="material-symbols-outlined text-[18px]">verified_user</span>
+<span>Checklist Documentario UNSA</span>
+</div>
+<p class="font-body-sm text-body-sm text-secondary">
+            Las solicitudes ingresadas requieren validación previa de: FUD UNSA, recibo de tasa por derecho de titulación, DNI legible y constancia de egresado original.
+          </p>
+</div>
+<div class="mt-4 pt-3 flex items-center justify-between text-secondary font-label-sm text-label-sm">
+<span>Reglamento 2024-FIPS</span>
+<a class="text-primary hover:underline font-semibold" href="#">Ver normativa</a>
+</div>
+</div>
+<!-- Box 2: Dictaminadores Asignados -->
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col justify-between">
+<div>
+<div class="flex items-center gap-space-xs text-on-surface font-label-md text-label-md uppercase mb-2">
+<span class="material-symbols-outlined text-[18px]">groups</span>
+<span>Comisión de Grados Activa</span>
+</div>
+<div class="flex items-center gap-3 mt-1">
+<div class="w-9 h-9 rounded-full bg-slate-900 text-white flex items-center justify-center font-label-md text-label-md font-semibold">
+              DR
+            </div>
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface font-semibold">Dr. Roberto Salas Manrique</span>
+<span class="font-body-sm text-body-sm text-secondary">Presidente Comisión Dictaminadora</span>
+</div>
+</div>
+</div>
+<div class="mt-4 pt-3 flex items-center justify-between text-secondary font-label-sm text-label-sm">
+<span>3 dictaminadores en sesión</span>
+<a class="text-primary hover:underline font-semibold" href="#">Ver miembros</a>
+</div>
+</div>
+<!-- Box 3: Conversión a Expediente -->
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col justify-between">
+<div>
+<div class="flex items-center gap-space-xs text-emerald-800 font-label-md text-label-md uppercase mb-2">
+<span class="material-symbols-outlined text-[18px]">flash_on</span>
+<span>Pase Directo a Expediente</span>
+</div>
+<p class="font-body-sm text-body-sm text-secondary">
+            Al dictaminar como "Conforme", el sistema generará automáticamente la carpeta institucional con código correlativo (ej. <strong>SET-008</strong>).
+          </p>
+</div>
+<div class="mt-4 pt-3 flex items-center justify-between text-secondary font-label-sm text-label-sm">
+<span>Automatización FIPS</span>
+<span class="text-emerald-700 font-bold">Activo</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Detail Modal Dialog (Quick View) -->
+<div class="fixed inset-0 bg-slate-950/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-200" id="quick-modal">
+<div class="bg-surface-container-lowest rounded-xl max-w-lg w-full p-space-lg shadow-xl flex flex-col gap-space-md transform scale-95 transition-transform duration-200" id="modal-box">
+<div class="flex items-center justify-between pb-2">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-secondary uppercase">Detalle Operativo de Solicitud</span>
+<h3 class="font-headline-md text-headline-md text-on-surface font-bold" id="modal-sol-code">SOL-2024-0089</h3>
+</div>
+<button class="w-8 h-8 rounded-full bg-surface-container hover:bg-surface-container-high text-secondary flex items-center justify-center" onclick="closeModal()">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+</div>
+<div class="flex flex-col gap-3">
+<div class="p-3 bg-surface-container-low rounded-lg flex flex-col">
+<span class="font-label-sm text-label-sm text-secondary uppercase">Tesista solicitante</span>
+<span class="font-headline-md text-body-lg font-semibold text-on-surface" id="modal-sol-author">María Torres Flores</span>
+<span class="font-body-sm text-body-sm text-secondary">Segunda Especialidad en Ingeniería de Sistemas</span>
+</div>
+<div class="flex flex-col gap-2">
+<span class="font-label-md text-label-md uppercase text-secondary">Documentación Remitida</span>
+<div class="flex items-center justify-between p-2 rounded-lg bg-surface-container-lowest shadow-sm">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-emerald-600 text-[20px]">task_alt</span>
+<span class="font-body-sm text-body-sm font-medium">FUD & Recibo de Pago (S/ 250.00)</span>
+</div>
+<span class="font-label-sm text-label-sm text-slate-500">PDF (1.2 MB)</span>
+</div>
+<div class="flex items-center justify-between p-2 rounded-lg bg-surface-container-lowest shadow-sm">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-emerald-600 text-[20px]">task_alt</span>
+<span class="font-body-sm text-body-sm font-medium">Borrador de Plan de Tesis Formato Artículo</span>
+</div>
+<span class="font-label-sm text-label-sm text-slate-500">PDF (4.8 MB)</span>
+</div>
+</div>
+</div>
+<div class="flex items-center justify-end gap-space-sm pt-4">
+<button class="px-4 py-2 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md hover:bg-surface-container-high transition-colors" onclick="closeModal()">
+          Cerrar
+        </button>
+<button class="px-4 py-2 rounded-lg bg-primary-container text-on-primary font-label-md text-label-md hover:bg-primary transition-colors flex items-center gap-1 shadow-sm" onclick="simulateGoToDetail()">
+<span>Abrir Panel de Calificación</span>
+<span class="material-symbols-outlined text-[16px]">open_in_new</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Interactive JavaScript logic -->
+<script>
+    function refreshTray() {
+      const icon = document.getElementById('refresh-icon');
+      if (icon) {
+        icon.classList.add('rotate-180');
+        setTimeout(() => {
+          icon.classList.remove('rotate-180');
+        }, 500);
+      }
+    }
+
+    function applyFilters() {
+      const search = (document.getElementById('search-input')?.value || '').toLowerCase();
+      const tramite = document.getElementById('filter-tramite')?.value || 'ALL';
+      const estado = document.getElementById('filter-estado')?.value || 'ALL';
+      const programa = document.getElementById('filter-programa')?.value || 'ALL';
+      
+      const rows = document.querySelectorAll('#table-rows tr');
+      let visibleCount = 0;
+
+      rows.forEach(row => {
+        const text = row.innerText.toLowerCase();
+        const rowTramite = row.getAttribute('data-tramite') || '';
+        const rowEstado = row.getAttribute('data-estado') || '';
+        const rowPrograma = row.getAttribute('data-programa') || '';
+
+        const matchSearch = !search || text.includes(search);
+        const matchTramite = tramite === 'ALL' || rowTramite === tramite;
+        const matchEstado = estado === 'ALL' || rowEstado === estado;
+        const matchPrograma = programa === 'ALL' || rowPrograma.toLowerCase().includes(programa.toLowerCase());
+
+        if (matchSearch && matchTramite && matchEstado && matchPrograma) {
+          row.style.display = '';
+          visibleCount++;
+        } else {
+          row.style.display = 'none';
+        }
+      });
+
+      const badge = document.getElementById('badge-total');
+      if (badge) {
+        badge.innerText = `${visibleCount} solicitudes encontradas`;
+      }
+
+      const pagination = document.getElementById('pagination-info');
+      if (pagination) {
+        pagination.innerHTML = `Mostrando <strong class="text-on-surface">1</strong> a <strong class="text-on-surface">${visibleCount}</strong> de <strong class="text-on-surface">${visibleCount}</strong> resultados`;
+      }
+    }
+
+    function filterByState(state) {
+      const selectEstado = document.getElementById('filter-estado');
+      if (selectEstado) {
+        selectEstado.value = state;
+        applyFilters();
+      }
+    }
+
+    function openDetail(code, author) {
+      const modal = document.getElementById('quick-modal');
+      const box = document.getElementById('modal-box');
+      document.getElementById('modal-sol-code').innerText = code;
+      document.getElementById('modal-sol-author').innerText = author;
+
+      modal.classList.remove('hidden');
+      setTimeout(() => {
+        modal.classList.remove('opacity-0');
+        box.classList.remove('scale-95');
+      }, 10);
+    }
+
+    function closeModal() {
+      const modal = document.getElementById('quick-modal');
+      const box = document.getElementById('modal-box');
+      modal.classList.add('opacity-0');
+      box.classList.add('scale-95');
+      setTimeout(() => {
+        modal.classList.add('hidden');
+      }, 200);
+    }
+
+    function simulateGoToDetail() {
+      closeModal();
+      alert('Redirigiendo a la pantalla de Calificación y Asignación de Dictaminadores...');
+    }
+
+    function exportTableToCSV() {
+      alert('Generando archivo XLS consolidado con las 16 solicitudes activas...');
+    }
+  </script>
+</div></main></div></body></html>

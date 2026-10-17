@@ -16,12 +16,20 @@ export function HomePage() {
           Ir a mi panel ({sesion.rol.replace("_", " ")})
         </Link>
       ) : (
-        <Link
-          className="inline-block rounded bg-guinda-800 px-6 py-2.5 text-sm font-bold text-white"
-          to="/login"
-        >
-          Iniciar sesión
-        </Link>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+          <Link
+            className="inline-block rounded-lg bg-navy-950 px-6 py-2.5 text-sm font-bold text-white shadow hover:bg-navy-900"
+            to="/mesa-de-partes"
+          >
+            Mesa de Partes Virtual
+          </Link>
+          <Link
+            className="inline-block rounded-lg bg-guinda-800 px-6 py-2.5 text-sm font-bold text-white shadow hover:bg-guinda-700"
+            to="/login"
+          >
+            Iniciar sesión
+          </Link>
+        </div>
       )}
     </main>
   );

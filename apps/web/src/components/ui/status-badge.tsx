@@ -13,6 +13,12 @@ const estilos: Record<string, string> = {
   CERRADO: "bg-slate-100 text-slate-600 border-slate-300",
   REGISTRADO: "bg-slate-100 text-slate-600 border-slate-300",
   TITULO_EMITIDO: "bg-verde-inst-100 text-verde-inst-700 border-green-300",
+  NUEVA: "bg-blue-100 text-blue-800 border-blue-300",
+  EN_REVISION: "bg-purple-100 text-purple-800 border-purple-300",
+  OBSERVADA: "bg-orange-100 text-orange-800 border-orange-300",
+  ACEPTADA: "bg-verde-inst-100 text-verde-inst-700 border-green-300",
+  RECHAZADA: "bg-red-100 text-red-800 border-red-300",
+  CONFORME: "bg-verde-inst-100 text-verde-inst-700 border-green-300",
 };
 
 /** StatusBadge §14.1: representación uniforme de estados. Nunca solo color: incluye texto. */

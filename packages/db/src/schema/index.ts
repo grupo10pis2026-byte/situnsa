@@ -9,6 +9,7 @@ export * from "./idempotencia.js";
 export * from "./mensajes.js";
 export * from "./programas.js";
 export * from "./seguridad.js";
+export * from "./solicitudes.js";
 export * from "./subetapas.js";
 export * from "./talleres.js";
 export * from "./tokens-acceso.js";

@@ -88,3 +88,26 @@ export const estadoCuotaEnum = pgEnum("estado_cuota", [
 ]);
 
 export type EstadoCuota = "PENDIENTE" | "PAGADA" | "VENCIDA" | "EXONERADA";
+
+/** Módulo de Obtención de Datos: Estados de la Solicitud (RF-02xx[000..015]) */
+export const estadoSolicitudEnum = pgEnum("estado_solicitud", [
+  "NUEVA",
+  "EN_REVISION",
+  "OBSERVADA",
+  "ACEPTADA",
+  "RECHAZADA",
+]);
+
+export type EstadoSolicitud = "NUEVA" | "EN_REVISION" | "OBSERVADA" | "ACEPTADA" | "RECHAZADA";
+
+export const viaIngresoEnum = pgEnum("via_ingreso", ["REGULAR", "TALLER"]);
+
+export type ViaIngreso = "REGULAR" | "TALLER";
+
+export const estadoConformidadDocumentoEnum = pgEnum("estado_conformidad_documento", [
+  "PENDIENTE",
+  "CONFORME",
+  "OBSERVADO",
+]);
+
+export type EstadoConformidadDocumento = "PENDIENTE" | "CONFORME" | "OBSERVADO";

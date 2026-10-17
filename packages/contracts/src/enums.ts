@@ -29,3 +29,18 @@ export const RolUsuarioSchema = z.enum([
 
 export const ModalidadSchema = z.enum(["TESIS", "TRABAJO_ACADEMICO", "ARTICULO"]);
 export type Modalidad = z.infer<typeof ModalidadSchema>;
+
+export const EstadoSolicitudSchema = z.enum([
+  "NUEVA",
+  "EN_REVISION",
+  "OBSERVADA",
+  "ACEPTADA",
+  "RECHAZADA",
+]);
+export type EstadoSolicitud = z.infer<typeof EstadoSolicitudSchema>;
+
+export const ViaIngresoSchema = z.enum(["REGULAR", "TALLER"]);
+export type ViaIngreso = z.infer<typeof ViaIngresoSchema>;
+
+export const EstadoConformidadDocumentoSchema = z.enum(["PENDIENTE", "CONFORME", "OBSERVADO"]);
+export type EstadoConformidadDocumento = z.infer<typeof EstadoConformidadDocumentoSchema>;

@@ -19,8 +19,12 @@ import { NuevoExpedientePage } from "./routes/expedientes-nuevo.js";
 import { HomePage } from "./routes/index.js";
 import { InscripcionesPage } from "./routes/inscripciones.js";
 import { LoginPage } from "./routes/login.js";
+import { MesaDePartesPage } from "./routes/mesa-de-partes.js";
 import { MiTramitePage } from "./routes/mi-tramite.js";
 import { RestablecerPage } from "./routes/restablecer.js";
+import { SolicitudDetallePage } from "./routes/solicitudes.$id.js";
+import { SolicitudesPage } from "./routes/solicitudes.js";
+import { SubsanarSolicitudPage } from "./routes/subsanar-solicitud.$token.js";
 import { AsesoresPage, TalleresPage } from "./routes/talleres-asesores.js";
 
 const rootRoute = createRootRoute();
@@ -102,6 +106,28 @@ const asesoresRoute = createRoute({
   beforeLoad: guard("/asesores"),
   component: AsesoresPage,
 });
+const mesaDePartesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/mesa-de-partes",
+  component: MesaDePartesPage,
+});
+const subsanarRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/subsanar/$token",
+  component: SubsanarSolicitudPage,
+});
+const solicitudesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/solicitudes",
+  beforeLoad: guard("/solicitudes"),
+  component: SolicitudesPage,
+});
+const solicitudDetalleRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/solicitudes/$id",
+  beforeLoad: guard("/solicitudes/x"),
+  component: SolicitudDetallePage,
+});
 const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
@@ -109,6 +135,10 @@ const routeTree = rootRoute.addChildren([
   restablecerRoute,
   configuracionRoute,
   adminRoute,
+  solicitudesRoute,
+  solicitudDetalleRoute,
+  mesaDePartesRoute,
+  subsanarRoute,
   miTramiteRoute,
   asesorRoute,
   nuevoRoute,

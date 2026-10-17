@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+
+<html lang="es"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_dashboard" name="shell-type"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"surface-container-low":"#f0f3ff","inverse-on-surface":"#ecf1ff","on-primary-fixed-variant":"#314863","surface-variant":"#d8e3fb","surface-container-high":"#dee8ff","on-tertiary-fixed-variant":"#003ea8","secondary-container":"#9fcafd","on-tertiary":"#ffffff","on-surface-variant":"#43474d","tertiary-container":"#002265","on-surface":"#111c2d","error-container":"#ffdad6","on-primary":"#ffffff","primary-fixed":"#d1e4ff","outline-variant":"#c3c6ce","surface-dim":"#cfdaf2","primary":"#001428","tertiary-fixed-dim":"#b4c5ff","on-error-container":"#93000a","background":"#f9f9ff","on-primary-container":"#7991af","inverse-primary":"#b0c9e8","secondary":"#35618e","tertiary":"#001039","surface-bright":"#f9f9ff","secondary-fixed-dim":"#9fcafd","on-primary-fixed":"#011d35","inverse-surface":"#263143","primary-container":"#0f2942","on-secondary":"#ffffff","error":"#ba1a1a","on-secondary-container":"#275582","on-secondary-fixed":"#001d36","on-secondary-fixed-variant":"#184975","surface-tint":"#49607c","on-error":"#ffffff","tertiary-fixed":"#dbe1ff","surface-container-lowest":"#ffffff","surface":"#f9f9ff","primary-fixed-dim":"#b0c9e8","surface-container-highest":"#d8e3fb","outline":"#74777e","on-tertiary-container":"#5d88ff","surface-container":"#e7eeff","on-tertiary-fixed":"#00174b","on-background":"#111c2d","secondary-fixed":"#d1e4ff"},borderRadius:{DEFAULT:"0.125rem",lg:"0.25rem",xl:"0.5rem",full:"0.75rem"},spacing:{"space-md":"1rem","space-lg":"1.5rem","space-sm":"0.5rem","space-xs":"0.25rem","gutter-sm":"1rem",margin:"2rem","margin-sm":"1rem","space-xl":"2.5rem",gutter:"1.5rem"},fontFamily:{"label-sm":["Inter"],"headline-md":["Inter"],"body-lg":["Inter"],"headline-lg-mobile":["Inter"],"label-lg":["Inter"],"headline-lg":["Inter"],"headline-sm":["Inter"],"body-sm":["Inter"],"code-sm":["Inter"],"headline-xl":["Inter"],"label-md":["Inter"],"body-md":["Inter"],"headline-xl-mobile":["Inter"]},fontSize:{"label-sm":["11px",{lineHeight:"14px",letterSpacing:"0.04em",fontWeight:"600"}],"headline-md":["18px",{lineHeight:"26px",letterSpacing:"-0.01em",fontWeight:"600"}],"body-lg":["16px",{lineHeight:"26px",fontWeight:"400"}],"headline-lg-mobile":["20px",{lineHeight:"28px",letterSpacing:"-0.01em",fontWeight:"700"}],"label-lg":["14px",{lineHeight:"20px",letterSpacing:"0.01em",fontWeight:"600"}],"headline-lg":["24px",{lineHeight:"32px",letterSpacing:"-0.015em",fontWeight:"700"}],"headline-sm":["16px",{lineHeight:"24px",letterSpacing:"-0.005em",fontWeight:"600"}],"body-sm":["13px",{lineHeight:"18px",fontWeight:"400"}],"code-sm":["12px",{lineHeight:"16px",fontWeight:"500"}],"headline-xl":["32px",{lineHeight:"40px",letterSpacing:"-0.02em",fontWeight:"700"}],"label-md":["12px",{lineHeight:"16px",letterSpacing:"0.02em",fontWeight:"600"}],"body-md":["14px",{lineHeight:"22px",fontWeight:"400"}],"headline-xl-mobile":["26px",{lineHeight:"34px",letterSpacing:"-0.01em",fontWeight:"700"}]}}}};</script></head><body class="bg-background font-body-md text-body-md text-on-surface antialiased"><aside class="fixed left-0 top-0 h-full w-64 bg-surface-container-lowest shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-50 flex flex-col justify-between"><div class="flex flex-col"><div class="h-16 px-space-md flex items-center gap-space-sm bg-primary-container text-on-primary"><span class="material-symbols-outlined text-secondary-fixed">account_balance</span><div class="flex flex-col leading-tight"><span class="font-label-md text-label-md uppercase tracking-wider text-secondary-fixed">Universidad Nacional</span><span class="font-label-sm text-label-sm text-surface-container-high">Sistema SUT</span></div></div><div class="px-space-md py-space-sm"><div class="font-label-sm text-label-sm uppercase tracking-wider text-outline px-space-xs py-space-xs">Módulos Principales</div></div><nav class="flex flex-col gap-space-xs px-space-sm" data-active-classes="bg-primary-container text-on-primary font-label-lg rounded-xl"><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="bandeja-de-solicitudes" href="#"><span class="material-symbols-outlined text-[20px]">inbox</span><span class="font-label-lg text-label-lg">Bandeja de Solicitudes</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="portal-del-tesista" href="#"><span class="material-symbols-outlined text-[20px]">school</span><span class="font-label-lg text-label-lg">Portal del Tesista</span></a><a aria-current="page" class="flex items-center gap-space-sm px-space-md py-space-sm transition-colors bg-primary-container text-on-primary font-label-lg rounded-xl" data-path="expedientes-y-grados" href="#"><span class="material-symbols-outlined text-[20px]">folder_shared</span><span class="font-label-lg text-label-lg">Expedientes y Grados</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="taller-de-tesis" href="#"><span class="material-symbols-outlined text-[20px]">menu_book</span><span class="font-label-lg text-label-lg">Taller de Tesis</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="documentos-oficiales" href="#"><span class="material-symbols-outlined text-[20px]">verified</span><span class="font-label-lg text-label-lg">Documentos Oficiales</span></a></nav></div><div class="p-space-md bg-surface-container-low"><div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-secondary">shield</span><div class="flex flex-col"><span class="font-label-sm text-label-sm text-on-surface font-semibold">Auditoría y Certificación</span><span class="font-code-sm text-code-sm text-outline">SUT v4.2.1-Oficial</span></div></div></div></aside><div class="pl-64"><header class="fixed top-0 left-64 right-0 h-16 bg-surface-container-lowest/90 backdrop-blur-md shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-margin"><div class="flex items-center gap-space-md"><span class="font-headline-sm text-headline-sm text-primary-container tracking-tight">Universidad Nacional - Sistema de Titulación</span><span class="hidden xl:inline-block bg-surface-container px-space-sm py-space-xs rounded-xl font-label-sm text-label-sm text-secondary">Periodo Académico 2024-II</span></div><div class="flex items-center gap-space-lg"><div class="flex items-center gap-space-xs text-outline"><button aria-label="Buscar expediente" class="p-space-xs rounded-xl hover:bg-surface-container-high hover:text-on-surface transition-colors" type="button"><span class="material-symbols-outlined text-[22px]">search</span></button><button aria-label="Notificaciones institucionales" class="relative p-space-xs rounded-xl hover:bg-surface-container-high hover:text-on-surface transition-colors" type="button"><span class="material-symbols-outlined text-[22px]">notifications</span><span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-error"></span></button></div><div class="h-6 w-px bg-surface-container-highest"></div><div class="flex items-center gap-space-sm"><div class="hidden md:flex flex-col text-right leading-tight"><span class="font-label-md text-label-md text-on-surface font-semibold">Magnolia C.</span><span class="font-label-sm text-label-sm text-outline">Administrador General</span></div><img alt="Profile" class="w-8 h-8 rounded-full object-cover ring-2 ring-primary-container/20" src="https://lh3.googleusercontent.com/aida/AEtjO1W06tREAenpiRUEbszvdM-9Y5wuRoVDBodEF4eAX6pQIG1-wAj-j04LFw8nz9n0-cVggM5KsF7I8PAPVW_tTUEqz7sFRDLaAiP7LfF7S_Mp5VWePz_i3BjsAZ8YK4PybvaWqbp9zcJ-c-lZKTODnBKImFV0fTtSvGI0AJkzEY3EZooxQpXEYVv_5iUhAehNApPu-hXF-fCTAxtLJtx2f-gAsKIA9ao87lDeSrSbR3FvenaT0OJ4LbJ4C-g"/></div></div></header><main class="relative pt-16 bg-background min-h-screen"><div class="flex flex-col w-full">
+<div class="px-margin py-space-lg flex flex-col gap-space-lg max-w-[1440px] mx-auto w-full pb-28">
+<!-- 1. Encabezado Principal y Metadatos Institucionales -->
+<div class="flex flex-col bg-surface-container-lowest p-space-lg rounded-xl shadow-sm gap-space-md">
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-space-md">
+<div class="flex flex-col sm:flex-row sm:items-baseline gap-space-md">
+<div class="flex items-center gap-space-sm">
+<span class="font-code-sm text-code-sm text-secondary uppercase tracking-widest bg-surface-container px-space-xs py-1 rounded">Expediente Oficial</span>
+<span class="font-headline-xl text-headline-xl text-primary tracking-tight font-bold font-mono">SET-001</span>
+</div>
+<div class="inline-flex items-center gap-1.5 px-space-sm py-0.5 rounded-full bg-surface-container-high text-secondary font-label-sm text-label-sm uppercase">
+<span class="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
+            En Trámite - Vía Regular
+          </div>
+</div>
+<div class="flex items-center gap-space-sm self-start lg:self-auto">
+<button class="inline-flex items-center gap-space-xs px-space-md py-2 rounded-xl bg-surface-container-low hover:bg-surface-container text-on-surface-variant font-label-md text-label-md transition-colors" type="button">
+<span class="material-symbols-outlined text-[18px]">history</span>
+            Trazabilidad Completa
+          </button>
+<button class="inline-flex items-center gap-space-xs px-space-md py-2 rounded-xl bg-primary-container text-on-primary font-label-md text-label-md hover:bg-primary transition-colors shadow-sm" type="button">
+<span class="material-symbols-outlined text-[18px]">print</span>
+            Hoja de Ruta
+          </button>
+</div>
+</div>
+<!-- Metadatos de la Carátula Institucional -->
+<div class="flex flex-wrap items-center gap-y-2 gap-x-space-lg pt-space-sm bg-surface-container-low/60 p-space-md rounded-xl text-on-surface-variant">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-[18px] text-outline">calendar_today</span>
+<span class="font-label-sm text-label-sm text-outline uppercase">Fecha de Creación:</span>
+<span class="font-body-sm text-body-sm font-semibold text-on-surface">14 de Marzo, 2025</span>
+</div>
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-[18px] text-outline">assignment_ind</span>
+<span class="font-label-sm text-label-sm text-outline uppercase">Asignado a:</span>
+<span class="font-body-sm text-body-sm font-semibold text-on-surface">Magnolia Paredes (Oficina de Grados y Títulos)</span>
+</div>
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-[18px] text-outline">domain</span>
+<span class="font-label-sm text-label-sm text-outline uppercase">Dependencia:</span>
+<span class="font-body-sm text-body-sm font-semibold text-on-surface">Facultad de Ingeniería</span>
+</div>
+</div>
+<!-- Barra de Estado del Trámite (4 Fases) -->
+<div class="pt-space-md flex flex-col gap-space-xs">
+<div class="flex justify-between items-center mb-1">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-outline">Progreso Procedimental SUT</span>
+<span class="font-code-sm text-code-sm text-secondary font-bold">Fase 2 de 4: Revisión Asesor</span>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-4 gap-space-sm">
+<!-- Paso 1: Completado -->
+<div class="flex items-center gap-space-sm p-space-sm rounded-xl bg-surface-container-lowest">
+<div class="w-8 h-8 rounded-full bg-secondary text-on-secondary flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[18px]">done</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-label-md text-label-md text-on-surface font-semibold truncate">1. Registro Inicial</span>
+<span class="font-code-sm text-code-sm text-outline truncate">Validado 14/03/25</span>
+</div>
+</div>
+<!-- Paso 2: En Curso -->
+<div class="flex items-center gap-space-sm p-space-sm rounded-xl bg-surface-container-high/80">
+<div class="w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center shrink-0 shadow-sm">
+<span class="material-symbols-outlined text-[18px] animate-spin">sync</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-label-md text-label-md text-primary font-bold truncate">2. Aprobación de Asesor</span>
+<span class="font-code-sm text-code-sm text-secondary font-medium truncate">En proceso de firma</span>
+</div>
+</div>
+<!-- Paso 3: Pendiente -->
+<div class="flex items-center gap-space-sm p-space-sm rounded-xl bg-surface-container-low opacity-60">
+<div class="w-8 h-8 rounded-full bg-surface-container text-outline flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[18px]">gavel</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-label-md text-label-md text-on-surface-variant truncate">3. Dictamen de Jurados</span>
+<span class="font-code-sm text-code-sm text-outline truncate">Sin designar</span>
+</div>
+</div>
+<!-- Paso 4: Pendiente -->
+<div class="flex items-center gap-space-sm p-space-sm rounded-xl bg-surface-container-low opacity-60">
+<div class="w-8 h-8 rounded-full bg-surface-container text-outline flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[18px]">school</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-label-md text-label-md text-on-surface-variant truncate">4. Sustentación</span>
+<span class="font-code-sm text-code-sm text-outline truncate">Acta no generada</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- 2. Sección de Participantes con Toggle interactivo de Co-autoría -->
+<div class="flex flex-col bg-surface-container-lowest p-space-lg rounded-xl shadow-sm gap-space-md">
+<!-- Toggle Card Destacada -->
+<div class="flex flex-col md:flex-row md:items-center justify-between p-space-md bg-secondary-container/20 rounded-xl gap-space-md">
+<div class="flex items-start gap-space-md">
+<div class="w-10 h-10 rounded-xl bg-primary-container text-secondary-fixed flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[22px]">group</span>
+</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-space-sm">
+<span class="font-headline-sm text-headline-sm text-primary">¿Son dos tesistas?</span>
+<span class="bg-primary text-on-primary font-label-sm text-label-sm px-2 py-0.5 rounded-full uppercase tracking-wider">Normativa Art. 45</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5" id="toggle-indicator-msg">
+              Habilitado: Modo Co-autoría para titulación en pareja. Genera decretos y oficios de dictamen en formulación plural coordinada.
+            </p>
+</div>
+</div>
+<div class="flex items-center gap-space-sm self-end md:self-auto shrink-0">
+<span class="font-label-md text-label-md text-on-surface-variant">Modalidad</span>
+<button aria-checked="true" class="relative inline-flex h-7 w-14 shrink-0 cursor-pointer rounded-full bg-primary-container transition-colors duration-200 ease-in-out p-0.5" id="toggle-coautoria" role="switch" type="button">
+<span class="pointer-events-none inline-block h-6 w-6 transform translate-x-7 rounded-full bg-surface-container-lowest shadow-md ring-0 transition duration-200 ease-in-out" id="toggle-thumb"></span>
+</button>
+</div>
+</div>
+<!-- Columnas Paralelas de Tesistas -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-space-lg" id="panel-tesistas-container">
+<!-- Columna Izquierda: Tesista 1 (Autor Principal) -->
+<div class="flex flex-col bg-surface-container-low/70 p-space-md rounded-xl gap-space-md">
+<div class="flex items-center justify-between pb-space-xs">
+<div class="flex items-center gap-space-sm">
+<span class="w-7 h-7 rounded-full bg-primary-container text-on-primary flex items-center justify-center font-label-sm text-label-sm">1</span>
+<div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Tesista 1</h3>
+<span class="font-label-sm text-label-sm text-secondary uppercase">Autor Principal</span>
+</div>
+</div>
+<div class="inline-flex items-center gap-1 bg-surface-container-highest px-space-sm py-1 rounded-xl text-primary font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px] text-secondary">verified</span>
+              Egresado Verificado
+            </div>
+</div>
+<div class="flex flex-col gap-space-sm">
+<div>
+<label class="font-label-sm text-label-sm uppercase text-outline">Nombres y Apellidos Completos</label>
+<input class="w-full mt-1 px-space-md py-2 bg-surface-container-lowest rounded-xl font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-secondary/40 shadow-sm" type="text" value="Carlos Eduardo Mendoza Cruz"/>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-space-sm">
+<div>
+<label class="font-label-sm text-label-sm uppercase text-outline">CUI (Código Universitario)</label>
+<input class="w-full mt-1 px-space-md py-2 bg-surface-container-lowest rounded-xl font-code-sm text-code-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-secondary/40 shadow-sm" type="text" value="20173829"/>
+</div>
+<div>
+<label class="font-label-sm text-label-sm uppercase text-outline">Documento de Identidad (DNI)</label>
+<input class="w-full mt-1 px-space-md py-2 bg-surface-container-lowest rounded-xl font-code-sm text-code-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-secondary/40 shadow-sm" type="text" value="73928104"/>
+</div>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-space-sm">
+<div>
+<label class="font-label-sm text-label-sm uppercase text-outline">Correo Institucional</label>
+<input class="w-full mt-1 px-space-md py-2 bg-surface-container-lowest rounded-xl font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-secondary/40 shadow-sm" type="email" value="carlos.mendoza@universidad.edu.pe"/>
+</div>
+<div>
+<label class="font-label-sm text-label-sm uppercase text-outline">Teléfono Móvil</label>
+<input class="w-full mt-1 px-space-md py-2 bg-surface-container-lowest rounded-xl font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-secondary/40 shadow-sm" type="tel" value="+51 984 551 223"/>
+</div>
+</div>
+<!-- Constancia y Requisitos -->
+<div class="mt-2 p-space-sm bg-surface-container-lowest rounded-xl flex items-center justify-between shadow-sm">
+<div class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-secondary text-[22px]">description</span>
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface">Constancia de Egresado Digital</span>
+<span class="font-code-sm text-code-sm text-outline">CONST-EG-2024-9982.pdf</span>
+</div>
+</div>
+<span class="bg-surface-container-high text-primary px-space-sm py-0.5 rounded-full font-label-sm text-label-sm uppercase">Verificada</span>
+</div>
+</div>
+</div>
+<!-- Columna Derecha: Tesista 2 (Co-autor) -->
+<div class="flex flex-col bg-surface-container-low/70 p-space-md rounded-xl gap-space-md transition-all duration-300" id="columna-tesista-dos">
+<div class="flex items-center justify-between pb-space-xs">
+<div class="flex items-center gap-space-sm">
+<span class="w-7 h-7 rounded-full bg-secondary text-on-secondary flex items-center justify-center font-label-sm text-label-sm">2</span>
+<div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Tesista 2</h3>
+<span class="font-label-sm text-label-sm text-secondary uppercase">Co-autor Declarado</span>
+</div>
+</div>
+<div class="inline-flex items-center gap-1 bg-surface-container-highest px-space-sm py-1 rounded-xl text-primary font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px] text-secondary">verified</span>
+              Egresado Verificado
+            </div>
+</div>
+<div class="flex flex-col gap-space-sm">
+<div>
+<label class="font-label-sm text-label-sm uppercase text-outline">Nombres y Apellidos Completos</label>
+<input class="w-full mt-1 px-space-md py-2 bg-surface-container-lowest rounded-xl font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-secondary/40 shadow-sm" type="text" value="Lucía Beatriz Fernández Vargas"/>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-space-sm">
+<div>
+<label class="font-label-sm text-label-sm uppercase text-outline">CUI (Código Universitario)</label>
+<input class="w-full mt-1 px-space-md py-2 bg-surface-container-lowest rounded-xl font-code-sm text-code-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-secondary/40 shadow-sm" type="text" value="20174910"/>
+</div>
+<div>
+<label class="font-label-sm text-label-sm uppercase text-outline">Documento de Identidad (DNI)</label>
+<input class="w-full mt-1 px-space-md py-2 bg-surface-container-lowest rounded-xl font-code-sm text-code-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-secondary/40 shadow-sm" type="text" value="74102938"/>
+</div>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-space-sm">
+<div>
+<label class="font-label-sm text-label-sm uppercase text-outline">Correo Institucional</label>
+<input class="w-full mt-1 px-space-md py-2 bg-surface-container-lowest rounded-xl font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-secondary/40 shadow-sm" type="email" value="lucia.fernandez@universidad.edu.pe"/>
+</div>
+<div>
+<label class="font-label-sm text-label-sm uppercase text-outline">Teléfono Móvil</label>
+<input class="w-full mt-1 px-space-md py-2 bg-surface-container-lowest rounded-xl font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-secondary/40 shadow-sm" type="tel" value="+51 952 119 448"/>
+</div>
+</div>
+<!-- Constancia y Requisitos -->
+<div class="mt-2 p-space-sm bg-surface-container-lowest rounded-xl flex items-center justify-between shadow-sm">
+<div class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-secondary text-[22px]">description</span>
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface">Constancia de Egresado Digital</span>
+<span class="font-code-sm text-code-sm text-outline">CONST-EG-2024-9984.pdf</span>
+</div>
+</div>
+<span class="bg-surface-container-high text-primary px-space-sm py-0.5 rounded-full font-label-sm text-label-sm uppercase">Verificada</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- 3. Sección de Datos de la Tesis y Asesor Designado -->
+<div class="flex flex-col bg-surface-container-lowest p-space-lg rounded-xl shadow-sm gap-space-md">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-secondary text-[24px]">science</span>
+<h2 class="font-headline-md text-headline-md text-primary">Datos del Proyecto de Investigación y Asesoría</h2>
+</div>
+<span class="font-label-sm text-label-sm text-outline uppercase bg-surface-container-low px-space-sm py-1 rounded">Edición Directa Habilitada</span>
+</div>
+<div class="flex flex-col gap-space-md">
+<!-- Título Editable -->
+<div>
+<label class="font-label-sm text-label-sm uppercase text-outline flex items-center justify-between">
+<span>Título de la Tesis (Aprobación Oficial)</span>
+<span class="font-code-sm text-code-sm text-secondary">Carácteres: 94 / 250</span>
+</label>
+<textarea class="w-full mt-1 p-space-md bg-surface-container-low/50 hover:bg-surface-container-low focus:bg-surface-container-lowest rounded-xl font-body-lg text-body-lg text-on-surface focus:outline-none focus:ring-2 focus:ring-secondary/50 transition-colors shadow-sm leading-relaxed font-semibold" id="tesis-titulo-input" rows="3">Análisis comparativo de algoritmos de optimización para redes de distribución hídrica en zonas áridas</textarea>
+<span class="font-code-sm text-code-sm text-outline mt-1 inline-block">Nota: Este título se inyectará automáticamente en las resoluciones decanales y diplomas finales.</span>
+</div>
+<!-- Asesor y Línea de Investigación -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-space-md pt-space-xs">
+<div class="p-space-md bg-surface-container-low/60 rounded-xl flex flex-col gap-space-xs">
+<label class="font-label-sm text-label-sm uppercase text-outline">Asesor de Tesis Asignado</label>
+<div class="flex items-center gap-space-md mt-1">
+<div class="w-12 h-12 rounded-xl bg-surface-container-highest text-secondary flex items-center justify-center font-bold text-headline-sm shrink-0">
+                RM
+              </div>
+<div class="flex flex-col min-w-0">
+<span class="font-headline-sm text-headline-sm text-on-surface truncate">Dr. Roberto Montoya Silva</span>
+<div class="flex items-center gap-space-sm mt-0.5">
+<span class="font-code-sm text-code-sm text-secondary font-medium">CIP: 148293</span>
+<span class="w-1 h-1 rounded-full bg-outline"></span>
+<span class="font-label-sm text-label-sm text-outline">Docente Principal - Dpto. de Hidráulica</span>
+</div>
+</div>
+</div>
+</div>
+<div class="p-space-md bg-surface-container-low/60 rounded-xl flex flex-col justify-between gap-space-xs">
+<div>
+<label class="font-label-sm text-label-sm uppercase text-outline">Línea de Investigación Acreditada</label>
+<div class="flex items-center gap-space-sm mt-2">
+<span class="material-symbols-outlined text-secondary text-[20px]">water_drop</span>
+<span class="font-headline-sm text-headline-sm text-on-surface">Recursos Hídricos y Modelado Computacional</span>
+</div>
+</div>
+<div class="flex items-center gap-space-xs mt-2 pt-2 border-t-0 bg-surface-container px-space-sm py-1 rounded">
+<span class="material-symbols-outlined text-[16px] text-outline">rule</span>
+<span class="font-code-sm text-code-sm text-outline truncate">Código UNESCO: 3305.03 - Ingeniería Hidráulica</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- 4. Sección de Documentos Oficiales y Correlativos Protegidos -->
+<div class="flex flex-col bg-surface-container-lowest p-space-lg rounded-xl shadow-sm gap-space-md">
+<div class="flex items-center justify-between pb-space-xs">
+<div class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-secondary text-[24px]">verified_user</span>
+<div>
+<h2 class="font-headline-md text-headline-md text-primary">Documentos Oficiales y Correlativos Protegidos</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Metadatos sellados y vinculados al libro de resoluciones de la facultad</p>
+</div>
+</div>
+<div class="flex items-center gap-1 bg-surface-container px-space-sm py-1 rounded-full text-secondary font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px]">lock</span>
+          Registro Inmutable
+        </div>
+</div>
+<!-- Grid de Correlativos Read-Only -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-space-md">
+<!-- Decreto Read-Only -->
+<div class="p-space-md bg-surface-container-low/80 rounded-xl flex flex-col justify-between gap-space-sm">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm uppercase text-outline">Número de Decreto</span>
+<span class="material-symbols-outlined text-[18px] text-outline">lock</span>
+</div>
+<div class="flex flex-col">
+<span class="font-mono font-bold text-headline-sm text-primary tracking-wide">DEC-FACING-2025-0142-R</span>
+<span class="font-code-sm text-code-sm text-secondary mt-1">Generado por Secretaría Académica</span>
+</div>
+<span class="font-label-sm text-label-sm uppercase text-outline self-start bg-surface-container px-2 py-0.5 rounded">Firma Digital Estampada</span>
+</div>
+<!-- Oficio Read-Only -->
+<div class="p-space-md bg-surface-container-low/80 rounded-xl flex flex-col justify-between gap-space-sm">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm uppercase text-outline">Número de Oficio</span>
+<span class="material-symbols-outlined text-[18px] text-outline">lock</span>
+</div>
+<div class="flex flex-col">
+<span class="font-mono font-bold text-headline-sm text-primary tracking-wide">OFIC-DGT-2025-0089</span>
+<span class="font-code-sm text-code-sm text-secondary mt-1">Trámite Vía Regular - Libro IV</span>
+</div>
+<span class="font-label-sm text-label-sm uppercase text-outline self-start bg-surface-container px-2 py-0.5 rounded">Despachado a Jurados</span>
+</div>
+<!-- Fecha Read-Only -->
+<div class="p-space-md bg-surface-container-low/80 rounded-xl flex flex-col justify-between gap-space-sm">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm uppercase text-outline">Fecha de Emisión Oficial</span>
+<span class="material-symbols-outlined text-[18px] text-outline">lock</span>
+</div>
+<div class="flex flex-col">
+<span class="font-mono font-bold text-headline-sm text-primary">15/03/2025</span>
+<span class="font-code-sm text-code-sm text-secondary mt-1">Timestamp: 09:34:12 GMT-5</span>
+</div>
+<span class="font-label-sm text-label-sm uppercase text-outline self-start bg-surface-container px-2 py-0.5 rounded">Validez Institucional Plena</span>
+</div>
+</div>
+<!-- Vista previa dinámica tipo papel de los Documentos Generados -->
+<div class="mt-space-sm p-space-lg bg-surface-container-low rounded-xl flex flex-col gap-space-md">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-primary text-[20px]">preview</span>
+<span class="font-label-lg text-label-lg text-on-surface font-semibold">Vista Previa Dinámica: Inyección de Redacción Oficial</span>
+</div>
+<span class="font-code-sm text-code-sm text-secondary">Motor de Plantillas LaTeX / PDF v3.8</span>
+</div>
+<div class="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm text-on-surface flex flex-col gap-space-sm font-serif">
+<div class="flex justify-between items-start pb-2">
+<div class="flex flex-col">
+<span class="font-label-md text-label-md uppercase font-sans tracking-wider text-primary font-bold">Universidad Nacional de Ingeniería</span>
+<span class="font-label-sm text-label-sm text-outline font-sans">Facultad de Ingeniería Civil - Unidad de Grados y Títulos</span>
+</div>
+<span class="font-code-sm text-code-sm text-secondary font-sans font-bold">EXP. SET-001 / 2025</span>
+</div>
+<div class="mt-2 text-body-md leading-relaxed text-on-surface">
+<p class="italic" id="doc-preview-text">
+              “Por cuanto se cumple con el reglamento de grados académicos y títulos profesionales, téngase por presentado el plan de tesis por <strong class="text-primary not-italic" id="doc-nombre-plural">los bachilleres Carlos Eduardo Mendoza Cruz y Lucía Beatriz Fernández Vargas</strong>, facultándolos a iniciar formalmente los actos preparatorios para su evaluación y posterior dictamen colegiado...”
+            </p>
+</div>
+<div class="flex items-center justify-between pt-space-sm mt-space-sm text-outline font-sans font-code-sm text-code-sm">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-[16px] text-secondary">qr_code_2</span>
+<span>Hash Digital: SHA256: 7f8a...9c2e01</span>
+</div>
+<span>Certificado por: M. Paredes (Admin SUT)</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- 5. Barra Inferior Sticky / Flotante para Guardado y Sincronización -->
+<div class="fixed bottom-0 left-64 right-0 z-40 bg-surface-container-lowest/95 backdrop-blur-md shadow-xl px-margin py-space-md">
+<div class="max-w-[1440px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-space-md">
+<!-- Mensaje de sincronización reactiva -->
+<div class="flex items-center gap-space-sm text-on-surface-variant min-w-0">
+<span class="material-symbols-outlined text-secondary text-[22px] animate-spin shrink-0" style="animation-duration: 4s;">sync</span>
+<div class="flex flex-col min-w-0">
+<span class="font-label-md text-label-md text-on-surface font-semibold truncate">Sincronización Dinámica Activa</span>
+<span class="font-body-sm text-body-sm text-outline truncate hidden md:inline">Cualquier modificación actualizará en tiempo real las plantillas oficiales y documentos PDF derivados.</span>
+</div>
+</div>
+<!-- Grupo de Botones de Acción -->
+<div class="flex items-center gap-space-sm shrink-0 w-full sm:w-auto justify-end">
+<button class="px-space-md py-2.5 rounded-xl text-on-surface-variant hover:bg-surface-container font-label-lg text-label-lg transition-colors" type="button">
+          Cancelar
+        </button>
+<button class="inline-flex items-center gap-space-xs px-space-md py-2.5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-secondary font-label-lg text-label-lg transition-colors" type="button">
+<span class="material-symbols-outlined text-[20px]">picture_as_pdf</span>
+<span class="hidden lg:inline">Ver Documentos Generados (PDF)</span>
+<span class="lg:hidden">Ver PDF</span>
+</button>
+<button class="inline-flex items-center gap-space-sm px-space-lg py-2.5 rounded-xl bg-primary-container text-on-primary hover:bg-primary font-label-lg text-label-lg transition-all shadow-md hover:shadow-lg active:scale-[0.98]" id="btn-save-expediente" type="button">
+<span class="material-symbols-outlined text-[20px]">cloud_sync</span>
+<span class="font-semibold">Guardar Cambios y Actualizar Documentos Dinámicamente</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Toast Notification Template (Micro-interacción JS) -->
+<div class="fixed top-20 right-8 z-50 transform translate-y-[-150%] opacity-0 transition-all duration-300 pointer-events-none bg-primary text-on-primary px-space-lg py-space-md rounded-xl shadow-2xl flex items-center gap-space-md" id="toast-notification">
+<span class="material-symbols-outlined text-secondary-fixed text-[24px]">task_alt</span>
+<div class="flex flex-col">
+<span class="font-label-md text-label-md font-bold">Expediente SET-001 Sincronizado</span>
+<span class="font-body-sm text-body-sm text-surface-variant">Los decretos y oficios han sido regenerados con éxito.</span>
+</div>
+</div>
+</div>
+<script>
+  (function() {
+    const toggleBtn = document.getElementById('toggle-coautoria');
+    const toggleThumb = document.getElementById('toggle-thumb');
+    const colTesistaDos = document.getElementById('columna-tesista-dos');
+    const docPreviewText = document.getElementById('doc-nombre-plural');
+    const indicatorMsg = document.getElementById('toggle-indicator-msg');
+    const btnSave = document.getElementById('btn-save-expediente');
+    const toast = document.getElementById('toast-notification');
+
+    let isCoautoria = true;
+
+    if (toggleBtn) {
+      toggleBtn.addEventListener('click', () => {
+        isCoautoria = !isCoautoria;
+        toggleBtn.setAttribute('aria-checked', isCoautoria ? 'true' : 'false');
+
+        if (isCoautoria) {
+          // Activar Co-autoría
+          toggleThumb.classList.remove('translate-x-0');
+          toggleThumb.classList.add('translate-x-7');
+          toggleBtn.classList.remove('bg-surface-container');
+          toggleBtn.classList.add('bg-primary-container');
+          
+          if (colTesistaDos) {
+            colTesistaDos.classList.remove('opacity-30', 'pointer-events-none');
+            colTesistaDos.style.display = 'flex';
+          }
+          if (docPreviewText) {
+            docPreviewText.textContent = 'los bachilleres Carlos Eduardo Mendoza Cruz y Lucía Beatriz Fernández Vargas';
+          }
+          if (indicatorMsg) {
+            indicatorMsg.textContent = 'Habilitado: Modo Co-autoría para titulación en pareja. Genera decretos y oficios de dictamen en formulación plural coordinada.';
+          }
+        } else {
+          // Desactivar Co-autoría (Modalidad Individual)
+          toggleThumb.classList.remove('translate-x-7');
+          toggleThumb.classList.add('translate-x-0');
+          toggleBtn.classList.remove('bg-primary-container');
+          toggleBtn.classList.add('bg-surface-container');
+
+          if (colTesistaDos) {
+            colTesistaDos.classList.add('opacity-30', 'pointer-events-none');
+          }
+          if (docPreviewText) {
+            docPreviewText.textContent = 'el bachiller Carlos Eduardo Mendoza Cruz';
+          }
+          if (indicatorMsg) {
+            indicatorMsg.textContent = 'Deshabilitado: Modo Individual. Solo se emitirá resolución y decretos a nombre del Autor Principal.';
+          }
+        }
+      });
+    }
+
+    if (btnSave && toast) {
+      btnSave.addEventListener('click', () => {
+        btnSave.classList.add('opacity-80', 'scale-95');
+        setTimeout(() => {
+          btnSave.classList.remove('opacity-80', 'scale-95');
+          // Mostrar Toast
+          toast.classList.remove('translate-y-[-150%]', 'opacity-0');
+          toast.classList.add('translate-y-0', 'opacity-100');
+          setTimeout(() => {
+            toast.classList.remove('translate-y-0', 'opacity-100');
+            toast.classList.add('translate-y-[-150%]', 'opacity-0');
+          }, 3500);
+        }, 400);
+      });
+    }
+  })();
+</script></main></div></body></html>
