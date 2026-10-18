@@ -379,3 +379,13 @@ export async function abrirArchivoProtegido(url: string): Promise<void> {
     throw e;
   }
 }
+
+export async function obtenerBlobArchivoProtegido(
+  url: string,
+): Promise<{ blobUrl: string; blob: Blob }> {
+  const res = await apiFetch(url);
+  if (!res.ok) throw await errorDeRespuesta(res, "No se pudo cargar el documento");
+  const blob = await res.blob();
+  const blobUrl = URL.createObjectURL(blob);
+  return { blobUrl, blob };
+}

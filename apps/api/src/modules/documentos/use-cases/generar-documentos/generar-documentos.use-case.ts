@@ -1,6 +1,8 @@
 import {
   db,
+  documentos,
   documentosGenerados,
+  expedientes,
   jurados,
   juradosExpediente,
   sustentaciones,
@@ -232,26 +234,26 @@ export class GenerarDocumentosUseCase {
     const renderizados = await Promise.all(
       plantillas.map(async (p) => {
         const plantillaDocx = obtenerPlantillaDocx(p.tipo, p.etapa, numTesistas);
+        let bytesDocx: Buffer | null = null;
+        let pendientesDocx: string[] = [];
         if (plantillaDocx) {
           const res = procesarDocxBuffer(plantillaDocx, datos);
-          return {
-            plantilla: p,
-            bytes: res.buffer,
-            pendientes: res.pendientes,
-            ext: "docx" as const,
-          };
+          bytesDocx = res.buffer;
+          pendientesDocx = res.pendientes;
         }
+
         const doc = renderizarPlantilla(p, datos);
-        const bytes = await this.renderer(doc, {
+        const bytesPdf = await this.renderer(doc, {
           codigo: detalle.codigo,
           versionPlantilla: VERSION_PLANTILLAS,
           generadoEn: ahora,
         });
+
         return {
           plantilla: p,
-          bytes: Buffer.from(bytes),
-          pendientes: [...doc.pendientes],
-          ext: "pdf" as const,
+          bytesDocx,
+          bytesPdf: Buffer.from(bytesPdf),
+          pendientes: plantillaDocx ? pendientesDocx : [...doc.pendientes],
         };
       }),
     );
@@ -259,9 +261,13 @@ export class GenerarDocumentosUseCase {
     const uow = new DrizzleUnitOfWork(db);
     const r = await uow.run(async (tx) => {
       const generados: FormatoGenerado[] = [];
-      for (const { plantilla, bytes, pendientes, ext } of renderizados) {
+      for (const { plantilla, bytesDocx, bytesPdf, pendientes } of renderizados) {
         const previo = await tx
-          .select({ id: documentosGenerados.id, version: documentosGenerados.version })
+          .select({
+            id: documentosGenerados.id,
+            version: documentosGenerados.version,
+            ruta: documentosGenerados.ruta,
+          })
           .from(documentosGenerados)
           .where(
             and(
@@ -271,10 +277,17 @@ export class GenerarDocumentosUseCase {
           )
           .limit(1);
         const version = (previo[0]?.version ?? 0) + 1;
+
+        // 1. Guardar formato editable en documentos_generados
+        const bytesGenerado = bytesDocx ?? bytesPdf;
+        const extGenerado = bytesDocx ? "docx" : "pdf";
+        if (previo[0]?.ruta) {
+          await this.storage.delete?.(previo[0].ruta);
+        }
         const { ruta, sha256 } = await this.storage.save(
           expedienteId,
-          `${plantilla.tipo}_v${version}.${ext}`,
-          bytes,
+          `${plantilla.tipo}_v${version}.${extGenerado}`,
+          bytesGenerado,
           "generados",
         );
         const valores = {
@@ -284,8 +297,8 @@ export class GenerarDocumentosUseCase {
           version,
           versionPlantilla: VERSION_PLANTILLAS,
           pendientes,
-          archivoContenido: bytes,
-          tamanoBytes: bytes.length,
+          archivoContenido: bytesGenerado,
+          tamanoBytes: bytesGenerado.length,
           createdAt: ahora,
         };
         let id: string;
@@ -303,6 +316,49 @@ export class GenerarDocumentosUseCase {
           if (!ins[0]) return fail(new DomainError("VALIDACION_FALLIDA", "No se pudo guardar"));
           id = ins[0].id;
         }
+
+        // 2. Auto-subir y adjuntar el PDF oficial generado directamente al checklist
+        const docsPrevios = await tx
+          .select({ id: documentos.id, ruta: documentos.ruta })
+          .from(documentos)
+          .where(
+            and(eq(documentos.expedienteId, expedienteId), eq(documentos.tipo, plantilla.tipo)),
+          );
+
+        for (const dp of docsPrevios) {
+          if (dp.ruta) {
+            await this.storage.delete?.(dp.ruta);
+          }
+        }
+        if (docsPrevios.length > 0) {
+          await tx
+            .delete(documentos)
+            .where(
+              and(eq(documentos.expedienteId, expedienteId), eq(documentos.tipo, plantilla.tipo)),
+            );
+        }
+
+        const pdfGuardado = await this.storage.save(
+          expedienteId,
+          `${plantilla.tipo}_v${version}.pdf`,
+          bytesPdf,
+        );
+
+        await tx.insert(documentos).values({
+          expedienteId,
+          tipo: plantilla.tipo,
+          etapa: plantilla.etapa,
+          ruta: pdfGuardado.ruta,
+          version,
+          sha256: pdfGuardado.sha256,
+          estado: "CARGADO",
+          origen: "SISTEMA",
+          driveSyncEstado: process.env.GOOGLE_DRIVE_ENABLED === "true" ? "PENDIENTE" : "NO_APLICA",
+          archivoContenido: bytesPdf,
+          tamanoBytes: bytesPdf.length,
+          createdAt: ahora,
+        });
+
         generados.push({
           id,
           tipo: plantilla.tipo,
@@ -311,6 +367,11 @@ export class GenerarDocumentosUseCase {
           pendientes,
         });
       }
+      await tx
+        .update(expedientes)
+        .set({ updatedAt: ahora })
+        .where(eq(expedientes.id, expedienteId));
+
       const conPendientes = generados.filter((g) => g.pendientes.length > 0).length;
       await appendAuditoria(tx, {
         expedienteId,

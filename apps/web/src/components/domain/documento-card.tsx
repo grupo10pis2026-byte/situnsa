@@ -9,7 +9,6 @@ import {
   AlertTriangle,
   Edit3,
   Eye,
-  FileDown,
   FileText,
   Stamp,
   UploadCloud,
@@ -17,8 +16,6 @@ import {
 } from "lucide-react";
 import { useRef, useState } from "react";
 import {
-  abrirArchivoProtegido,
-  descargarArchivoProtegido,
   documentoDescargaUrl,
   formatoDescargaUrl,
   useGenerarDocumentos,
@@ -35,6 +32,7 @@ import { Dialogo } from "../ui/dialog.js";
 import { StatusBadge } from "../ui/status-badge.js";
 import { useToast } from "../ui/toast.js";
 import { AnalisisDocumentalPanel } from "./analisis-documental-panel.js";
+import { ModalVisorDocumento } from "./modal-visor-documento.js";
 
 interface Props {
   expedienteId: string;
@@ -166,6 +164,7 @@ export function DocumentoCard(p: Props) {
   const [arrastrando, setArrastrando] = useState(false);
   const [pendiente, setPendiente] = useState<File | null>(null);
   const [revisionAbierta, setRevisionAbierta] = useState(false);
+  const [visorAbierto, setVisorAbierto] = useState(false);
   const esPersonal = !!sesion && PERSONAL.includes(sesion.rol);
   const esTesista = sesion?.rol === "TESISTA";
   // RN-06: el tesista solo carga lo de su subetapa activa (o lo observado) y
@@ -219,14 +218,6 @@ export function DocumentoCard(p: Props) {
     }
   }
 
-  async function abrir(url: string): Promise<void> {
-    try {
-      await abrirArchivoProtegido(url);
-    } catch (e) {
-      avisar(e instanceof Error ? e.message : "No se pudo abrir el documento", "error");
-    }
-  }
-
   /** Envía aprobación u observación a POST /api/documentos/:id/visto-bueno. */
   async function visar(aprobado: boolean): Promise<void> {
     if (!p.documentoId) return;
@@ -265,14 +256,6 @@ export function DocumentoCard(p: Props) {
       return;
     }
     void ejecutar(file);
-  }
-
-  async function descargarFormato(url: string, nombreSugerido: string): Promise<void> {
-    try {
-      await descargarArchivoProtegido(url, nombreSugerido);
-    } catch (e) {
-      avisar(e instanceof Error ? e.message : "No se pudo descargar el documento", "error");
-    }
   }
 
   return (
@@ -348,12 +331,7 @@ export function DocumentoCard(p: Props) {
       )}
       <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-200/70 pt-3">
         {p.documentoId ? (
-          <Button
-            tamano="sm"
-            variante="oscuro"
-            onClick={() => void abrir(documentoDescargaUrl(p.documentoId ?? ""))}
-            type="button"
-          >
+          <Button tamano="sm" variante="oscuro" onClick={() => setVisorAbierto(true)} type="button">
             <Eye size={14} />
             VER
           </Button>
@@ -369,61 +347,38 @@ export function DocumentoCard(p: Props) {
             VER
           </span>
         )}
-        {p.formato && tieneFormatoGenerable ? (
-          <>
-            <Button
-              tamano="sm"
-              variante="contorno"
-              onClick={() =>
-                void descargarFormato(formatoDescargaUrl(p.formato?.id ?? ""), `${p.nombre}.docx`)
-              }
-              title={
-                p.formato.pendientes.length > 0
-                  ? `Descargar Word editable (.docx) — Faltan: ${p.formato.pendientes.join(", ")}`
-                  : "Descargar documento Word (.docx) con todos los datos"
-              }
-              type="button"
-            >
-              <FileDown size={14} />
-              Descargar
-            </Button>
-            {esPersonal && p.onModificar && (
-              <Button
-                tamano="sm"
-                variante="contorno"
-                onClick={() => {
-                  if (!p.formato) return;
-                  p.onModificar?.({
-                    tipo: p.tipo,
-                    nombre: p.nombre,
-                    version: p.formato.version,
-                    pendientes: p.formato.pendientes,
-                  });
-                }}
-                title="Corregir datos de este formato y regenerar en Word/Google Drive"
-                type="button"
-              >
-                <Edit3 size={14} />
-                CORREGIR
-              </Button>
-            )}
-          </>
-        ) : (
-          !p.formato &&
-          tieneFormatoGenerable &&
-          esPersonal && (
-            <Button
-              tamano="sm"
-              variante="contorno"
-              disabled={generando || generar.isPending}
-              onClick={() => void onGenerarIndividual()}
-              title="Autorrellenar esta plantilla con los datos del expediente"
-              type="button"
-            >
-              <WandSparkles size={14} />
-              {generando || generar.isPending ? "RELLENANDO…" : "RELLENAR"}
-            </Button>
-          )
+        {tieneFormatoGenerable && esPersonal && (
+          <Button
+            tamano="sm"
+            variante="contorno"
+            disabled={generando || generar.isPending}
+            onClick={() => void onGenerarIndividual()}
+            title="Autorrellenar esta plantilla con los datos del expediente"
+            type="button"
+          >
+            <WandSparkles size={14} />
+            {generando || generar.isPending ? "RELLENANDO…" : "RELLENAR"}
+          </Button>
+        )}
+        {p.formato && tieneFormatoGenerable && esPersonal && p.onModificar && (
+          <Button
+            tamano="sm"
+            variante="contorno"
+            onClick={() => {
+              if (!p.formato) return;
+              p.onModificar?.({
+                tipo: p.tipo,
+                nombre: p.nombre,
+                version: p.formato.version,
+                pendientes: p.formato.pendientes,
+              });
+            }}
+            title="Corregir datos de este formato y regenerar en Word/Google Drive"
+            type="button"
+          >
+            <Edit3 size={14} />
+            CORREGIR
+          </Button>
         )}
         {puedeCargar ? (
           <button
@@ -565,6 +520,20 @@ export function DocumentoCard(p: Props) {
             void ejecutar(f);
           }}
           onCancelar={() => setPendiente(null)}
+        />
+      )}
+      {p.documentoId && (
+        <ModalVisorDocumento
+          abierto={visorAbierto}
+          onCerrar={() => setVisorAbierto(false)}
+          titulo={p.nombre}
+          subtitulo={NOMBRES_LISTADO_OFICIAL[p.tipo]}
+          documentoUrl={documentoDescargaUrl(p.documentoId)}
+          nombrePdf={`${p.tipo}_v${p.version ?? 1}.pdf`}
+          formatoUrl={p.formato && tieneFormatoGenerable ? formatoDescargaUrl(p.formato.id) : null}
+          nombreDocx={`${p.tipo}_v${p.formato?.version ?? 1}.docx`}
+          version={p.version}
+          estado={p.estado}
         />
       )}
     </Card>

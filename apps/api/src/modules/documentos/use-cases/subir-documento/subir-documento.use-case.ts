@@ -118,13 +118,17 @@ export class SubirDocumentoUseCase {
         return fail(new DomainError("TRANSICION_INVALIDA", "El expediente está anulado"));
       }
       const previos = await tx
-        .select({ version: documentos.version, estado: documentos.estado })
+        .select({
+          id: documentos.id,
+          version: documentos.version,
+          estado: documentos.estado,
+          ruta: documentos.ruta,
+        })
         .from(documentos)
         .where(
           and(eq(documentos.expedienteId, input.expedienteId), eq(documentos.tipo, input.tipo)),
         )
-        .orderBy(desc(documentos.version))
-        .limit(1);
+        .orderBy(desc(documentos.version));
       const ultimo = previos[0] ?? null;
       if (input.comoTesista) {
         const activa = await subetapaActivaDe(tx, input.expedienteId);
@@ -148,6 +152,19 @@ export class SubirDocumentoUseCase {
             ),
           );
         }
+      }
+      // Limpiar archivo(s) anterior(es) en disco para no acumular basura
+      if (previos.length > 0) {
+        for (const p of previos) {
+          if (p.ruta) {
+            await this.storage.delete?.(p.ruta);
+          }
+        }
+        await tx
+          .delete(documentos)
+          .where(
+            and(eq(documentos.expedienteId, input.expedienteId), eq(documentos.tipo, input.tipo)),
+          );
       }
       const version = (ultimo?.version ?? 0) + 1;
       const nombre = `${input.tipo}_v${version}.pdf`;

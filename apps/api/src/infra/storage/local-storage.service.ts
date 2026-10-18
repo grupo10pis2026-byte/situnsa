@@ -131,6 +131,18 @@ export class LocalStorageService implements AlmacenamientoPort {
     }
   }
 
+  /**
+   * Elimina un archivo físico del almacenamiento si existe.
+   */
+  async delete(ruta: string): Promise<void> {
+    if (!this.relativa(ruta)) return;
+    try {
+      await rm(ruta, { force: true });
+    } catch {
+      // Ignorar si el archivo ya no existe
+    }
+  }
+
   /** Ruta relativa al volumen, o null si apunta fuera de él. */
   private relativa(ruta: string): string | null {
     const rel = relative(resolve(this.baseDir), resolve(ruta));
