@@ -10,7 +10,7 @@ import {
   modalidadAEtiqueta,
   normalizarAdministrativo,
 } from "../expediente/modalidades.js";
-import { fechaLarga } from "./etiquetas.js";
+import { fechaLarga, formatoAutoridad } from "./etiquetas.js";
 
 export interface PersonaDocumento {
   readonly nombres: string;
@@ -292,7 +292,7 @@ export function formatoTituloFormal(tituloEntrada: string | null | undefined): s
   return formateadas.join(" ");
 }
 
-/** "Dr. Nombres Apellidos" usando el grado registrado del asesor con mayúsculas iniciales. */
+/** RN-L08: Formato profesional con grado académico y Title Case ("Dr. Nombres Apellidos"). */
 export function formatoAsesor(p: PersonaDocumento | null): string {
   if (!p) return "";
   const grado = (p.grado ?? "").trim();
@@ -345,12 +345,17 @@ export function construirDatosDocumento(
   const nombresConjuntos = [p1Nombre, p2Nombre].filter(Boolean).join(" y ");
   const dnisConjuntos = [p1?.dni, p2?.dni].filter((d): d is string => !!d).join(" / ");
   const asesor = formatoNombrePersona(texto(a.asesorNombre)) || formatoAsesor(exp.asesor);
+  const coasesor = formatoNombrePersona(texto(a.coAsesor));
   const modFinal =
     texto(a.modalidadVirtual) || texto(a.modalidadFinal) || MODALIDAD_FINAL[exp.modalidad];
   // Fecha civil de Arequipa (UTC-5), no la del servidor.
   const fechaIso = hoy.toLocaleDateString("en-CA", { timeZone: "America/Lima" });
   const sust = exp.sustentacion ?? null;
   const tituloFormal = formatoTituloFormal(exp.titulo);
+  const veredictoVal =
+    (sust?.actaVeredicto ? (VEREDICTO[sust.actaVeredicto] ?? sust.actaVeredicto) : null) ||
+    (texto(a.veredicto) ? (VEREDICTO[texto(a.veredicto)] ?? texto(a.veredicto)) : "");
+  const numeroActa = texto(a.numeroActa) || texto(a.actaNumero) || "001";
   const datos: Record<string, string> = {
     CODIGO: exp.codigo,
     TESIS: tituloFormal,
@@ -385,8 +390,8 @@ export function construirDatosDocumento(
     MOD_F: modFinal,
     "MODALIDAD FINAL": modFinal,
     ASESOR: asesor,
-    COASESOR: formatoNombrePersona(texto(a.coAsesor)),
-    "CO ASESOR": formatoNombrePersona(texto(a.coAsesor)),
+    COASESOR: coasesor,
+    "CO ASESOR": coasesor,
     DECRETO: texto(a.nroDecreto),
     "N° DECRETO": texto(a.nroDecreto),
     OFICIO: texto(a.nroOficio),
@@ -404,7 +409,7 @@ export function construirDatosDocumento(
       texto(a.suplenteE2) || "Mg. Hugo Rufino Llamosas Barriga",
     ),
     SUPLENTE: formatoNombrePersona(texto(a.suplenteE2) || "Mg. Hugo Rufino Llamosas Barriga"),
-    DECANAL: formatoNombrePersona(texto(a.decanal)),
+    DECANAL: normalizarAdministrativo("decanal", texto(a.decanal)),
     "FECHA APERTURA": fechaLarga(a.fechaApertura),
     "FECHA PRESENTACION": fechaLarga(a.fechaPresentacion),
     FECHA: fechaLarga(sust?.fecha ?? a.fechaSustentacion),
@@ -418,11 +423,27 @@ export function construirDatosDocumento(
       "lugarSustentacion",
       texto(sust?.lugar ?? a.lugarSustentacion),
     ),
-    VEREDICTO: sust?.actaVeredicto ? (VEREDICTO[sust.actaVeredicto] ?? sust.actaVeredicto) : "",
-    VERREDICTO:
-      (sust?.actaVeredicto ? (VEREDICTO[sust.actaVeredicto] ?? sust.actaVeredicto) : null) ||
-      texto(a.veredicto) ||
-      "UNANIMIDAD",
+    "LUGAR DE SUSTENTACION": normalizarAdministrativo(
+      "lugarSustentacion",
+      texto(sust?.lugar ?? a.lugarSustentacion),
+    ),
+    "LUGAR DE SUSTENTACIÓN": normalizarAdministrativo(
+      "lugarSustentacion",
+      texto(sust?.lugar ?? a.lugarSustentacion),
+    ),
+    VEREDICTO: veredictoVal,
+    VERREDICTO: veredictoVal,
+    NUMERO_ACTA: numeroActa,
+    "NUMERO DE ACTA": numeroActa,
+    "N° DE ACTA": numeroActa,
+    ACTA_NUMERO: numeroActa,
+    "N° DE TRÁMITE": exp.codigo,
+    "N° DE TRAMITE": exp.codigo,
+    "NRO DE TRAMITE": exp.codigo,
+    EXPEDIENTE: exp.codigo,
+    GRUPO: texto(a.grupo) || "GRUPO 01",
+    REPOSITORIO: texto(exp.validaciones?.urlRepositorio) || "http://repositorio.unsa.edu.pe",
+    ASE_MINU: toTitleCase(asesor),
     JURADO: textoJurado(exp),
     SIMILITUD:
       exp.validaciones?.similitud !== null && exp.validaciones?.similitud !== undefined
@@ -432,7 +453,9 @@ export function construirDatosDocumento(
     FECHA_EMISION: fechaLarga(fechaIso),
     ANIO: fechaIso.slice(0, 4),
     // Etiquetas de formato y compatibilidad con ETIQUETAS.docx
-    NOM_MIN: toTitleCase(nombresConjuntos),
+    NOM_MIN: p2
+      ? `${toTitleCase(p1Nombre)}\n${toTitleCase(p2Nombre)}`
+      : toTitleCase(nombresConjuntos),
     NOM_MIN02: toTitleCase(p2Nombre),
     NOM_MIN_1: toTitleCase(p1Nombre),
     NOM_MIN_2: toTitleCase(p2Nombre),
@@ -497,13 +520,14 @@ export function construirDatosDocumento(
         ? `${exp.validaciones.similitud} %`
         : texto(a.porcentajeTurnitin) || "0 %",
     FECHA_INVITACION: fechaLarga(a.fechaInvitacion) || fechaLarga(fechaIso),
+    "FECHA DE INVITACIÓN PÚBLICA": fechaLarga(a.fechaInvitacion) || fechaLarga(fechaIso),
+    "FECHA DE INVITACION PUBLICA": fechaLarga(a.fechaInvitacion) || fechaLarga(fechaIso),
     FECHA_OFICIO_OTI: fechaLarga(a.fechaOficioOti) || fechaLarga(fechaIso),
     FECHA_OFICIO_UGI: fechaLarga(a.fechaOficioUgi) || fechaLarga(fechaIso),
     "FECHA JURADOS":
       fechaLarga(a.fechaJurados ?? a.fechaNombramientoJurados) || fechaLarga(fechaIso),
     "FECHA DE NOMBRAMIENTO DE JURADOS":
       fechaLarga(a.fechaJurados ?? a.fechaNombramientoJurados) || fechaLarga(fechaIso),
-    ACTA_NUMERO: texto(a.actaNumero) || "001",
     OFICIO_OTI: texto(a.oficioOti) || "322-2026",
     OFICIO_UGI: texto(a.oficioUgi) || "XXX-2026",
     INFORME_SIMILITUD_NUM: texto(a.informeSimilitudNum) || "001",

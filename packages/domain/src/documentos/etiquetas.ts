@@ -187,3 +187,63 @@ export function esEtiquetaHora(clave: string): boolean {
   const k = clave.trim().toUpperCase();
   return k.startsWith("HORA") || k.includes("HORA");
 }
+
+const PREFIJOS_GRADO: Record<string, string> = {
+  dr: "Dr.",
+  "dr.": "Dr.",
+  dra: "Dra.",
+  "dra.": "Dra.",
+  mg: "Mg.",
+  "mg.": "Mg.",
+  mgtr: "Mgtr.",
+  "mgtr.": "Mgtr.",
+  msc: "MSc.",
+  "msc.": "MSc.",
+  "m.sc.": "MSc.",
+  ing: "Ing.",
+  "ing.": "Ing.",
+  lic: "Lic.",
+  "lic.": "Lic.",
+  abg: "Abg.",
+  "abg.": "Abg.",
+  bach: "Bach.",
+  "bach.": "Bach.",
+};
+
+const CONECTORES_NOMBRE = new Set(["de", "del", "la", "las", "los", "y", "e"]);
+
+/**
+ * Normaliza nombres de autoridades y personas a Title Case formal,
+ * preservando los prefijos de grado académico estándar ("Dr.", "Mg.", "Ing.", etc.).
+ * Evita mayúsculas sostenidas en los documentos institucionales.
+ */
+export function formatoAutoridad(texto: string | null | undefined): string {
+  if (!texto) return "";
+  const partes = texto.trim().replace(/\s+/g, " ").split(" ");
+  const primeraRaw = partes[0];
+  if (!primeraRaw) return "";
+
+  const resultado: string[] = [];
+  let inicio = 0;
+
+  const primera = primeraRaw.toLowerCase();
+  const prefijo = PREFIJOS_GRADO[primera];
+  if (prefijo) {
+    resultado.push(prefijo);
+    inicio = 1;
+  }
+
+  for (let i = inicio; i < partes.length; i++) {
+    const p = partes[i];
+    if (!p) continue;
+    const pLower = p.toLowerCase();
+    if (i > inicio && CONECTORES_NOMBRE.has(pLower)) {
+      resultado.push(pLower);
+    } else {
+      resultado.push(p.charAt(0).toUpperCase() + p.slice(1).toLowerCase());
+    }
+  }
+
+  return resultado.join(" ");
+}
+

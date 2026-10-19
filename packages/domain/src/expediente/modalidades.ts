@@ -48,6 +48,7 @@ const CAMPOS_MAYUSCULAS = new Set([
   "nroDecreto",
   "recomendacion",
   "nroOficio",
+  "decanal",
   "lugarSustentacion",
 ]);
 

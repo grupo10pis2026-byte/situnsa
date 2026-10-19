@@ -37,11 +37,42 @@ export function procesarDocxBuffer(
     "word/footer2.xml",
   ];
 
+  const tieneCoasesor = Boolean(
+    (datos["COASESOR"] ?? datos["CO ASESOR"] ?? "").trim(),
+  );
+
   for (const rutaXml of archivosXml) {
     const file = zip.file(rutaXml);
     if (!file) continue;
 
     let xml = file.asText();
+
+    // Si no hay coasesor registrado, omitir el bloque de Coasesor en carátulas
+    if (!tieneCoasesor) {
+      // 1. Elimina la dupla de párrafos "Coasesor:" seguido de "<<COASESOR>>" en líneas separadas (misma estructura que Asesor)
+      xml = xml.replace(
+        /<w:p\b[^>]*>(?:(?!<w:p\b).)*?Coasesor:(?:(?!<w:p\b).)*?<\/w:p>\s*<w:p\b[^>]*>(?:(?!<w:p\b).)*?(?:COASESOR|CO ASESOR).*?<\/w:p>/gs,
+        "",
+      );
+      // 2. Elimina si viniera en un solo párrafo "Coasesor: <<COASESOR>>"
+      xml = xml.replace(
+        /<w:p\b[^>]*>(?:(?!<w:p\b).)*?Coasesor:(?:(?!<w:p\b).)*?(?:COASESOR|CO ASESOR).*?<\/w:p>/gs,
+        "",
+      );
+      // 3. Fallback defensivo: párrafo suelto de "Coasesor:"
+      xml = xml.replace(
+        /<w:p\b[^>]*>(?:(?!<w:p\b).)*?Coasesor:\s*<\/w:t>.*?<\/w:p>/gs,
+        "",
+      );
+    } else {
+      // Si tiene coasesor y alguna plantilla viniera con "Coasesor: <<COASESOR>>" en un solo párrafo,
+      // asegurar que el nombre quede en la siguiente línea, de la misma forma que Asesor.
+      xml = xml.replace(
+        /<w:p\b([^>]*)>((?:(?!<w:p\b).)*?Coasesor:\s*<\/w:t><\/w:r>)\s*(<w:r\b[^>]*>(?:(?!<w:r\b).)*?(?:<<|&lt;&lt;)\s*(?:COASESOR|CO ASESOR)\s*(?:>>|&gt;&gt;).*?<\/w:p>)/gs,
+        `<w:p$1>$2</w:p><w:p w:rsidR="00000000" w:rsidRDefault="00000000"><w:pPr><w:ind w:left="3686" w:firstLine="0"/><w:jc w:val="both"/><w:rPr><w:rFonts w:ascii="Calibri" w:cs="Calibri" w:eastAsia="Calibri" w:hAnsi="Calibri"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr></w:pPr>$3`,
+      );
+    }
+
     xml = xml.replace(PATRON_TAG, (_match, tag) => {
       const clave = tag.trim().replace(/\s+/g, " ").toUpperCase();
       const valor = (datos[clave] ?? "").trim();
@@ -91,6 +122,10 @@ const MAPA_ARCHIVOS: Record<string, { 1: string; 2: string }> = {
   OBSERVACIONES_PLAN_TESIS: {
     1: "OBSERVACIONES DE PLAN DE TESIS - 01 TESISTA.docx",
     2: "OBSERVACIONES DE PLAN DE TESIS - 02 TESISTA.docx",
+  },
+  ETIQUETAS: {
+    1: "ETIQUETAS.docx",
+    2: "ETIQUETAS.docx",
   },
 
   // Etapa 02
@@ -198,6 +233,7 @@ const ETAPAS_E1 = new Set([
   "OFICIO_CIRCULAR",
   "OBSERVACIONES_PLAN",
   "OBSERVACIONES_PLAN_TESIS",
+  "ETIQUETAS",
 ]);
 
 /**

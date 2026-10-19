@@ -12,6 +12,7 @@ import {
   extraerEtiquetas,
   fechaIso,
   fechaLarga,
+  formatoAutoridad,
   horaLimpia,
   insertarEtiquetas,
 } from "../src/documentos/etiquetas.js";
@@ -91,21 +92,27 @@ describe("inserción de etiquetas (legacy insertarDatosEnDocumento)", () => {
 describe("datos del expediente (formato formal de nombres y títulos)", () => {
   const datos = construirDatosDocumento(EXP, new Date("2026-10-05T15:00:00Z"));
 
-  it("asesor en formato profesional con mayúsculas iniciales", () => {
+  it("asesor y autoridades en formato profesional Title Case (iniciales mayúsculas y prefijo)", () => {
     expect(formatoAsesor(EXP.asesor)).toBe("Dr. Juan Torres");
     expect(datos.ASESOR).toBe("Dr. Juan Torres");
+    expect(datos.PRESIDENTE).toBe("Dr. Ana Ruiz");
+    expect(formatoAutoridad("DR. CECILIO MAURO VILLAVICENCIO MELGAREJO")).toBe(
+      "Dr. Cecilio Mauro Villavicencio Melgarejo",
+    );
+    expect(formatoAutoridad("mg. hugo rufino llamosas barriga")).toBe(
+      "Mg. Hugo Rufino Llamosas Barriga",
+    );
   });
 
-  it("la tesis se formatea como título formal y los nombres llevan mayúsculas iniciales", () => {
+  it("la tesis se formatea como título formal y los administrativos van en mayúsculas", () => {
     expect(datos.TESIS).toBe("Sistema de Gestión de Expedientes para la FIPS");
-    expect(datos.PRESIDENTE).toBe("Dr. Ana Ruiz");
     expect(datos.MODALIDAD).toBe("Plan de Tesis");
     expect(datos.MOD_F).toBe("La Tesis");
     expect(datos["FECHA APERTURA"]).toBe("1 de septiembre de 2026");
     expect(datos.FECHA_EMISION).toBe("5 de octubre de 2026");
   });
 
-  it("en expediente de 2 tesistas ambos comparten el título de tesis formal (TESIS y TESIS 02)", () => {
+  it("en expediente de 2 tesistas ambos comparten el título de tesis formal y NOM_MIN tiene saltos de línea", () => {
     const exp2: ExpedienteDocumento = {
       ...EXP,
       participante2: { nombres: "Carlos", apellidos: "Gómez López", dni: "70223344" },
@@ -115,6 +122,7 @@ describe("datos del expediente (formato formal de nombres y títulos)", () => {
     expect(d2.TESIS).toBe("Sistema de Gestión de Expedientes para la FIPS");
     expect(d2["TESIS 02"]).toBe("Sistema de Gestión de Expedientes para la FIPS");
     expect(d2.TESIS02).toBe("Sistema de Gestión de Expedientes para la FIPS");
+    expect(d2.NOM_MIN).toBe("María Pérez Quispe\nCarlos Gómez López");
   });
 
   it("formatoNombrePersona respeta grados, preposiciones y partículas", () => {
@@ -142,6 +150,12 @@ describe("datos del expediente (formato formal de nombres y títulos)", () => {
     expect(
       formatoTituloFormal("Diseño e Implementación de un Sistema de Monitoreo para la FIPS"),
     ).toBe("Diseño e Implementación de un Sistema de Monitoreo para la FIPS");
+=======
+    expect(d2.TESIS).toBe("sistema de gestión de expedientes para la fips");
+    expect(d2["TESIS 02"]).toBe("sistema de gestión de expedientes para la fips");
+    expect(d2.TESIS02).toBe("sistema de gestión de expedientes para la fips");
+    expect(d2.NOM_MIN).toBe("María Pérez Quispe\nCarlos Gómez López");
+>>>>>>> feat/modulo-almacenamiento-y-gestion-documental
   });
 });
 
@@ -166,6 +180,7 @@ describe("plantillas", () => {
       "OFICIO_UGI_REPOSITORIO",
       "RESOLUCION_DECANAL",
       "INFORME_SECRETARIA",
+      "ETIQUETAS",
     ]);
     for (const p of PLANTILLAS) expect(tipos.has(p.tipo) || extras.has(p.tipo)).toBe(true);
   });

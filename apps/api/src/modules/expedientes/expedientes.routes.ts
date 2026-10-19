@@ -1,8 +1,10 @@
 import { ExpedienteDetalleDTOSchema, expedientesContract } from "@pis/contracts";
-import { db } from "@pis/db";
+import { db, usuarios } from "@pis/db";
 import { initServer } from "@ts-rest/fastify";
+import { eq } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { autorizar, denegado, esPersonal, type Perfil } from "../../infra/auth/autorizacion.js";
+import { presenciaExpedienteManager } from "./servicios/presencia-expediente.service.js";
 import {
   errorEnvelope,
   respuestaError,
@@ -191,4 +193,36 @@ export function registerExpedientesRoutes(app: FastifyInstance): void {
     scoped.addHook("preHandler", requireAuth);
     await scoped.register(s.plugin(router), OPCIONES_TS_REST);
   });
+
+  /** Detección de concurrencia: aviso de usuarios simultáneos en el expediente. */
+  app.post<{ Params: { id: string }; Body?: { nombre?: string } }>(
+    "/api/expedientes/:id/presencia",
+    { preHandler: async (req, reply) => requireAuth(req, reply) },
+    async (req, reply) => {
+      const a = await autorizar(req.actor, {
+        permiso: ["expedientes", "ver"],
+        expedienteId: req.params.id,
+      });
+      if (!a.ok) {
+        await reply.status(a.status).send(a.body);
+        return;
+      }
+      const actor = req.actor ?? { id: "", dni: "desconocido", rol: "PERSONAL" };
+      let nombre = req.body?.nombre;
+      if (!nombre && actor.id) {
+        const u = await db
+          .select({ nombres: usuarios.nombres, apellidos: usuarios.apellidos })
+          .from(usuarios)
+          .where(eq(usuarios.id, actor.id))
+          .limit(1);
+        if (u[0]) nombre = `${u[0].nombres} ${u[0].apellidos}`.trim();
+      }
+      const concurrentes = presenciaExpedienteManager.registrarPresencia(req.params.id, {
+        id: actor.id,
+        nombre: nombre || actor.dni,
+        rol: actor.rol,
+      });
+      await reply.status(200).send({ concurrentes });
+    },
+  );
 }
