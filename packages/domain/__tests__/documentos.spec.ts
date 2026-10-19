@@ -3,6 +3,8 @@ import {
   construirDatosDocumento,
   type ExpedienteDocumento,
   formatoAsesor,
+  formatoNombrePersona,
+  formatoTituloFormal,
 } from "../src/documentos/datos-documento.js";
 import {
   esEtiquetaFecha,
@@ -86,33 +88,60 @@ describe("inserción de etiquetas (legacy insertarDatosEnDocumento)", () => {
   });
 });
 
-describe("datos del expediente (RN-L07/L08)", () => {
+describe("datos del expediente (formato formal de nombres y títulos)", () => {
   const datos = construirDatosDocumento(EXP, new Date("2026-10-05T15:00:00Z"));
 
-  it("asesor en formato profesional y mayúsculas", () => {
-    expect(formatoAsesor(EXP.asesor)).toBe("DR. JUAN TORRES");
-    expect(datos.ASESOR).toBe("DR. JUAN TORRES");
+  it("asesor en formato profesional con mayúsculas iniciales", () => {
+    expect(formatoAsesor(EXP.asesor)).toBe("Dr. Juan Torres");
+    expect(datos.ASESOR).toBe("Dr. Juan Torres");
   });
 
-  it("la tesis conserva la escritura del autor; los administrativos van en mayúsculas", () => {
-    expect(datos.TESIS).toBe("sistema de gestión de expedientes para la fips");
-    expect(datos.PRESIDENTE).toBe("dr. ana ruiz");
+  it("la tesis se formatea como título formal y los nombres llevan mayúsculas iniciales", () => {
+    expect(datos.TESIS).toBe("Sistema de Gestión de Expedientes para la FIPS");
+    expect(datos.PRESIDENTE).toBe("Dr. Ana Ruiz");
     expect(datos.MODALIDAD).toBe("Plan de Tesis");
     expect(datos.MOD_F).toBe("La Tesis");
     expect(datos["FECHA APERTURA"]).toBe("1 de septiembre de 2026");
     expect(datos.FECHA_EMISION).toBe("5 de octubre de 2026");
   });
 
-  it("en expediente de 2 tesistas ambos comparten el título de tesis (TESIS y TESIS 02)", () => {
+  it("en expediente de 2 tesistas ambos comparten el título de tesis formal (TESIS y TESIS 02)", () => {
     const exp2: ExpedienteDocumento = {
       ...EXP,
       participante2: { nombres: "Carlos", apellidos: "Gómez López", dni: "70223344" },
       datosAdmin: { ...EXP.datosAdmin, titulo02: "otro titulo desfasado" },
     };
     const d2 = construirDatosDocumento(exp2, new Date("2026-10-05T15:00:00Z"));
-    expect(d2.TESIS).toBe("sistema de gestión de expedientes para la fips");
-    expect(d2["TESIS 02"]).toBe("sistema de gestión de expedientes para la fips");
-    expect(d2.TESIS02).toBe("sistema de gestión de expedientes para la fips");
+    expect(d2.TESIS).toBe("Sistema de Gestión de Expedientes para la FIPS");
+    expect(d2["TESIS 02"]).toBe("Sistema de Gestión de Expedientes para la FIPS");
+    expect(d2.TESIS02).toBe("Sistema de Gestión de Expedientes para la FIPS");
+  });
+
+  it("formatoNombrePersona respeta grados, preposiciones y partículas", () => {
+    expect(formatoNombrePersona("MARÍA DEL PILAR NÚÑEZ DE LA TORRE")).toBe(
+      "María del Pilar Núñez de la Torre",
+    );
+    expect(formatoNombrePersona("MARIA DEL PILAR NUÑEZ DE LA TORRE")).toBe(
+      "Maria del Pilar Nuñez de la Torre",
+    );
+    expect(formatoNombrePersona("DR. JUAN CARLOS PEREZ")).toBe("Dr. Juan Carlos Perez");
+    expect(formatoNombrePersona("DRA. ANA RUIZ")).toBe("Dra. Ana Ruiz");
+    expect(formatoNombrePersona("MG. HUGO RUFINO LLAMOSAS BARRIGA")).toBe(
+      "Mg. Hugo Rufino Llamosas Barriga",
+    );
+    expect(formatoNombrePersona("DE LA CRUZ, JUAN")).toBe("De la Cruz, Juan");
+  });
+
+  it("formatoTituloFormal retira comillas, puntos finales y aplica mayúsculas formales conservando acrónimos", () => {
+    expect(formatoTituloFormal("«SISTEMA WEB DE GESTIÓN DE EXPEDIENTES PARA LA FIPS.»")).toBe(
+      "Sistema Web de Gestión de Expedientes para la FIPS",
+    );
+    expect(formatoTituloFormal("SISTEMA BASADO EN IA Y TIC PARA LA UNSA.")).toBe(
+      "Sistema Basado en IA y TIC para la UNSA",
+    );
+    expect(
+      formatoTituloFormal("Diseño e Implementación de un Sistema de Monitoreo para la FIPS"),
+    ).toBe("Diseño e Implementación de un Sistema de Monitoreo para la FIPS");
   });
 });
 
@@ -179,7 +208,7 @@ describe("plantillas", () => {
     expect(completo.pendientes).toEqual([]);
     const texto = completo.parrafos.map((p) => p.map((x) => x.texto).join("")).join("\n");
     expect(texto).toContain(
-      "DR. ANA RUIZ (presidente), MG. ROSA DÍAZ (secretario) y ING. LUIS SOTO (vocal)",
+      "Dr. Ana Ruiz (presidente), Mg. Rosa Díaz (secretario) y Ing. Luis Soto (vocal)",
     );
     expect(texto).toContain("similitud del reporte Turnitin es de 12 %");
     expect(texto).toContain("APROBADO POR UNANIMIDAD");

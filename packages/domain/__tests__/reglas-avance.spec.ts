@@ -63,7 +63,7 @@ describe("E1 · verificación inicial", () => {
     }
   });
 
-  it("cierra la presentación con los 7 documentos cargados, sin mover el estado", () => {
+  it("cierra la presentación con los documentos requeridos cargados, sin mover el estado", () => {
     const r = evaluarCierreSubetapa(
       ctx({ claveSubetapa: "E1_PRESENTACION_PLAN", documentos: docsE1("CARGADO") }),
     );
@@ -72,7 +72,7 @@ describe("E1 · verificación inicial", () => {
 
   it("un documento observado bloquea la validación administrativa", () => {
     const docs = docsE1("APROBADO");
-    docs.set("ANEXO_17", "OBSERVADO");
+    docs.set("SOLICITUD_INSCRIPCION", "OBSERVADO");
     const r = evaluarCierreSubetapa(
       ctx({ claveSubetapa: "E1_VALIDACION_DOCUMENTOS", documentos: docs }),
     );

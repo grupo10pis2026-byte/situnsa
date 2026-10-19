@@ -247,7 +247,6 @@ test("portal del tesista: activación, alcance y RN-06", async () => {
     "ACEPTACION_ASESORIA",
     "PLAN_ESTRUCTURADO",
     "DJ_CONFIDENCIALIDAD",
-    "ANEXO_17",
     "ANEXO_18",
     "ANEXO_33",
   ]) {
@@ -269,7 +268,6 @@ test("E1: guardas de terna, observación y decreto → PLAN_APROBADO", async () 
       "ACEPTACION_ASESORIA",
       "PLAN_ESTRUCTURADO",
       "DJ_CONFIDENCIALIDAD",
-      "ANEXO_17",
       "ANEXO_18",
       "ANEXO_33",
     ]) {

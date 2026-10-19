@@ -21,7 +21,7 @@ import {
   type Semaforo,
   TOTAL_SUBETAPAS,
 } from "@pis/domain";
-import { and, asc, eq, inArray, or, type SQL } from "drizzle-orm";
+import { and, asc, eq, inArray, ne, or, type SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
 export type EstadoLiteral =
@@ -211,10 +211,12 @@ export async function leerChecklist(db: DbExecutor): Promise<readonly ChecklistD
   const rows = await db
     .select()
     .from(catalogoDocsRequeridos)
+    .where(ne(catalogoDocsRequeridos.tipo, "ANEXO_17"))
     .orderBy(asc(catalogoDocsRequeridos.etapa));
   if (rows.length === 0) return CHECKLIST_COMPLETO;
   const orden = new Map(CHECKLIST_COMPLETO.map((d, i) => [d.tipo, i]));
   return rows
+    .filter((r) => r.tipo !== "ANEXO_17")
     .map(
       (r): ChecklistDef => ({
         tipo: r.tipo,

@@ -71,12 +71,234 @@ export function toTitleCase(s: string): string {
   return s.toLowerCase().replace(/(?:^|\s|\/)\S/g, (char) => char.toUpperCase());
 }
 
-/** RN-L08: "DR. NOMBRES APELLIDOS" usando el grado registrado del asesor. */
+/** Preposiciones y artículos que van en minúscula intermedia en nombres en español. */
+const PREPOSICIONES_NOMBRES = new Set(["de", "del", "la", "las", "los", "y", "e"]);
+
+/** Grados y títulos académicos con su capitalización formal canónica. */
+const ABREVIATURAS_GRADO: Record<string, string> = {
+  dr: "Dr.",
+  "dr.": "Dr.",
+  dra: "Dra.",
+  "dra.": "Dra.",
+  mg: "Mg.",
+  "mg.": "Mg.",
+  msc: "MSc.",
+  "msc.": "MSc.",
+  ing: "Ing.",
+  "ing.": "Ing.",
+  lic: "Lic.",
+  "lic.": "Lic.",
+  "ph.d": "Ph.D.",
+  "ph.d.": "Ph.D.",
+  phd: "Ph.D.",
+  abg: "Abg.",
+  "abg.": "Abg.",
+  prof: "Prof.",
+  "prof.": "Prof.",
+  bach: "Bach.",
+  "bach.": "Bach.",
+};
+
+/**
+ * Formatea nombres de personas con mayúsculas iniciales (Title Case formal),
+ * conservando preposiciones intermedias en minúscula ("del", "de la") y
+ * abreviaturas académicas estándar ("Dr.", "Dra.", "Mg.", "MSc.", "Ing.", "Lic.").
+ */
+export function formatoNombrePersona(textoEntrada: string | null | undefined): string {
+  if (!textoEntrada) return "";
+  const limpio = textoEntrada.trim().replace(/\s+/g, " ");
+  if (!limpio) return "";
+
+  const palabras = limpio.split(" ");
+  const resultado: string[] = [];
+
+  for (let i = 0; i < palabras.length; i++) {
+    const palabra = palabras[i];
+    if (!palabra) continue;
+
+    const normalizada = palabra.toLowerCase().replace(/[,;:]+$/u, "");
+    const puntuacionFinal = palabra.slice(normalizada.length);
+
+    // Grado académico (Dr., Dra., Mg., etc.)
+    if (ABREVIATURAS_GRADO[normalizada]) {
+      resultado.push(`${ABREVIATURAS_GRADO[normalizada]}${puntuacionFinal}`);
+      continue;
+    }
+
+    // Partículas intermedias en minúsculas (de, del, la, las, los, y, e)
+    if (i > 0 && PREPOSICIONES_NOMBRES.has(normalizada)) {
+      resultado.push(`${normalizada}${puntuacionFinal}`);
+      continue;
+    }
+
+    // Capitalizar con mayúscula inicial (respetando guiones como Jean-Luc o paréntesis)
+    const partesGuion = palabra.split("-").map((sub) => {
+      if (!sub) return "";
+      const match = /^([^\p{L}\p{N}]*)([\p{L}\p{N}])(.*)$/u.exec(sub);
+      if (match && match[1] !== undefined && match[2] !== undefined && match[3] !== undefined) {
+        const prefijo = match[1];
+        const inicial = match[2];
+        const resto = match[3];
+        return `${prefijo}${inicial.toUpperCase()}${resto.toLowerCase()}`;
+      }
+      return sub.charAt(0).toUpperCase() + sub.slice(1).toLowerCase();
+    });
+
+    resultado.push(partesGuion.join("-"));
+  }
+
+  return resultado.join(" ");
+}
+
+/** Palabras menores que van en minúscula en títulos formales en español (salvo inicio). */
+const PALABRAS_MENORES_TITULO = new Set([
+  "de",
+  "del",
+  "la",
+  "las",
+  "el",
+  "los",
+  "un",
+  "una",
+  "unos",
+  "unas",
+  "en",
+  "para",
+  "por",
+  "con",
+  "sin",
+  "sobre",
+  "a",
+  "al",
+  "y",
+  "e",
+  "o",
+  "u",
+]);
+
+/** Acrónimos y siglas que deben permanecer en mayúsculas en títulos académicos. */
+const ACRONIMOS_TITULO: Record<string, string> = {
+  unsa: "UNSA",
+  fips: "FIPS",
+  epis: "EPIS",
+  tic: "TIC",
+  tics: "TICs",
+  ti: "TI",
+  ia: "IA",
+  api: "API",
+  apis: "APIs",
+  rest: "REST",
+  sql: "SQL",
+  iot: "IoT",
+  ml: "ML",
+  gps: "GPS",
+  erp: "ERP",
+  crm: "CRM",
+  scm: "SCM",
+  iso: "ISO",
+  ieee: "IEEE",
+  sunedu: "SUNEDU",
+  minedu: "MINEDU",
+  reniec: "RENIEC",
+  cui: "CUI",
+  dni: "DNI",
+  web: "Web",
+  app: "App",
+  apps: "Apps",
+  so: "SO",
+  pdf: "PDF",
+  v26: "V26",
+};
+
+/**
+ * Formato formal para títulos de tesis y trabajos académicos según normativa
+ * institucional y de documentos oficiales:
+ * 1. Sin comillas (« », “ ”, " ", ' ').
+ * 2. Sin punto final (.).
+ * 3. Si viene en mayúsculas sostenidas o minúsculas sostenidas, se formatea
+ *    en mayúsculas iniciales / tipo título formal, conservando acrónimos
+ *    (UNSA, FIPS, IA, TIC, etc.) y preposiciones/artículos en minúscula.
+ * 4. Si ya viene con mayúsculas y minúsculas mixtas del autor, se respeta su
+ *    capitalización cuidando comillas y puntuación final.
+ */
+export function formatoTituloFormal(tituloEntrada: string | null | undefined): string {
+  if (!tituloEntrada) return "";
+  // 1. Quitar comillas exteriores e interiores y punto final
+  const limpio = tituloEntrada
+    .trim()
+    .replace(/^[«“"'\s]+|[»”"'\s]+$/gu, "")
+    .replace(/[«»“”]/gu, "")
+    .replace(/\.+$/gu, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!limpio) return "";
+
+  // 2. Evaluar si está en mayúsculas o minúsculas sostenidas
+  const soloLetras = limpio.replace(/[^\p{L}]/gu, "");
+  const esTodoMayusculas = soloLetras.length > 5 && soloLetras === soloLetras.toUpperCase();
+  const esTodoMinusculas = soloLetras.length > 5 && soloLetras === soloLetras.toLowerCase();
+
+  if (!esTodoMayusculas && !esTodoMinusculas) {
+    // Ya viene con mezcla de mayúsculas/minúsculas del autor; solo devolver limpio
+    return limpio;
+  }
+
+  // 3. Formatear como título formal (Title Case académico)
+  const palabras = limpio.split(" ");
+  const formateadas: string[] = [];
+
+  for (let i = 0; i < palabras.length; i++) {
+    const pal = palabras[i];
+    if (!pal) continue;
+
+    const normalizada = pal.toLowerCase().replace(/[,;:.-]+$/u, "");
+    const puntuacionFinal = pal.slice(normalizada.length);
+
+    // ¿Es un acrónimo reconocido?
+    if (ACRONIMOS_TITULO[normalizada]) {
+      formateadas.push(`${ACRONIMOS_TITULO[normalizada]}${puntuacionFinal}`);
+      continue;
+    }
+
+    // ¿Es palabra menor intermedia? (salvo si la anterior terminó en dos puntos o guion)
+    const palabraPrevia = i > 0 ? (palabras[i - 1] ?? "") : "";
+    const esDespuesDePuntuacion = /[:\-–—]$/u.test(palabraPrevia);
+    if (i > 0 && !esDespuesDePuntuacion && PALABRAS_MENORES_TITULO.has(normalizada)) {
+      formateadas.push(`${normalizada}${puntuacionFinal}`);
+      continue;
+    }
+
+    // Capitalizar palabra (respetando guiones)
+    const subpartes = pal.split("-").map((sub) => {
+      if (!sub) return "";
+      const match = /^([^\p{L}\p{N}]*)([\p{L}\p{N}])(.*)$/u.exec(sub);
+      if (match && match[1] !== undefined && match[2] !== undefined && match[3] !== undefined) {
+        const prefijo = match[1];
+        const inicial = match[2];
+        const resto = match[3];
+        const normSub = `${inicial}${resto}`.toLowerCase();
+        if (ACRONIMOS_TITULO[normSub]) {
+          return `${prefijo}${ACRONIMOS_TITULO[normSub]}`;
+        }
+        return `${prefijo}${inicial.toUpperCase()}${resto.toLowerCase()}`;
+      }
+      return sub.charAt(0).toUpperCase() + sub.slice(1).toLowerCase();
+    });
+
+    formateadas.push(subpartes.join("-"));
+  }
+
+  return formateadas.join(" ");
+}
+
+/** "Dr. Nombres Apellidos" usando el grado registrado del asesor con mayúsculas iniciales. */
 export function formatoAsesor(p: PersonaDocumento | null): string {
   if (!p) return "";
   const grado = (p.grado ?? "").trim();
   const nombre = nombreCompleto(p);
-  return normalizarAdministrativo("asesorNombre", grado ? `${grado} ${nombre}` : nombre);
+  const combinado = grado ? `${grado} ${nombre}` : nombre;
+  return formatoNombrePersona(combinado);
 }
 
 function texto(v: string | null | undefined): string {
@@ -91,23 +313,21 @@ function unirLista(partes: readonly string[]): string {
 
 const ORDEN_ROL = ["PRESIDENTE", "SECRETARIO", "VOCAL", "SUPLENTE"];
 
-/** Jurado en texto corrido: "DR. ANA RUIZ (presidente), …" (RN-L07: nombres en mayúsculas). */
+/** Jurado en texto corrido: "Dr. Ana Ruiz (presidente), …" con mayúsculas iniciales. */
 function textoJurado(exp: ExpedienteDocumento): string {
   const registrado = [...(exp.jurado ?? [])].sort(
     (x, y) => ORDEN_ROL.indexOf(x.rol) - ORDEN_ROL.indexOf(y.rol),
   );
   if (registrado.length > 0) {
     return unirLista(
-      registrado.map(
-        (j) => `${normalizarAdministrativo("asesorNombre", j.nombre)} (${j.rol.toLowerCase()})`,
-      ),
+      registrado.map((j) => `${formatoNombrePersona(j.nombre)} (${j.rol.toLowerCase()})`),
     );
   }
   const a = exp.datosAdmin;
   const legacy: Array<[string, string]> = [
-    ["presidente", texto(a.presidenteE2)],
-    ["secretario", texto(a.secretarioE2)],
-    ["suplente", texto(a.suplenteE2)],
+    ["presidente", formatoNombrePersona(texto(a.presidenteE2))],
+    ["secretario", formatoNombrePersona(texto(a.secretarioE2))],
+    ["suplente", formatoNombrePersona(texto(a.suplenteE2))],
   ];
   return unirLista(legacy.filter(([, n]) => n).map(([rol, n]) => `${n} (${rol})`));
 }
@@ -120,21 +340,22 @@ export function construirDatosDocumento(
   const a = exp.datosAdmin;
   const p1 = exp.participante1;
   const p2 = exp.participante2;
-  const p1Nombre = nombreCompleto(p1);
-  const p2Nombre = nombreCompleto(p2);
+  const p1Nombre = formatoNombrePersona(nombreCompleto(p1));
+  const p2Nombre = formatoNombrePersona(nombreCompleto(p2));
   const nombresConjuntos = [p1Nombre, p2Nombre].filter(Boolean).join(" y ");
   const dnisConjuntos = [p1?.dni, p2?.dni].filter((d): d is string => !!d).join(" / ");
-  const asesor = texto(a.asesorNombre) || formatoAsesor(exp.asesor);
+  const asesor = formatoNombrePersona(texto(a.asesorNombre)) || formatoAsesor(exp.asesor);
   const modFinal =
     texto(a.modalidadVirtual) || texto(a.modalidadFinal) || MODALIDAD_FINAL[exp.modalidad];
   // Fecha civil de Arequipa (UTC-5), no la del servidor.
   const fechaIso = hoy.toLocaleDateString("en-CA", { timeZone: "America/Lima" });
   const sust = exp.sustentacion ?? null;
+  const tituloFormal = formatoTituloFormal(exp.titulo);
   const datos: Record<string, string> = {
     CODIGO: exp.codigo,
-    TESIS: exp.titulo.trim(),
-    "TESIS 02": exp.titulo.trim(),
-    TESIS02: exp.titulo.trim(),
+    TESIS: tituloFormal,
+    "TESIS 02": tituloFormal,
+    TESIS02: tituloFormal,
     NOMBRES: p2 ? p1Nombre : nombresConjuntos,
     NOMBRES_1: p1Nombre,
     NOMBRES_2: p2Nombre,
@@ -164,22 +385,26 @@ export function construirDatosDocumento(
     MOD_F: modFinal,
     "MODALIDAD FINAL": modFinal,
     ASESOR: asesor,
-    COASESOR: texto(a.coAsesor),
-    "CO ASESOR": texto(a.coAsesor),
+    COASESOR: formatoNombrePersona(texto(a.coAsesor)),
+    "CO ASESOR": formatoNombrePersona(texto(a.coAsesor)),
     DECRETO: texto(a.nroDecreto),
     "N° DECRETO": texto(a.nroDecreto),
     OFICIO: texto(a.nroOficio),
     RECOMENDACION: texto(a.recomendacion),
-    PRESIDENTE: texto(a.presidente),
-    SECRETARIO: texto(a.secretario),
-    INTEGRANTE: texto(a.integrante) || asesor || "DR. ASESOR PRUEBA",
-    "PRESIDENTE ETAPA 02":
+    PRESIDENTE: formatoNombrePersona(texto(a.presidente)),
+    SECRETARIO: formatoNombrePersona(texto(a.secretario)),
+    INTEGRANTE: formatoNombrePersona(texto(a.integrante)) || asesor || "Dr. Asesor Prueba",
+    "PRESIDENTE ETAPA 02": formatoNombrePersona(
       texto(a.presidenteE2) || texto(a.presidente) || "Dr. Cecilio Mauro Villavicencio Melgarejo",
-    "SECRETARIO ETAPA 02":
+    ),
+    "SECRETARIO ETAPA 02": formatoNombrePersona(
       texto(a.secretarioE2) || texto(a.secretario) || "Dr. Edwin Carlos Leoncio Gama Quispe",
-    "SUPLENTE ETAPA 02": texto(a.suplenteE2) || "Mg. Hugo Rufino Llamosas Barriga",
-    SUPLENTE: texto(a.suplenteE2) || "Mg. Hugo Rufino Llamosas Barriga",
-    DECANAL: texto(a.decanal),
+    ),
+    "SUPLENTE ETAPA 02": formatoNombrePersona(
+      texto(a.suplenteE2) || "Mg. Hugo Rufino Llamosas Barriga",
+    ),
+    SUPLENTE: formatoNombrePersona(texto(a.suplenteE2) || "Mg. Hugo Rufino Llamosas Barriga"),
+    DECANAL: formatoNombrePersona(texto(a.decanal)),
     "FECHA APERTURA": fechaLarga(a.fechaApertura),
     "FECHA PRESENTACION": fechaLarga(a.fechaPresentacion),
     FECHA: fechaLarga(sust?.fecha ?? a.fechaSustentacion),
@@ -240,14 +465,16 @@ export function construirDatosDocumento(
     PROGRAMAS02: normalizarAdministrativo("programa", exp.programa),
     PROGR_MIN02: toTitleCase(exp.programa),
     MODALIDAD02: modalidadAEtiqueta(exp.modalidad),
-    ADMIN: texto(a.admin),
+    ADMIN: formatoNombrePersona(texto(a.admin)),
     CORREO_ADMIN: texto(a.correoAdmin),
     FECHA_EXP: fechaLarga(a.fechaExp ?? a.fechaApertura),
     "FECHA DE EXP": fechaLarga(a.fechaExp ?? a.fechaApertura),
     HORA_EXP: texto(a.horaExp),
     "HORA DE EXP": texto(a.horaExp),
-    DECANO: texto(a.decano) || "Dr. Paúl Vicente Tanco Fernández",
-    DIRECTOR_USE: texto(a.directorUse) || "Dr. Cecilio Mauro Villavicencio Melgarejo",
+    DECANO: formatoNombrePersona(texto(a.decano) || "Dr. Paúl Vicente Tanco Fernández"),
+    DIRECTOR_USE: formatoNombrePersona(
+      texto(a.directorUse) || "Dr. Cecilio Mauro Villavicencio Melgarejo",
+    ),
     ANIO_LEMA: texto(a.anioLema) || "Año de la Esperanza y el Fortalecimiento de la Democracia",
     FECHA_CONFORMIDAD: fechaLarga(a.fechaConformidad) || fechaLarga(fechaIso),
     "FECHA DE CONFORMIDAD": fechaLarga(a.fechaConformidad) || fechaLarga(fechaIso),

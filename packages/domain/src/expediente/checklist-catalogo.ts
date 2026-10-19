@@ -46,13 +46,6 @@ export const CHECKLIST_E1: readonly ChecklistDef[] = [
     requeridoEn: "E1_PRESENTACION_PLAN",
   },
   {
-    tipo: "ANEXO_17",
-    nombre: "Anexo 17",
-    etapa: "E1",
-    obligatorio: true,
-    requeridoEn: "E1_PRESENTACION_PLAN",
-  },
-  {
     tipo: "ANEXO_18",
     nombre: "Anexo 18",
     etapa: "E1",
