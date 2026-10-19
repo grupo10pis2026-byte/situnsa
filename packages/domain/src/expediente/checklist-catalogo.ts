@@ -46,13 +46,6 @@ export const CHECKLIST_E1: readonly ChecklistDef[] = [
     requeridoEn: "E1_PRESENTACION_PLAN",
   },
   {
-    tipo: "ANEXO_17",
-    nombre: "Anexo 17",
-    etapa: "E1",
-    obligatorio: true,
-    requeridoEn: "E1_PRESENTACION_PLAN",
-  },
-  {
     tipo: "ANEXO_18",
     nombre: "Anexo 18",
     etapa: "E1",
@@ -101,6 +94,13 @@ export const CHECKLIST_E2: readonly ChecklistDef[] = [
   {
     tipo: "ANEXO_01_DJ",
     nombre: "Anexo N° 01 — Declaración jurada",
+    etapa: "E2",
+    obligatorio: true,
+    requeridoEn: "E2_CARGA_DOCUMENTOS",
+  },
+  {
+    tipo: "ANEXO_02_DJ",
+    nombre: "Anexo N° 02 — DJ no antecedentes penales y terrorismo",
     etapa: "E2",
     obligatorio: true,
     requeridoEn: "E2_CARGA_DOCUMENTOS",

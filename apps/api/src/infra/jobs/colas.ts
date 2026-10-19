@@ -3,6 +3,17 @@ import { enqueue } from "./pg-boss.client.js";
 /** Colas del sistema (pg-boss sobre Postgres, sin Redis — Lean). */
 export const COLA_CORREOS = "correos";
 export const COLA_RECORDATORIOS = "recordatorios";
+export const COLA_REVISION_DOCUMENTOS = "revision-documentos";
+export const COLA_SYNC_DRIVE = "sync-drive-institucional";
+export const COLA_INBOUND_EMAIL = "inbound-email-check";
+
+export const COLAS = {
+  NOTIFICACIONES_CORREO: COLA_CORREOS,
+  RECORDATORIOS: COLA_RECORDATORIOS,
+  REVISION_DOCUMENTOS: COLA_REVISION_DOCUMENTOS,
+  SYNC_DRIVE_INSTITUCIONAL: COLA_SYNC_DRIVE,
+  INBOUND_EMAIL: COLA_INBOUND_EMAIL,
+} as const;
 
 /**
  * Correo a encolar (HU-0058/0061/0062). Los destinatarios del expediente se
@@ -28,6 +39,11 @@ export interface RecordatorioPayload {
   notadoEn: string;
 }
 
+export interface RevisionDocumentoPayload {
+  documentoId: string;
+  expedienteId: string;
+}
+
 /**
  * Encola un correo (best-effort: si la cola cae, el flujo principal ya hizo
  * commit; el error queda en el log y el worker reintenta lo encolado).
@@ -37,5 +53,17 @@ export async function enqueueCorreo(payload: CorreoPayload): Promise<void> {
     await enqueue(COLA_CORREOS, payload, { retryLimit: 3, retryDelay: 60 });
   } catch (err) {
     console.error("[colas] no se pudo encolar correo", err);
+  }
+}
+
+/**
+ * Encola la revisión automática de un documento (Tarea 3).
+ * pg-boss reintenta hasta 3 veces con 60 segundos de espera si hay fallos transitorios.
+ */
+export async function enqueueRevisionDocumento(payload: RevisionDocumentoPayload): Promise<void> {
+  try {
+    await enqueue(COLA_REVISION_DOCUMENTOS, payload, { retryLimit: 3, retryDelay: 60 });
+  } catch (err) {
+    console.error("[colas] no se pudo encolar la revisión del documento", err);
   }
 }

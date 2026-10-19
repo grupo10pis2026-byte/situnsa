@@ -1,5 +1,7 @@
 import {
   type ActualizarDatosInput,
+  type DocumentoRevisionDTO,
+  DocumentoRevisionDTOSchema,
   type ExpedienteDetalleDTO,
   ExpedienteDetalleDTOSchema,
   type InscribirPlanInput,
@@ -12,6 +14,7 @@ import { apiFetch } from "./session.js";
 
 export const expedienteKey = (id: string) => ["expediente", id] as const;
 export const expedientesKey = ["expedientes"] as const;
+export const documentoRevisionKey = (id: string) => ["documento-revision", id] as const;
 
 /** Lee el mensaje legible de un error API (envelope nuevo `{error.mensaje}` o legacy `{message}`). */
 export const leerMensajeError = mensajeDeCuerpo;
@@ -28,6 +31,26 @@ export function useExpedienteDetalle(id: string, enabled = true) {
     enabled,
     queryFn: async (): Promise<ExpedienteDetalleDTO> =>
       leerDetalle(await apiFetch(`${apiBaseUrl}/api/expedientes/${id}`)),
+  });
+}
+
+async function leerRevisionDocumento(res: Response): Promise<DocumentoRevisionDTO | null> {
+  if (!res.ok) throw await errorDeRespuesta(res, "No se pudo cargar la revisión del documento");
+  const body = await res.json();
+  return body === null ? null : DocumentoRevisionDTOSchema.parse(body);
+}
+
+/** GET /api/documentos/:id/revision. */
+export function useRevisionDocumento(documentoId: string | null | undefined) {
+  return useQuery({
+    queryKey: documentoRevisionKey(documentoId ?? "__sin-documento__"),
+    enabled: !!documentoId,
+    queryFn: async (): Promise<DocumentoRevisionDTO | null> => {
+      if (!documentoId) return null;
+      return leerRevisionDocumento(
+        await apiFetch(`${apiBaseUrl}/api/documentos/${documentoId}/revision`),
+      );
+    },
   });
 }
 
@@ -204,16 +227,28 @@ export interface FormatoGenerado {
   pendientes: string[];
 }
 
-/** "INSERTAR DATOS EN DOCUMENTOS": genera los formatos PDF de la etapa. */
+/** "INSERTAR DATOS EN DOCUMENTOS": genera o regenera los formatos PDF de la etapa con soporte para overrides. */
 export function useGenerarDocumentos(id: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (etapa: "E1" | "E2" | "E6") =>
-      postJson<{ generados: FormatoGenerado[] }>(
+    mutationFn: (
+      param:
+        | "E1"
+        | "E2"
+        | "E6"
+        | {
+            etapa: "E1" | "E2" | "E6";
+            tipo?: string | undefined;
+            overrides?: Record<string, string> | undefined;
+          },
+    ) => {
+      const body = typeof param === "string" ? { etapa: param } : param;
+      return postJson<{ generados: FormatoGenerado[] }>(
         `/api/expedientes/${id}/documentos/generar`,
-        { etapa },
+        body,
         "No se pudieron generar los documentos",
-      ),
+      );
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: expedienteKey(id) });
     },
@@ -298,11 +333,30 @@ export function formatoDescargaUrl(generadoId: string): string {
 export async function descargarArchivoProtegido(url: string, nombre: string): Promise<void> {
   const res = await apiFetch(url);
   if (!res.ok) throw await errorDeRespuesta(res, "No se pudo descargar el archivo");
-  const sugerido = /filename="([^"]+)"/.exec(res.headers.get("Content-Disposition") ?? "")?.[1];
+  const disp = res.headers.get("Content-Disposition") ?? "";
+  let sugerido: string | undefined;
+  const matchUtf8 = /filename\*=(?:UTF-8'')?([^;\r\n]+)/i.exec(disp);
+  if (matchUtf8?.[1]) {
+    try {
+      sugerido = decodeURIComponent(matchUtf8[1].replace(/^["']|["']$/g, ""));
+    } catch {
+      sugerido = matchUtf8[1];
+    }
+  }
+  if (!sugerido) {
+    const matchSimple = /filename="?([^";\r\n]+)"?/i.exec(disp);
+    if (matchSimple?.[1]) {
+      try {
+        sugerido = decodeURIComponent(matchSimple[1]);
+      } catch {
+        sugerido = matchSimple[1];
+      }
+    }
+  }
   const objeto = URL.createObjectURL(await res.blob());
   const enlace = document.createElement("a");
   enlace.href = objeto;
-  enlace.download = sugerido ?? nombre;
+  enlace.download = sugerido || nombre;
   document.body.append(enlace);
   enlace.click();
   enlace.remove();
@@ -324,4 +378,14 @@ export async function abrirArchivoProtegido(url: string): Promise<void> {
     ventana?.close();
     throw e;
   }
+}
+
+export async function obtenerBlobArchivoProtegido(
+  url: string,
+): Promise<{ blobUrl: string; blob: Blob }> {
+  const res = await apiFetch(url);
+  if (!res.ok) throw await errorDeRespuesta(res, "No se pudo cargar el documento");
+  const blob = await res.blob();
+  const blobUrl = URL.createObjectURL(blob);
+  return { blobUrl, blob };
 }

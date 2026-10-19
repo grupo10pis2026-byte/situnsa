@@ -1,6 +1,8 @@
 import {
   db,
+  documentos,
   documentosGenerados,
+  expedientes,
   jurados,
   juradosExpediente,
   sustentaciones,
@@ -12,15 +14,22 @@ import {
   DomainError,
   type EtapaPlantilla,
   type ExpedienteDocumento,
+  esEtiquetaFecha,
+  esEtiquetaHora,
   fail,
+  fechaLarga,
+  horaLimpia,
   ok,
   PLANTILLAS,
   type Result,
   renderizarPlantilla,
+  resolverNombreArchivo,
+  resolverSubcarpetaEtapa,
   VERSION_PLANTILLAS,
 } from "@pis/domain";
 import { and, eq } from "drizzle-orm";
 import { DrizzleUnitOfWork } from "../../../../infra/db/unit-of-work.js";
+import { obtenerPlantillaDocx, procesarDocxBuffer } from "../../../../infra/docx/render-docx.js";
 import { type MetaPdf, renderizarPdf } from "../../../../infra/pdf/render-documento.js";
 import type { AlmacenamientoPort } from "../../../../infra/storage/almacenamiento.port.js";
 import { LocalStorageService } from "../../../../infra/storage/local-storage.service.js";
@@ -48,7 +57,18 @@ export function expedienteParaDocumentos(
 ): ExpedienteDocumento {
   const persona = (p: DetalleRow["participante1"]) =>
     p
-      ? { nombres: p.nombres, apellidos: p.apellidos, dni: p.dni, cui: p.cui, grado: p.grado }
+      ? {
+          nombres: p.nombres,
+          apellidos: p.apellidos,
+          dni: p.dni,
+          cui: p.cui,
+          grado: p.grado,
+          email: p.email,
+          telefono: p.telefono,
+          direccion: p.direccion,
+          ciudad: p.ciudad,
+          nacionalidad: p.nacionalidad,
+        }
       : null;
   return {
     codigo: d.codigo,
@@ -91,8 +111,16 @@ export class GenerarDocumentosUseCase {
     expedienteId: string,
     etapa: EtapaPlantilla,
     actor: Actor,
-    ahora: Date = new Date(),
+    ahoraUopciones?:
+      | Date
+      | { tipo?: string | undefined; overrides?: Record<string, string> | undefined }
+      | undefined,
+    opciones?:
+      | { tipo?: string | undefined; overrides?: Record<string, string> | undefined }
+      | undefined,
   ): Promise<Result<{ generados: FormatoGenerado[] }, DomainError>> {
+    const ahora = ahoraUopciones instanceof Date ? ahoraUopciones : new Date();
+    const opts = ahoraUopciones instanceof Date ? opciones : ahoraUopciones;
     const detalle = await getDetalleById(db, expedienteId, ahora);
     if (!detalle) return fail(new DomainError("NO_ENCONTRADO", "Expediente no encontrado"));
     if (detalle.estado === "ANULADO") {
@@ -141,7 +169,7 @@ export class GenerarDocumentosUseCase {
       .where(eq(validacionesInstitucionales.expedienteId, expedienteId));
     const oti = vals.find((v) => v.instancia === "OTI_SIMILITUD");
     const repositorio = vals.find((v) => v.instancia === "REPOSITORIO");
-    const datos = construirDatosDocumento(
+    const datosBase = construirDatosDocumento(
       expedienteParaDocumentos(detalle, sust[0] ?? null, {
         jurado: designados.map((j) => ({
           rol: j.rol,
@@ -154,25 +182,92 @@ export class GenerarDocumentosUseCase {
       }),
       ahora,
     );
-    const plantillas = PLANTILLAS.filter((p) => p.etapa === etapa);
+    const overridesNormalizados: Record<string, string> = {};
+    if (opts?.overrides) {
+      for (const [k, v] of Object.entries(opts.overrides)) {
+        if (!v || typeof v !== "string") continue;
+        const clave = k.trim().toUpperCase();
+        if (esEtiquetaFecha(clave)) {
+          overridesNormalizados[clave] = fechaLarga(v);
+        } else if (esEtiquetaHora(clave)) {
+          const hora = horaLimpia(v) || v.trim();
+          overridesNormalizados[clave] = hora;
+          if (clave === "HORA") overridesNormalizados["HORAS DE LA SUSTENTACION"] = hora;
+          if (clave === "HORAS DE LA SUSTENTACION") overridesNormalizados.HORA = hora;
+        } else {
+          overridesNormalizados[clave] = v.trim();
+        }
+      }
+    }
+    const datos = { ...datosBase, ...overridesNormalizados };
+    const numTesistas = detalle.participante2 ? 2 : 1;
+    let plantillasEtapa = PLANTILLAS.filter((p) => p.etapa === etapa);
+
+    if (numTesistas === 1) {
+      plantillasEtapa = plantillasEtapa.filter(
+        (p) => !p.tipo.endsWith("_P1") && !p.tipo.endsWith("_P2"),
+      );
+    } else {
+      plantillasEtapa = plantillasEtapa.filter(
+        (p) => p.tipo !== "ANEXO_01_DJ" && p.tipo !== "ANEXO_02_DJ",
+      );
+    }
+
+    const plantillas = opts?.tipo
+      ? opts.tipo === "ANEXO_01_DJ" && numTesistas === 2
+        ? plantillasEtapa.filter((p) => p.tipo.startsWith("ANEXO_01_DJ_P"))
+        : opts.tipo === "ANEXO_02_DJ" && numTesistas === 2
+          ? plantillasEtapa.filter((p) => p.tipo.startsWith("ANEXO_02_DJ_P"))
+          : plantillasEtapa.filter((p) => p.tipo === opts.tipo)
+      : plantillasEtapa;
+
+    if (plantillas.length === 0) {
+      return fail(
+        new DomainError(
+          "NO_ENCONTRADO",
+          `No se encontraron plantillas para la etapa ${etapa}${opts?.tipo ? ` y tipo ${opts.tipo}` : ""}`,
+        ),
+      );
+    }
+
     // Render fuera de la transacción (CPU); la escritura va en un COMMIT.
     const renderizados = await Promise.all(
       plantillas.map(async (p) => {
+        const plantillaDocx = obtenerPlantillaDocx(p.tipo, p.etapa, numTesistas);
+        let bytesDocx: Buffer | null = null;
+        let pendientesDocx: string[] = [];
+        if (plantillaDocx) {
+          const res = procesarDocxBuffer(plantillaDocx, datos);
+          bytesDocx = res.buffer;
+          pendientesDocx = res.pendientes;
+        }
+
         const doc = renderizarPlantilla(p, datos);
-        const bytes = await this.renderer(doc, {
+        const bytesPdf = await this.renderer(doc, {
           codigo: detalle.codigo,
           versionPlantilla: VERSION_PLANTILLAS,
           generadoEn: ahora,
         });
-        return { plantilla: p, doc, bytes };
+
+        return {
+          plantilla: p,
+          bytesDocx,
+          bytesPdf: Buffer.from(bytesPdf),
+          pendientes: plantillaDocx ? pendientesDocx : [...doc.pendientes],
+        };
       }),
     );
+
     const uow = new DrizzleUnitOfWork(db);
-    return uow.run(async (tx) => {
+    const r = await uow.run(async (tx) => {
       const generados: FormatoGenerado[] = [];
-      for (const { plantilla, doc, bytes } of renderizados) {
+      for (const { plantilla, bytesDocx, bytesPdf, pendientes } of renderizados) {
         const previo = await tx
-          .select({ id: documentosGenerados.id, version: documentosGenerados.version })
+          .select({
+            id: documentosGenerados.id,
+            version: documentosGenerados.version,
+            ruta: documentosGenerados.ruta,
+          })
           .from(documentosGenerados)
           .where(
             and(
@@ -182,10 +277,17 @@ export class GenerarDocumentosUseCase {
           )
           .limit(1);
         const version = (previo[0]?.version ?? 0) + 1;
+
+        // 1. Guardar formato editable en documentos_generados
+        const bytesGenerado = bytesDocx ?? bytesPdf;
+        const extGenerado = bytesDocx ? "docx" : "pdf";
+        if (previo[0]?.ruta) {
+          await this.storage.delete?.(previo[0].ruta);
+        }
         const { ruta, sha256 } = await this.storage.save(
           expedienteId,
-          `${plantilla.tipo}_v${version}.pdf`,
-          bytes,
+          `${plantilla.tipo}_v${version}.${extGenerado}`,
+          bytesGenerado,
           "generados",
         );
         const valores = {
@@ -194,7 +296,9 @@ export class GenerarDocumentosUseCase {
           sha256,
           version,
           versionPlantilla: VERSION_PLANTILLAS,
-          pendientes: [...doc.pendientes],
+          pendientes,
+          archivoContenido: bytesGenerado,
+          tamanoBytes: bytesGenerado.length,
           createdAt: ahora,
         };
         let id: string;
@@ -212,14 +316,62 @@ export class GenerarDocumentosUseCase {
           if (!ins[0]) return fail(new DomainError("VALIDACION_FALLIDA", "No se pudo guardar"));
           id = ins[0].id;
         }
+
+        // 2. Auto-subir y adjuntar el PDF oficial generado directamente al checklist
+        const docsPrevios = await tx
+          .select({ id: documentos.id, ruta: documentos.ruta })
+          .from(documentos)
+          .where(
+            and(eq(documentos.expedienteId, expedienteId), eq(documentos.tipo, plantilla.tipo)),
+          );
+
+        for (const dp of docsPrevios) {
+          if (dp.ruta) {
+            await this.storage.delete?.(dp.ruta);
+          }
+        }
+        if (docsPrevios.length > 0) {
+          await tx
+            .delete(documentos)
+            .where(
+              and(eq(documentos.expedienteId, expedienteId), eq(documentos.tipo, plantilla.tipo)),
+            );
+        }
+
+        const pdfGuardado = await this.storage.save(
+          expedienteId,
+          `${plantilla.tipo}_v${version}.pdf`,
+          bytesPdf,
+        );
+
+        await tx.insert(documentos).values({
+          expedienteId,
+          tipo: plantilla.tipo,
+          etapa: plantilla.etapa,
+          ruta: pdfGuardado.ruta,
+          version,
+          sha256: pdfGuardado.sha256,
+          estado: "CARGADO",
+          origen: "SISTEMA",
+          driveSyncEstado: process.env.GOOGLE_DRIVE_ENABLED === "true" ? "PENDIENTE" : "NO_APLICA",
+          archivoContenido: bytesPdf,
+          tamanoBytes: bytesPdf.length,
+          createdAt: ahora,
+        });
+
         generados.push({
           id,
           tipo: plantilla.tipo,
           nombre: plantilla.nombre,
           version,
-          pendientes: [...doc.pendientes],
+          pendientes,
         });
       }
+      await tx
+        .update(expedientes)
+        .set({ updatedAt: ahora })
+        .where(eq(expedientes.id, expedienteId));
+
       const conPendientes = generados.filter((g) => g.pendientes.length > 0).length;
       await appendAuditoria(tx, {
         expedienteId,
@@ -231,5 +383,34 @@ export class GenerarDocumentosUseCase {
       });
       return ok({ generados });
     });
+
+    if (r.ok && process.env.GOOGLE_DRIVE_ENABLED === "true") {
+      try {
+        const { getBoss } = await import("../../../../infra/jobs/pg-boss.client.js");
+        const { COLAS } = await import("../../../../infra/jobs/colas.js");
+        const boss = await getBoss();
+        const subcarpeta = resolverSubcarpetaEtapa(etapa);
+
+        for (const gen of r.value.generados) {
+          const plantillaDocx = obtenerPlantillaDocx(gen.tipo, etapa, numTesistas);
+          const ext = plantillaDocx ? "docx" : "pdf";
+          const nombreArchivo = resolverNombreArchivo(gen.tipo, numTesistas, ext);
+          await boss.send(
+            COLAS.SYNC_DRIVE_INSTITUCIONAL,
+            {
+              documentoGeneradoId: gen.id,
+              expedienteId,
+              subcarpeta,
+              nombreArchivo,
+            },
+            { retryLimit: 5, retryDelay: 10, retryBackoff: true },
+          );
+        }
+      } catch (err) {
+        console.error("[GenerarDocumentosUseCase] no se pudo encolar sync drive", err);
+      }
+    }
+
+    return r;
   }
 }

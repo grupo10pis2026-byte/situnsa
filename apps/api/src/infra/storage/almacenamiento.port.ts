@@ -14,4 +14,9 @@ export interface AlmacenamientoPort {
     bytes: Uint8Array,
     subcarpeta?: string,
   ): Promise<{ ruta: string; sha256: string }>;
+
+  /**
+   * Elimina un archivo físico del almacenamiento si existe.
+   */
+  delete?(ruta: string): Promise<void>;
 }

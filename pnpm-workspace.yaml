@@ -5,3 +5,16 @@ packages:
 allowBuilds:
   '@tailwindcss/oxide': true
   esbuild: false
+overrides:
+  # Herramientas transitivas: parches verificados con build y drizzle-kit check.
+  esbuild@0.18.20: 0.25.12
+  source-map-js@1.2.1: 1.2.2
+minimumReleaseAgeExclude:
+  - fastify@5.12.7
+  - '@turbo/darwin-64@2.11.8'
+  - '@turbo/darwin-arm64@2.11.8'
+  - '@turbo/linux-64@2.11.8'
+  - '@turbo/linux-arm64@2.11.8'
+  - '@turbo/windows-64@2.11.8'
+  - '@turbo/windows-arm64@2.11.8'
+  - turbo@2.11.8

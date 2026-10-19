@@ -102,3 +102,17 @@ return r;
   `DOCS_VOLUME_PATH`; la entrega usa `entregarArchivo()` (X-Accel-Redirect a
   `/protected-files/` en prod, stream en dev; ver `DOCS_ENTREGA`). La web
   descarga con Bearer (`abrirArchivoProtegido`), nunca con un enlace directo.
+
+## Agent skills
+
+### Issue tracker
+
+Issues and specs are tracked as local markdown files under `.scratch/<feature-slug>/`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Canonical triage roles mapped to standard label strings (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context layout (`GLOSSARY.md` and `docs/adr/` at repo root). See `docs/agents/domain.md`.

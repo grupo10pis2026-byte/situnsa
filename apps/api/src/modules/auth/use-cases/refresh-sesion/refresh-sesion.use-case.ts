@@ -1,5 +1,11 @@
 import { DomainError, fail, ok, type Result } from "@pis/domain";
-import { expiracionRefresh, firmarAcceso, hashRefresh, nuevoRefresh } from "../../sesiones.js";
+import {
+  ACCESO_MINUTOS,
+  expiracionRefresh,
+  firmarAcceso,
+  hashRefresh,
+  nuevoRefresh,
+} from "../../sesiones.js";
 import {
   type RepositorioCuentas,
   type RepositorioSesiones,
@@ -39,7 +45,7 @@ export class RefreshSesionUseCase {
     return ok({
       accessToken: firmarAcceso({ sub: cuenta.id, dni: cuenta.dni, rol: cuenta.rol }),
       refreshToken: refresh.token,
-      expiraEn: 15 * 60,
+      expiraEn: ACCESO_MINUTOS * 60,
     });
   }
 }

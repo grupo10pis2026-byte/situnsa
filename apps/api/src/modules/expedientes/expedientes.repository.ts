@@ -21,7 +21,7 @@ import {
   type Semaforo,
   TOTAL_SUBETAPAS,
 } from "@pis/domain";
-import { and, asc, eq, inArray, or, type SQL } from "drizzle-orm";
+import { and, asc, eq, inArray, ne, or, type SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
 export type EstadoLiteral =
@@ -211,10 +211,12 @@ export async function leerChecklist(db: DbExecutor): Promise<readonly ChecklistD
   const rows = await db
     .select()
     .from(catalogoDocsRequeridos)
+    .where(ne(catalogoDocsRequeridos.tipo, "ANEXO_17"))
     .orderBy(asc(catalogoDocsRequeridos.etapa));
   if (rows.length === 0) return CHECKLIST_COMPLETO;
   const orden = new Map(CHECKLIST_COMPLETO.map((d, i) => [d.tipo, i]));
   return rows
+    .filter((r) => r.tipo !== "ANEXO_17")
     .map(
       (r): ChecklistDef => ({
         tipo: r.tipo,
@@ -304,7 +306,50 @@ export async function getDetalleById(
   const generadoPorTipo = new Map(generadosRows.map((g) => [g.tipo, g]));
 
   const catalogo = await leerChecklist(db);
-  const checklist = catalogo.map((def) => {
+  const checklist = catalogo.flatMap((def) => {
+    if (row.participante2Id && (def.tipo === "ANEXO_01_DJ" || def.tipo === "ANEXO_02_DJ")) {
+      const p1Tipo = `${def.tipo}_P1`;
+      const p2Tipo = `${def.tipo}_P2`;
+      const p1Def = {
+        tipo: p1Tipo,
+        nombre: `${def.nombre} — Participante 01`,
+        etapa: def.etapa,
+        obligatorio: def.obligatorio,
+        requeridoEn: def.requeridoEn,
+      };
+      const p2Def = {
+        tipo: p2Tipo,
+        nombre: `${def.nombre} — Participante 02`,
+        etapa: def.etapa,
+        obligatorio: def.obligatorio,
+        requeridoEn: def.requeridoEn,
+      };
+      return [p1Def, p2Def].map((d) => {
+        const doc = porTipo.get(d.tipo) ?? (d.tipo.endsWith("_P1") ? porTipo.get(def.tipo) : null);
+        const generado =
+          generadoPorTipo.get(d.tipo) ??
+          (d.tipo.endsWith("_P1") ? generadoPorTipo.get(def.tipo) : null);
+        const faltantes = doc
+          ? []
+          : [
+              "Falta adjuntar el archivo",
+              ...(generado?.pendientes ?? []).map((p) => `Campo pendiente en el formato: ${p}`),
+            ];
+        return {
+          tipo: d.tipo,
+          nombre: d.nombre,
+          etapa: d.etapa,
+          obligatorio: d.obligatorio,
+          requeridoEn: d.requeridoEn,
+          estado: (doc?.estado ?? "PENDIENTE") as EstadoDocumentoLiteral,
+          documentoId: doc?.id ?? null,
+          version: doc?.version ?? null,
+          updatedAt: doc?.createdAt ? doc.createdAt.toISOString() : null,
+          faltantes,
+        };
+      });
+    }
+
     const doc = porTipo.get(def.tipo);
     const generado = generadoPorTipo.get(def.tipo);
     const faltantes = doc
@@ -313,18 +358,20 @@ export async function getDetalleById(
           "Falta adjuntar el archivo",
           ...(generado?.pendientes ?? []).map((p) => `Campo pendiente en el formato: ${p}`),
         ];
-    return {
-      tipo: def.tipo,
-      nombre: def.nombre,
-      etapa: def.etapa,
-      obligatorio: def.obligatorio,
-      requeridoEn: def.requeridoEn,
-      estado: (doc?.estado ?? "PENDIENTE") as EstadoDocumentoLiteral,
-      documentoId: doc?.id ?? null,
-      version: doc?.version ?? null,
-      updatedAt: doc?.createdAt ? doc.createdAt.toISOString() : null,
-      faltantes,
-    };
+    return [
+      {
+        tipo: def.tipo,
+        nombre: def.nombre,
+        etapa: def.etapa,
+        obligatorio: def.obligatorio,
+        requeridoEn: def.requeridoEn,
+        estado: (doc?.estado ?? "PENDIENTE") as EstadoDocumentoLiteral,
+        documentoId: doc?.id ?? null,
+        version: doc?.version ?? null,
+        updatedAt: doc?.createdAt ? doc.createdAt.toISOString() : null,
+        faltantes,
+      },
+    ];
   });
 
   const subs = await db

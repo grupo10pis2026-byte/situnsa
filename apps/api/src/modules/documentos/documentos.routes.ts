@@ -1,13 +1,21 @@
+/**
+ * Registro de rutas nativas Fastify: POST /api/documentos/upload y GET /api/documentos/:id.
+ * Incluye GET /api/documentos/:id/descargar, POST /api/documentos/:id/visto-bueno y análisis.
+ * También genera por POST /api/expedientes/:id/documentos/generar y descarga formatos generados.
+ */
 import { GenerarDocumentosSchema, VistoBuenoSchema } from "@pis/contracts";
-import { db, documentoRevisiones, documentos, documentosGenerados } from "@pis/db";
+import { db, documentoRevisiones, documentos, documentosGenerados, expedientes } from "@pis/db";
+import { resolverNombreArchivoDescarga } from "@pis/domain";
 import { desc, eq } from "drizzle-orm";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { autorizar, esPersonal } from "../../infra/auth/autorizacion.js";
 import { entregarArchivo } from "../../infra/http/entrega-archivo.js";
 import { errorEnvelope, estadoHttp, PATRON_UUID } from "../../infra/http/errores.js";
+import { enqueueRevisionDocumento } from "../../infra/jobs/colas.js";
 import { LocalStorageService } from "../../infra/storage/local-storage.service.js";
 import { requireAuth } from "../../middleware/require-auth.js";
 import { leerChecklist } from "../expedientes/expedientes.repository.js";
+import { registerAnalisisDocumental } from "./analisis.routes.js";
 import { GenerarDocumentosUseCase } from "./use-cases/generar-documentos/generar-documentos.use-case.js";
 import { SubirDocumentoUseCase } from "./use-cases/subir-documento/subir-documento.use-case.js";
 import { VistoBuenoDocumentoUseCase } from "./use-cases/visto-bueno/visto-bueno.use-case.js";
@@ -19,24 +27,30 @@ import { VistoBuenoDocumentoUseCase } from "./use-cases/visto-bueno/visto-bueno.
 
 const storage = new LocalStorageService();
 
+/** UUID inválido se responde como 404, conservando el envelope común de rutas documentales. */
 function idValido(req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply): boolean {
   if (PATRON_UUID.test(req.params.id)) return true;
   void reply.status(404).send(errorEnvelope("NO_ENCONTRADO", "Documento no encontrado"));
   return false;
 }
 
+/** Lee metadatos internos; cada handler debe comprobar el alcance antes de entregar el archivo. */
 async function documentoPorId(id: string) {
   const rows = await db.select().from(documentos).where(eq(documentos.id, id)).limit(1);
   return rows[0] ?? null;
 }
 
+/** Registra carga, consulta, descargas, visto bueno, generación y el análisis en analisis.routes.ts. */
 export function registerDocumentosRoutes(app: FastifyInstance): void {
+  registerAnalisisDocumental(app);
   /** POST /api/documentos/upload (multipart: expedienteId, tipo, file). */
   app.post(
     "/api/documentos/upload",
     { preHandler: requireAuth },
     async (req: FastifyRequest, reply: FastifyReply) => {
-      const data = await req.file();
+      const data = await req.file({
+        limits: { files: 1, fields: 2, parts: 3, fieldSize: 2048, fileSize: 50 * 1024 * 1024 },
+      });
       const fields = data?.fields as unknown as
         | { expedienteId?: { value: string }; tipo?: { value: string } }
         | undefined;
@@ -53,25 +67,61 @@ export function registerDocumentosRoutes(app: FastifyInstance): void {
         await reply.status(a.status).send(a.body);
         return;
       }
-      const bytes = new Uint8Array(await data.toBuffer());
-      const comoTesista = !esPersonal(a.perfil.roles) && a.perfil.roles.includes("TESISTA");
-      const uc = new SubirDocumentoUseCase(storage, await leerChecklist(db));
-      const actor = req.actor ?? { id: "", dni: "desconocido" };
-      const r = await uc.execute({
-        expedienteId,
-        tipo,
-        filename: data.filename,
-        bytes,
-        actor,
-        comoTesista,
-      });
-      if (!r.ok) {
-        await reply
-          .status(estadoHttp(r.error.code))
-          .send(errorEnvelope(r.error.code, r.error.message));
+      if (
+        !data.filename.toLowerCase().endsWith(".pdf") ||
+        data.filename.length > 255 ||
+        /[\\/:]/u.test(data.filename) ||
+        data.filename.includes(String.fromCharCode(0))
+      ) {
+        await reply.status(400).send(errorEnvelope("DOCUMENTO_INVALIDO", "Nombre PDF inválido"));
         return;
       }
-      await reply.status(201).send(r.value);
+      const contenido = await storage.prepararPdf(data.file);
+      let conservar = false;
+      try {
+        if (data.file.truncated) {
+          await reply
+            .status(400)
+            .send(errorEnvelope("DOCUMENTO_INVALIDO", "El archivo excede el límite permitido"));
+          return;
+        }
+        const comoTesista = !esPersonal(a.perfil.roles) && a.perfil.roles.includes("TESISTA");
+        const uc = new SubirDocumentoUseCase(storage, await leerChecklist(db));
+        const actor = req.actor ?? { id: "", dni: "desconocido" };
+        const r = await uc.execute({
+          expedienteId,
+          tipo,
+          filename: data.filename,
+          contenido,
+          actor,
+          comoTesista,
+        });
+        if (!r.ok) {
+          await reply
+            .status(estadoHttp(r.error.code))
+            .send(errorEnvelope(r.error.code, r.error.message));
+          return;
+        }
+        conservar = true;
+        if (tipo === "PLAN_ESTRUCTURADO") {
+          await db
+            .insert(documentoRevisiones)
+            .values({
+              documentoId: r.value.id,
+              expedienteId,
+              estado: "PENDIENTE",
+            })
+            .catch((e) => req.log.error(e, "Error al registrar revisión pendiente"));
+
+          await enqueueRevisionDocumento({
+            documentoId: r.value.id,
+            expedienteId,
+          });
+        }
+        await reply.status(201).send(r.value);
+      } finally {
+        await contenido.limpiar(conservar);
+      }
     },
   );
 
@@ -204,6 +254,8 @@ export function registerDocumentosRoutes(app: FastifyInstance): void {
         req.params.id,
         parsed.data.etapa,
         actor,
+        new Date(),
+        { tipo: parsed.data.tipo, overrides: parsed.data.overrides },
       );
       if (!r.ok) {
         await reply
@@ -238,9 +290,41 @@ export function registerDocumentosRoutes(app: FastifyInstance): void {
         await reply.status(a.status).send(a.body);
         return;
       }
+      const exp = await db
+        .select({
+          codigo: expedientes.codigo,
+          participante2Id: expedientes.participante2Id,
+        })
+        .from(expedientes)
+        .where(eq(expedientes.id, gen.expedienteId))
+        .limit(1);
+      const codigoExp = exp[0]?.codigo ?? "EXP";
+      const esDocx = gen.ruta.endsWith(".docx") || gen.archivoContenido !== null;
+      const ext = esDocx ? "docx" : "pdf";
+      const nombreDescarga = resolverNombreArchivoDescarga(codigoExp, gen.tipo, ext);
+
+      if (gen.archivoContenido) {
+        const mimeType = esDocx
+          ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          : "application/pdf";
+        const asciiSafe = nombreDescarga
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^A-Za-z0-9._ -]/g, "_");
+        void reply
+          .header("Content-Type", mimeType)
+          .header(
+            "Content-Disposition",
+            `attachment; filename="${asciiSafe}"; filename*=UTF-8''${encodeURIComponent(nombreDescarga)}`,
+          )
+          .header("Content-Length", gen.archivoContenido.length)
+          .send(gen.archivoContenido);
+        return;
+      }
+
       await entregarArchivo(reply, storage, gen.ruta, {
-        nombre: `${gen.tipo}_v${gen.version}.pdf`,
-        inline: true,
+        nombre: nombreDescarga,
+        inline: false,
       });
     },
   );
