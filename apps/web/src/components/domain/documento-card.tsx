@@ -32,6 +32,7 @@ import { Dialogo } from "../ui/dialog.js";
 import { StatusBadge } from "../ui/status-badge.js";
 import { useToast } from "../ui/toast.js";
 import { AnalisisDocumentalPanel } from "./analisis-documental-panel.js";
+import { ItemHallazgo } from "./item-hallazgo.js";
 import { ModalVisorDocumento } from "./modal-visor-documento.js";
 
 interface Props {
@@ -108,40 +109,48 @@ const NOMBRES_LISTADO_OFICIAL: Record<string, string> = {
 };
 
 function RevisionBadge({
+  tipo,
+  cargando,
   estado,
   hallazgos,
   onAbrir,
 }: {
+  tipo: string;
+  cargando: boolean;
   estado: "PENDIENTE" | "EN_PROCESO" | "COMPLETADO" | "FALLIDO" | string | null;
   hallazgos: Array<{ campo: string; mensaje: string }> | undefined;
   onAbrir: () => void;
 }) {
-  const texto =
-    !estado || estado === "PENDIENTE" || estado === "EN_PROCESO"
-      ? "Analizando..."
-      : hallazgos && hallazgos.length > 0
-        ? `${hallazgos.length} observación${hallazgos.length > 1 ? "es" : ""} detectada${hallazgos.length > 1 ? "s" : ""}`
-        : "Carátula conforme";
+  if (tipo !== "PLAN_ESTRUCTURADO") return null;
 
-  const clase =
-    !estado || estado === "PENDIENTE" || estado === "EN_PROCESO"
-      ? "border-slate-300 bg-slate-200 text-slate-600 animate-pulse"
-      : hallazgos && hallazgos.length > 0
-        ? "border-amber-300 bg-amber-100 text-amber-800"
-        : "border-green-300 bg-verde-inst-100 text-verde-inst-700";
+  if (cargando || estado === "PENDIENTE" || estado === "EN_PROCESO") {
+    return (
+      <span className="inline-flex items-center rounded-full border border-slate-300 bg-slate-200 px-2.5 py-0.5 text-[11px] font-semibold text-slate-600 animate-pulse cursor-default">
+        Analizando...
+      </span>
+    );
+  }
+
+  if (!estado) return null;
+
+  const tieneObs = hallazgos && hallazgos.length > 0;
+  const texto = tieneObs
+    ? `${hallazgos.length} observación${hallazgos.length > 1 ? "es" : ""} detectada${hallazgos.length > 1 ? "s" : ""}`
+    : "Carátula conforme";
+
+  const clase = tieneObs
+    ? "border-amber-300 bg-amber-100 text-amber-800 hover:bg-amber-200"
+    : "border-green-300 bg-verde-inst-100 text-verde-inst-700 hover:bg-verde-inst-200";
 
   return (
     <button
       type="button"
       onClick={onAbrir}
-      disabled={!estado || estado === "PENDIENTE" || estado === "EN_PROCESO"}
-      className={[
-        "inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold",
+      title="Clic para ver observaciones y fragmentos detectados"
+      className={cn(
+        "inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold cursor-pointer transition-colors",
         clase,
-        !estado || estado === "PENDIENTE" || estado === "EN_PROCESO"
-          ? "cursor-default"
-          : "cursor-pointer hover:brightness-95",
-      ].join(" ")}
+      )}
     >
       {texto}
     </button>
@@ -307,8 +316,10 @@ export function DocumentoCard(p: Props) {
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
           <StatusBadge estado={p.estado} />
-          {p.documentoId && (
+          {p.documentoId && p.tipo === "PLAN_ESTRUCTURADO" && (
             <RevisionBadge
+              tipo={p.tipo}
+              cargando={revision.isFetching}
               estado={revision.data?.estado ?? null}
               hallazgos={revision.data?.hallazgos}
               onAbrir={() => setRevisionAbierta(true)}
@@ -447,32 +458,30 @@ export function DocumentoCard(p: Props) {
               ? "Se encontraron inconsistencias en la carátula o el contenido del documento."
               : "La revisión no detectó observaciones en la carátula."
           }
-          ancho="max-w-lg"
+          ancho="max-w-xl"
         >
           {revision.isPending ? (
             <p className="text-sm text-grafito-600">Analizando el documento…</p>
           ) : revision.data ? (
             <div className="space-y-3">
               {revision.data.hallazgos.length === 0 ? (
-                <p className="text-sm text-grafito-700">
-                  La carátula y el resumen cumplen con los controles básicos del trámite.
-                </p>
+                <div className="rounded-xl border border-green-200 bg-verde-inst-100/50 p-4 text-center">
+                  <p className="text-sm font-semibold text-verde-inst-700">
+                    ✓ La carátula, la presentación y el resumen cumplen con las especificaciones de
+                    la guía oficial.
+                  </p>
+                </div>
               ) : (
-                <ul className="space-y-3">
+                <ul className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
                   {revision.data.hallazgos.map((hallazgo, index) => (
-                    <li
+                    <ItemHallazgo
                       key={`${hallazgo.campo}-${index}`}
-                      className="rounded-xl border border-amber-200 bg-amber-50 p-3"
-                    >
-                      <p className="text-sm font-bold text-amber-900">{hallazgo.campo}</p>
-                      <p className="mt-1 text-sm text-amber-800">{hallazgo.mensaje}</p>
-                      {hallazgo.esperado && (
-                        <p className="mt-1 text-xs text-amber-700">Esperado: {hallazgo.esperado}</p>
-                      )}
-                      {hallazgo.encontrado && (
-                        <p className="text-xs text-amber-700">Encontrado: {hallazgo.encontrado}</p>
-                      )}
-                    </li>
+                      campo={hallazgo.campo}
+                      mensaje={hallazgo.mensaje}
+                      severidad={hallazgo.severidad}
+                      esperado={hallazgo.esperado}
+                      encontrado={hallazgo.encontrado}
+                    />
                   ))}
                 </ul>
               )}

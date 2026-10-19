@@ -264,6 +264,11 @@ export async function procesarRevisionDocumento(payload: RevisionDocumentoPayloa
           : exp.asesorNombre
             ? { nombre: exp.asesorNombre }
             : null,
+        modalidad: exp.modalidad,
+        programa: exp.programa,
+        anoReferencia: exp.fechaSustentacion
+          ? new Date(exp.fechaSustentacion).getFullYear()
+          : undefined,
       },
       base,
       false,
@@ -273,8 +278,12 @@ export async function procesarRevisionDocumento(payload: RevisionDocumentoPayloa
       campo: h.tipo,
       mensaje: h.mensaje,
       severidad: h.severidad === "ADVERTENCIA" ? "ADVERTENCIA" : "INFO",
-      ...(h.sugerencia ? { esperado: h.sugerencia } : {}),
-      ...(h.evidencia ? { encontrado: h.evidencia } : {}),
+      ...(h.esperado ? { esperado: h.esperado } : h.sugerencia ? { esperado: h.sugerencia } : {}),
+      ...(h.encontrado
+        ? { encontrado: h.encontrado }
+        : h.evidencia
+          ? { encontrado: h.evidencia }
+          : {}),
     }));
 
     await db

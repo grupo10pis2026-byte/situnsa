@@ -1,7 +1,10 @@
 /**
  * Motor puro de POST /api/documentos/:id/analisis, invocado por analizar-documento.use-case.ts.
- * Solo recibe texto de páginas 1–3 y referencias esperadas; no lee PDF, DB ni proveedores de IA.
+ * Valida carátula, presentación, resumen y abstract según la guía oficial
+ * "FORMATO PRESENTACIÓN BORRADOR DE TESIS O TRABAJO ACAD." de la FIPS - UNSA.
+ * Solo recibe texto de páginas 1–6 y referencias esperadas; no lee PDF, DB ni proveedores de IA.
  */
+
 export interface PaginaDocumento {
   numero: number;
   texto: string;
@@ -9,13 +12,17 @@ export interface PaginaDocumento {
 
 export interface IdentidadDocumento {
   nombre: string;
-  dni?: string;
+  dni?: string | undefined;
+  grado?: string | undefined;
 }
 
 export interface DatosAnalisisDocumento {
   titulo: string;
   tesistas: readonly IdentidadDocumento[];
   asesor: IdentidadDocumento | null;
+  modalidad?: "TESIS" | "TRABAJO_ACADEMICO" | "ARTICULO" | string | undefined;
+  programa?: string | undefined;
+  anoReferencia?: number | string | undefined;
 }
 
 export interface HallazgoDocumento {
@@ -23,6 +30,8 @@ export interface HallazgoDocumento {
   mensaje: string;
   severidad: "ADVERTENCIA" | "INFO";
   pagina?: number | undefined;
+  esperado?: string | undefined;
+  encontrado?: string | undefined;
   evidencia?: string | undefined;
   sugerencia?: string | undefined;
 }
@@ -53,7 +62,7 @@ export function normalizarTextoDocumento(texto: string): string {
 }
 
 /** Compara frases normalizadas con límites de palabra para evitar coincidencias parciales. */
-function contieneFrase(texto: string, frase: string): boolean {
+export function contieneFrase(texto: string, frase: string): boolean {
   const normal = normalizarTextoDocumento(frase);
   return normal.length > 0 && ` ${normalizarTextoDocumento(texto)} `.includes(` ${normal} `);
 }
@@ -74,7 +83,7 @@ const FIN_RESUMEN =
 
 /**
  * Delimita el resumen por encabezados y calcula si las páginas disponibles cubren su final.
- * Un resumen cortado al terminar la página 3 no se entrega a revisión editorial.
+ * Un resumen cortado no se entrega a revisión editorial.
  */
 function leerResumen(paginas: readonly PaginaDocumento[], totalPaginas: number) {
   let iniciado = false;
@@ -105,20 +114,25 @@ function leerResumen(paginas: readonly PaginaDocumento[], totalPaginas: number) 
 }
 
 /** Busca etiquetas, comillas o bloques exactos en la carátula; no infiere títulos del resumen. */
-function detectarTitulo(caratula: string, esperado: string): string | null {
+export function detectarTitulo(caratula: string, esperado: string): string | null {
   const lineas = caratula
     .split(/\r?\n/u)
     .map((l) => l.trim())
     .filter(Boolean);
   // Etiqueta explícita o bloque entre comillas, sin buscar en resumen ni otras páginas.
   const indice = lineas.findIndex((l) =>
-    /^(?:título|titulo)(?:\s+de\s+(?:la\s+)?tesis)?\s*:/iu.test(l),
+    /^(?:título|titulo)(?:\s+de\s+(?:la\s+)?(?:tesis|trabajo(?:\s+acad[eé]mico)?))?\s*:/iu.test(l),
   );
   if (indice >= 0) {
     const primera = (lineas[indice] ?? "").replace(/^[^:]+:\s*/u, "");
     const siguientes: string[] = primera ? [primera] : [];
     for (const linea of lineas.slice(indice + 1, indice + 5)) {
-      if (/^(?:asesor|autor|tesista|presentado|dni|resumen|abstract)\b/iu.test(linea)) break;
+      if (
+        /^(?:asesor|autor|tesista|presentado|dni|para\s+optar|facultad|resumen|abstract)\b/iu.test(
+          linea,
+        )
+      )
+        break;
       siguientes.push(linea);
       if (normalizarTextoDocumento(siguientes.join(" ")) === normalizarTextoDocumento(esperado))
         break;
@@ -138,11 +152,11 @@ function detectarTitulo(caratula: string, esperado: string): string | null {
 }
 
 /**
- * Motor puro utilizado por POST /api/documentos/:id/analisis.
- * @param paginasEntrada Texto ya extraído; se descartan páginas fuera de 1–3.
+ * Motor puro utilizado por POST /api/documentos/:id/analisis y background workers.
+ * @param paginasEntrada Texto ya extraído; se procesan páginas dentro de 1–6.
  * @param datos Referencias del expediente suministradas por la capa de aplicación.
- * @param totalPaginas Total del PDF para distinguir un resumen completo de uno truncado.
- * @returns Controles y hallazgos orientativos; no cambia datos ni concede visto bueno.
+ * @param totalPaginas Total del PDF para distinguir secciones completas de truncadas.
+ * @returns Controles y hallazgos orientativos estructurados con esperado y encontrado.
  */
 export function analizarCaratulaResumen(
   paginasEntrada: readonly PaginaDocumento[],
@@ -150,61 +164,183 @@ export function analizarCaratulaResumen(
   totalPaginas: number,
 ): AnalisisDocumento {
   const paginas = paginasEntrada
-    .filter((p) => p.numero >= 1 && p.numero <= 3)
+    .filter((p) => p.numero >= 1 && p.numero <= 6)
     .map((p) => ({ numero: p.numero, texto: p.texto.slice(0, 100_000) }))
     .sort((a, b) => a.numero - b.numero);
+
   const controles: ControlDocumento[] = [];
   const hallazgos: HallazgoDocumento[] = [];
   const caratula = paginas.find((p) => p.numero === 1)?.texto ?? "";
   const legible = normalizarTextoDocumento(caratula).length >= 20;
-  // Centraliza la correspondencia entre control no conforme y severidad del hallazgo.
+
   const agregar = (
     tipo: string,
     estado: ControlDocumento["estado"],
     mensaje: string,
     pagina?: number,
+    esperado?: string,
+    encontrado?: string,
   ) => {
     controles.push({ tipo, estado, mensaje });
-    if (estado !== "CONFORME")
+    if (estado !== "CONFORME") {
       hallazgos.push({
         tipo,
         mensaje,
         severidad: estado === "NO_EVALUABLE" ? "INFO" : "ADVERTENCIA",
         ...(pagina ? { pagina } : {}),
+        ...(esperado ? { esperado } : {}),
+        ...(encontrado ? { encontrado } : {}),
       });
+    }
   };
+
+  // 1. TÍTULO: Detección y formato normativo
   const tituloDetectado =
     datos.titulo.trim() && legible ? detectarTitulo(caratula, datos.titulo) : null;
   const similitudTitulo = tituloDetectado
     ? similitudTituloDocumento(tituloDetectado, datos.titulo)
     : null;
-  if (!datos.titulo.trim())
+
+  if (!datos.titulo.trim()) {
     agregar("TITULO", "NO_EVALUABLE", "Falta el título registrado del expediente.");
-  else if (!legible || !tituloDetectado)
-    agregar("TITULO", "NO_EVALUABLE", "No se pudo identificar el título de la carátula.", 1);
-  else if (normalizarTextoDocumento(tituloDetectado) === normalizarTextoDocumento(datos.titulo))
-    agregar("TITULO", "CONFORME", "El título coincide con el registrado.", 1);
-  else
+  } else if (!legible || !tituloDetectado) {
     agregar(
       "TITULO",
-      "ADVERTENCIA",
-      "El título detectado presenta diferencias respecto al registrado.",
+      "NO_EVALUABLE",
+      "No se pudo identificar el título en la carátula.",
       1,
+      datos.titulo,
+      "No identificado",
     );
+  } else {
+    // Restricciones de la guía oficial sobre el título:
+    // a) No comillas
+    if (/[«“"”]/u.test(tituloDetectado)) {
+      agregar(
+        "TITULO_COMILLAS",
+        "ADVERTENCIA",
+        "El título no debe contener comillas (« », “ ”) según el formato oficial.",
+        1,
+        datos.titulo.replace(/[«“"”]/gu, "").trim(),
+        tituloDetectado,
+      );
+    }
+    // b) No punto final
+    if (/\.\s*$/u.test(tituloDetectado)) {
+      agregar(
+        "TITULO_PUNTO_FINAL",
+        "ADVERTENCIA",
+        "El título no debe terminar con un punto final (.) según el formato oficial.",
+        1,
+        datos.titulo.replace(/\.+$/u, "").trim(),
+        tituloDetectado,
+      );
+    }
+    // c) No mayúsculas sostenidas en todo el título
+    const soloLetras = tituloDetectado.replace(/[^\p{L}]/gu, "");
+    if (soloLetras.length > 10 && soloLetras === soloLetras.toUpperCase()) {
+      agregar(
+        "TITULO_MAYUSCULAS",
+        "ADVERTENCIA",
+        "El título no debe escribirse en mayúsculas sostenidas; se recomienda tipo oración o título.",
+        1,
+        "Título en mayúsculas y minúsculas (tipo oración)",
+        tituloDetectado,
+      );
+    }
 
-  /** Verifica nombre completo y, si existe referencia, DNI con límites numéricos. */
-  function identidad(persona: IdentidadDocumento, tipo: string) {
-    if (!legible || !persona.nombre.trim())
-      agregar(tipo, "NO_EVALUABLE", "No hay datos suficientes para verificar esta identidad.", 1);
-    else
+    if (normalizarTextoDocumento(tituloDetectado) === normalizarTextoDocumento(datos.titulo)) {
+      agregar("TITULO", "CONFORME", "El título coincide con el registrado.", 1);
+    } else {
+      agregar(
+        "TITULO",
+        "ADVERTENCIA",
+        "El título detectado en la carátula presenta diferencias respecto al registrado.",
+        1,
+        datos.titulo,
+        tituloDetectado,
+      );
+    }
+  }
+
+  // 2. MODALIDAD Y FÓRMULA DE PRESENTACIÓN (Página 1 o 2 de la guía)
+  const esTrabajoAcademico =
+    datos.modalidad === "TRABAJO_ACADEMICO" ||
+    (datos.modalidad && normalizarTextoDocumento(datos.modalidad).includes("trabajo"));
+
+  if (esTrabajoAcademico && legible) {
+    const tieneFormulaTesis = contieneFrase(caratula, "tesis presentada por");
+    const tieneFormulaTrabajo =
+      contieneFrase(caratula, "trabajo academico presentado por") ||
+      contieneFrase(caratula, "trabajo de suficiencia profesional presentado por");
+
+    if (tieneFormulaTesis) {
+      agregar(
+        "MODALIDAD_FORMULA",
+        "ADVERTENCIA",
+        "Para la modalidad de Trabajo Académico, la carátula debe indicar 'Trabajo Académico presentado por:' y no 'Tesis presentada por:'.",
+        1,
+        "Trabajo Académico presentado por:",
+        "Tesis presentada por:",
+      );
+    } else if (!tieneFormulaTrabajo && datos.modalidad) {
+      agregar(
+        "MODALIDAD_FORMULA",
+        "ADVERTENCIA",
+        "La carátula debe incluir la fórmula: 'Trabajo Académico presentado por:'.",
+        1,
+        "Trabajo Académico presentado por:",
+        "Fórmula no detectada",
+      );
+    } else {
+      agregar(
+        "MODALIDAD_FORMULA",
+        "CONFORME",
+        "Fórmula de presentación para Trabajo Académico conforme.",
+        1,
+      );
+    }
+  } else if (datos.modalidad === "TESIS" && legible) {
+    const tieneFormulaTrabajo =
+      contieneFrase(caratula, "trabajo academico presentado por") ||
+      contieneFrase(caratula, "trabajo de suficiencia profesional presentado por");
+    if (tieneFormulaTrabajo) {
+      agregar(
+        "MODALIDAD_FORMULA",
+        "ADVERTENCIA",
+        "Para la modalidad de Tesis, la carátula debe indicar 'Tesis presentada por:' y no 'Trabajo Académico presentado por:'.",
+        1,
+        "Tesis presentada por:",
+        "Trabajo Académico presentado por:",
+      );
+    }
+  }
+
+  // 3. IDENTIDAD DE TESISTAS / AUTORES (Nombre completo y DNI)
+  function verificarIdentidad(persona: IdentidadDocumento, tipo: string) {
+    if (!legible || !persona.nombre.trim()) {
       agregar(
         tipo,
-        contieneFrase(caratula, persona.nombre) ? "CONFORME" : "ADVERTENCIA",
-        contieneFrase(caratula, persona.nombre)
+        "NO_EVALUABLE",
+        "No hay datos suficientes para verificar esta identidad.",
+        1,
+        persona.nombre || "Nombre registrado",
+        "Datos insuficientes",
+      );
+    } else {
+      const coincide = contieneFrase(caratula, persona.nombre);
+      agregar(
+        tipo,
+        coincide ? "CONFORME" : "ADVERTENCIA",
+        coincide
           ? "El nombre figura en la carátula."
           : "No se encontró el nombre completo esperado en la carátula.",
         1,
+        persona.nombre,
+        coincide ? persona.nombre : "No detectado en la carátula",
       );
+    }
+
     if (persona.dni !== undefined) {
       const valido = /^\d{8}$/u.test(persona.dni);
       const encontrado = valido && new RegExp(`(?<!\\d)${persona.dni}(?!\\d)`, "u").test(caratula);
@@ -217,38 +353,67 @@ export function analizarCaratulaResumen(
             ? "El DNI esperado figura en la carátula."
             : "No se encontró el DNI esperado en la carátula.",
         1,
+        persona.dni,
+        encontrado ? persona.dni : "No detectado en la carátula",
       );
     }
   }
-  if (!datos.tesistas.length)
-    agregar("TESISTAS", "NO_EVALUABLE", "No hay tesistas registrados para comparar.");
-  datos.tesistas.forEach((persona, indice) => {
-    identidad(persona, `TESISTA_${indice + 1}`);
-  });
-  if (datos.asesor) identidad(datos.asesor, "ASESOR");
-  else agregar("ASESOR", "NO_EVALUABLE", "No hay asesor registrado para comparar.");
 
+  if (!datos.tesistas.length) {
+    agregar("TESISTAS", "NO_EVALUABLE", "No hay tesistas registrados para comparar.");
+  }
+  datos.tesistas.forEach((persona, indice) => {
+    verificarIdentidad(persona, `TESISTA_${indice + 1}`);
+  });
+
+  // 4. ASESOR: Nombre y grado académico previo
+  if (datos.asesor) {
+    verificarIdentidad(datos.asesor, "ASESOR");
+    if (legible && contieneFrase(caratula, datos.asesor.nombre)) {
+      // Verificar si figura el grado académico previo (Mg., Dr., MSc., Ing., etc.)
+      const tieneGrado = /\b(?:dr|dra|mg|msc|mag|ing|lic|abg)\b\.?/iu.test(caratula);
+      if (!tieneGrado) {
+        agregar(
+          "ASESOR_GRADO",
+          "ADVERTENCIA",
+          "El asesor debe consignar su grado académico previo (ej. Mg., Dr., MSc., Ing.) según la normativa.",
+          1,
+          `Mg./Dr./MSc. ${datos.asesor.nombre}`,
+          datos.asesor.nombre,
+        );
+      }
+    }
+  } else {
+    agregar("ASESOR", "NO_EVALUABLE", "No hay asesor registrado para comparar.");
+  }
+
+  // 5. RESUMEN Y PALABRAS CLAVE
   const resumen = leerResumen(paginas, totalPaginas);
-  if (!paginas.some((p) => normalizarTextoDocumento(p.texto).length >= 20))
+  if (!paginas.some((p) => normalizarTextoDocumento(p.texto).length >= 20)) {
     agregar(
       "RESUMEN",
       "NO_EVALUABLE",
       "El PDF no contiene texto extraíble suficiente. Requiere revisión manual.",
     );
-  else if (!resumen.encontrado)
+  } else if (!resumen.encontrado) {
     agregar(
       "RESUMEN",
       "ADVERTENCIA",
-      "No se encontró un encabezado Resumen o Abstract en las páginas 1–3.",
+      "No se encontró un encabezado Resumen en las páginas analizadas.",
+      undefined,
+      "Encabezado RESUMEN",
+      "No detectado",
     );
-  else if (!resumen.texto)
+  } else if (!resumen.texto) {
     agregar(
       "RESUMEN",
       "NO_EVALUABLE",
       "El encabezado no contiene un resumen extraíble.",
       resumen.pagina,
+      "Contenido del resumen",
+      "Texto vacío",
     );
-  else
+  } else {
     agregar(
       "RESUMEN",
       resumen.completo ? "CONFORME" : "NO_EVALUABLE",
@@ -257,6 +422,85 @@ export function analizarCaratulaResumen(
         : "El resumen puede continuar fuera de las páginas analizadas; revisión parcial.",
       resumen.pagina,
     );
+
+    // Verificación de PALABRAS CLAVE obligatorias
+    const paginaResumenTexto = paginas.find((p) => p.numero === resumen.pagina)?.texto ?? "";
+    const tienePalabrasClave = /\b(?:palabras\s+clave|palabra\s+clave)\b\s*:/iu.test(
+      paginaResumenTexto,
+    );
+    if (!tienePalabrasClave) {
+      agregar(
+        "RESUMEN_PALABRAS_CLAVE",
+        "ADVERTENCIA",
+        "La sección de Resumen debe incluir obligatoriamente 'PALABRAS CLAVE:' (de 3 a 5 términos).",
+        resumen.pagina,
+        "PALABRAS CLAVE: término 1, término 2, término 3",
+        "No se detectó la sección 'PALABRAS CLAVE:'",
+      );
+    }
+  }
+
+  // 6. ABSTRACT Y KEYWORDS (Para documentos completos con totalPaginas >= 4)
+  if (totalPaginas >= 4) {
+    const paginaAbstract = paginas.find((p) =>
+      /^\s*(?:\d+[.)]?\s+)?abstract\s*:?[ \t]*$/imu.test(p.texto),
+    );
+    if (!paginaAbstract) {
+      agregar(
+        "ABSTRACT",
+        "ADVERTENCIA",
+        "No se encontró la sección de ABSTRACT en inglés en las primeras páginas analizadas.",
+        undefined,
+        "Encabezado ABSTRACT y contenido en inglés",
+        "No detectado",
+      );
+    } else {
+      const tieneKeywords = /\b(?:keywords|key\s+words)\b\s*:/iu.test(paginaAbstract.texto);
+      if (!tieneKeywords) {
+        agregar(
+          "ABSTRACT_KEYWORDS",
+          "ADVERTENCIA",
+          "La sección de Abstract debe incluir obligatoriamente 'KEYWORDS:' en inglés.",
+          paginaAbstract.numero,
+          "KEYWORDS: keyword 1, keyword 2, keyword 3",
+          "No se detectó la sección 'KEYWORDS:'",
+        );
+      } else {
+        agregar(
+          "ABSTRACT",
+          "CONFORME",
+          "Sección de Abstract y KEYWORDS conforme.",
+          paginaAbstract.numero,
+        );
+      }
+    }
+  }
+
+  // 7. PRESENTACIÓN: En caso de Trabajo Académico verificar mención a la empresa/centro laboral
+  if (esTrabajoAcademico && totalPaginas >= 3) {
+    const paginasPresentacion = paginas.filter((p) => p.numero === 2 || p.numero === 3);
+    const textoPresentacion = paginasPresentacion.map((p) => p.texto).join("\n");
+    const esPaginaPresentacion = /presentaci[oó]n|se[ñn]or(?:a)?\s+decano/iu.test(
+      textoPresentacion,
+    );
+    if (esPaginaPresentacion) {
+      const tieneMencionEmpresa =
+        /\b(?:empresa|instituci[oó]n|laborando|laboral|centro\s+de\s+trabajo|experiencia\s+laboral)\b/iu.test(
+          textoPresentacion,
+        );
+      if (!tieneMencionEmpresa) {
+        agregar(
+          "PRESENTACION_EMPRESA",
+          "ADVERTENCIA",
+          "En la presentación de Trabajo Académico debe mencionarse la empresa o centro de labores de la experiencia profesional.",
+          paginasPresentacion[0]?.numero ?? 2,
+          "Mención del centro de labores / empresa",
+          "No se detectó mención de empresa o centro de labores",
+        );
+      }
+    }
+  }
+
   return {
     estado: !paginas.some((p) => normalizarTextoDocumento(p.texto).length >= 20)
       ? "NO_EVALUABLE"

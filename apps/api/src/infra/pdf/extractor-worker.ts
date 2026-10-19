@@ -50,7 +50,7 @@ async function extraer() {
     verbosity: 0,
   });
   try {
-    const result = await parser.getText({ first: 3 });
+    const result = await parser.getText({ first: 6 });
     if (result.text.length > MAX_TEXTO) throw new Error("Texto excedido");
     process.stdout.write(
       JSON.stringify({

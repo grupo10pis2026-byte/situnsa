@@ -13,8 +13,8 @@ import { extraerEnSandbox } from "./cola-sandbox.js";
 
 const ResultadoExtraccionSchema = z.object({
   paginas: z
-    .array(z.object({ numero: z.number().int().min(1).max(3), texto: z.string().max(100_000) }))
-    .max(3),
+    .array(z.object({ numero: z.number().int().min(1).max(6), texto: z.string().max(100_000) }))
+    .max(6),
   totalPaginas: z.number().int().positive(),
   rss: z.number().positive(),
   peakCgroupBytes: z.number().positive().optional(),

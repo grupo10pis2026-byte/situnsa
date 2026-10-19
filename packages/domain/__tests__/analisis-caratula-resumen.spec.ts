@@ -119,17 +119,17 @@ describe("motor puro de carátula y resumen", () => {
       "NO_EVALUABLE",
     );
   });
-  it("no procesa página 4 y reconoce cobertura parcial", () => {
+  it("no procesa página 7 y reconoce cobertura parcial", () => {
     const r = analizarCaratulaResumen(
       [
         { numero: 1, texto: caratula },
-        { numero: 3, texto: "Resumen\nContenido inconcluso" },
-        { numero: 4, texto: "MARCADOR_PAGINA_4" },
+        { numero: 6, texto: "Resumen\nContenido inconcluso" },
+        { numero: 7, texto: "MARCADOR_PAGINA_7" },
       ],
       datos,
-      4,
+      7,
     );
-    expect(r.resumen).not.toContain("MARCADOR_PAGINA_4");
+    expect(r.resumen).not.toContain("MARCADOR_PAGINA_7");
     expect(r.resumenCompleto).toBe(false);
     expect(r.estado).toBe("PARCIAL");
   });
@@ -137,6 +137,65 @@ describe("motor puro de carátula y resumen", () => {
     const r = analizarCaratulaResumen(paginas, { titulo: "", tesistas: [], asesor: null }, 2);
     expect(r.estado).toBe("PARCIAL");
     expect(r.controles.filter((c) => c.estado === "NO_EVALUABLE")).toHaveLength(3);
+  });
+  it("detecta comillas en el título según formato oficial", () => {
+    const conComillas = caratula.replace(datos.titulo, `"${datos.titulo}"`);
+    const r = analizar(conComillas);
+    const hallazgo = r.hallazgos.find((h) => h.tipo === "TITULO_COMILLAS");
+    expect(hallazgo).toBeDefined();
+    expect(hallazgo?.severidad).toBe("ADVERTENCIA");
+    expect(hallazgo?.esperado).toBe(datos.titulo);
+    expect(hallazgo?.encontrado).toContain(`"${datos.titulo}"`);
+  });
+  it("detecta punto final en el título según formato oficial", () => {
+    const conPunto = caratula.replace(datos.titulo, `${datos.titulo}.`);
+    const r = analizar(conPunto);
+    const hallazgo = r.hallazgos.find((h) => h.tipo === "TITULO_PUNTO_FINAL");
+    expect(hallazgo).toBeDefined();
+    expect(hallazgo?.esperado).toBe(datos.titulo);
+    expect(hallazgo?.encontrado).toContain(`${datos.titulo}.`);
+  });
+  it("detecta título en mayúsculas sostenidas", () => {
+    const enMayusculas = caratula.replace(datos.titulo, datos.titulo.toUpperCase());
+    const r = analizar(enMayusculas);
+    const hallazgo = r.hallazgos.find((h) => h.tipo === "TITULO_MAYUSCULAS");
+    expect(hallazgo).toBeDefined();
+    expect(hallazgo?.encontrado).toBe(datos.titulo.toUpperCase());
+  });
+  it("detecta fórmula errónea de presentación en Trabajo Académico", () => {
+    const caratulaTrabajoErronea = `UNIVERSIDAD\nTítulo: ${datos.titulo}\nTesis presentada por: María Núñez García\nDNI: 01234567\nAsesor: Dr. José Pérez Torres\nDNI: 07654321`;
+    const r = analizarCaratulaResumen(
+      [
+        { numero: 1, texto: caratulaTrabajoErronea },
+        { numero: 2, texto: "RESUMEN\nSe estudió el sistema.\nPalabras clave: red" },
+      ],
+      { ...datos, modalidad: "TRABAJO_ACADEMICO" },
+      2,
+    );
+    const hallazgo = r.hallazgos.find((h) => h.tipo === "MODALIDAD_FORMULA");
+    expect(hallazgo).toBeDefined();
+    expect(hallazgo?.esperado).toBe("Trabajo Académico presentado por:");
+    expect(hallazgo?.encontrado).toBe("Tesis presentada por:");
+  });
+  it("detecta falta de PALABRAS CLAVE en el resumen", () => {
+    const r = analizarCaratulaResumen(
+      [
+        { numero: 1, texto: caratula },
+        { numero: 2, texto: "RESUMEN\nTexto sin sección de palabras clave." },
+      ],
+      datos,
+      2,
+    );
+    const hallazgo = r.hallazgos.find((h) => h.tipo === "RESUMEN_PALABRAS_CLAVE");
+    expect(hallazgo).toBeDefined();
+    expect(hallazgo?.esperado).toContain("PALABRAS CLAVE:");
+  });
+  it("detecta falta de grado académico en el asesor", () => {
+    const caratulaSinGrado = caratula.replace("Dr. José Pérez Torres", "José Pérez Torres");
+    const r = analizar(caratulaSinGrado);
+    const hallazgo = r.hallazgos.find((h) => h.tipo === "ASESOR_GRADO");
+    expect(hallazgo).toBeDefined();
+    expect(hallazgo?.esperado).toContain("Mg./Dr./MSc.");
   });
   it("determinismo y ausencia de mutación", () => {
     const antes = JSON.stringify({ paginas, datos });

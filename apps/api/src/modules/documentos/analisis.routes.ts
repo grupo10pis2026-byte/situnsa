@@ -3,7 +3,7 @@
  * Ruta: POST /api/documentos/:id/analisis. Contrato: packages/contracts/src/analisis-documental.ts.
  */
 import { AnalisisDocumentoRequestSchema } from "@pis/contracts";
-import { db, documentos, expedientes, usuarios } from "@pis/db";
+import { db, documentoRevisiones, documentos, expedientes, usuarios } from "@pis/db";
 import { eq, inArray } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { autorizar } from "../../infra/auth/autorizacion.js";
@@ -113,10 +113,63 @@ export function registerAnalisisDocumental(app: FastifyInstance): void {
               : exp.asesorNombre
                 ? { nombre: exp.asesorNombre }
                 : null,
+            modalidad: exp.modalidad,
+            programa: exp.programa,
+            anoReferencia: exp.fechaSustentacion
+              ? new Date(exp.fechaSustentacion).getFullYear()
+              : undefined,
           },
           process.env.DOCS_VOLUME_PATH ?? "./var/data/titulacion-docs",
           entrada.data.revisionEditorial,
         );
+
+        // Sincronizar con la tabla documentoRevisiones para que las tarjetas y badges se actualicen
+        try {
+          const hallazgosDb = resultado.hallazgos.map((h) => ({
+            campo: h.tipo,
+            mensaje: h.mensaje,
+            severidad: h.severidad === "ADVERTENCIA" ? ("ADVERTENCIA" as const) : ("INFO" as const),
+            ...(h.esperado
+              ? { esperado: h.esperado }
+              : h.sugerencia
+                ? { esperado: h.sugerencia }
+                : {}),
+            ...(h.encontrado
+              ? { encontrado: h.encontrado }
+              : h.evidencia
+                ? { encontrado: h.evidencia }
+                : {}),
+          }));
+
+          const [existente] = await db
+            .select({ id: documentoRevisiones.id })
+            .from(documentoRevisiones)
+            .where(eq(documentoRevisiones.documentoId, doc.id))
+            .limit(1);
+
+          if (existente) {
+            await db
+              .update(documentoRevisiones)
+              .set({
+                estado: "COMPLETADO",
+                hallazgos: hallazgosDb,
+                paginasAnalizadas: resultado.paginasAnalizadas.length,
+                updatedAt: new Date(),
+              })
+              .where(eq(documentoRevisiones.id, existente.id));
+          } else {
+            await db.insert(documentoRevisiones).values({
+              documentoId: doc.id,
+              expedienteId: exp.id,
+              estado: "COMPLETADO",
+              hallazgos: hallazgosDb,
+              paginasAnalizadas: resultado.paginasAnalizadas.length,
+            });
+          }
+        } catch (errSync) {
+          req.log.warn(errSync, "No se pudo sincronizar documentoRevisiones tras análisis manual");
+        }
+
         return reply.send(resultado);
       } finally {
         activo = false;

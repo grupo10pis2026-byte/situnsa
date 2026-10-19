@@ -10,8 +10,10 @@ export const HallazgoDocumentoSchema = z
     tipo: z.string().min(1).max(64),
     mensaje: z.string().min(1).max(1000),
     severidad: z.enum(["ADVERTENCIA", "INFO"]),
-    pagina: z.number().int().min(1).max(3).optional(),
-    evidencia: z.string().max(500).optional(),
+    pagina: z.number().int().min(1).max(6).optional(),
+    esperado: z.string().max(1000).optional(),
+    encontrado: z.string().max(1000).optional(),
+    evidencia: z.string().max(1000).optional(),
     sugerencia: z.string().max(1000).optional(),
   })
   .strict();
@@ -29,7 +31,7 @@ export const AnalisisDocumentoResponseSchema = z
     documentoId: z.string().uuid(),
     version: z.number().int().positive(),
     sha256: z.string().length(64),
-    paginasAnalizadas: z.array(z.number().int().min(1).max(3)).max(3),
+    paginasAnalizadas: z.array(z.number().int().min(1).max(6)).max(6),
     estado: z.enum(["COMPLETADO", "PARCIAL", "NO_EVALUABLE"]),
     tituloRegistrado: z.string(),
     tituloDetectado: z.string().nullable(),
@@ -46,7 +48,7 @@ export const AnalisisDocumentoResponseSchema = z
           })
           .strict(),
       )
-      .max(30),
+      .max(50),
     hallazgos: z.array(HallazgoDocumentoSchema).max(100),
     editorial: z.enum(["NO_SOLICITADA", "COMPLETADA", "NO_DISPONIBLE"]),
   })

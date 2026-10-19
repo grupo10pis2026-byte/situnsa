@@ -18,12 +18,12 @@ afterEach(async () => {
 });
 
 describe("extracción real de PDF por rangos", () => {
-  it("extrae páginas 1–3 y excluye el marcador de página 4", async () => {
+  it("extrae páginas 1–6 y excluye el marcador de página 7", async () => {
     const pdf = await PDFDocument.create();
     const font = await pdf.embedFont(StandardFonts.Helvetica);
-    for (let i = 1; i <= 4; i++) {
+    for (let i = 1; i <= 7; i++) {
       const page = pdf.addPage();
-      page.drawText(i === 4 ? "SOLO_PAGINA_4" : `Contenido de pagina ${i}`, {
+      page.drawText(i === 7 ? "SOLO_PAGINA_7" : `Contenido de pagina ${i}`, {
         x: 50,
         y: 700,
         font,
@@ -32,9 +32,9 @@ describe("extracción real de PDF por rangos", () => {
     const ruta = join(raiz, "plan.pdf");
     await writeFile(ruta, await pdf.save());
     const resultado = await extraerPrimerasPaginas(ruta, raiz);
-    expect(resultado.totalPaginas).toBe(4);
-    expect(resultado.paginas.map((p) => p.numero)).toEqual([1, 2, 3]);
-    expect(resultado.paginas.map((p) => p.texto).join(" ")).not.toContain("SOLO_PAGINA_4");
+    expect(resultado.totalPaginas).toBe(7);
+    expect(resultado.paginas.map((p) => p.numero)).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(resultado.paginas.map((p) => p.texto).join(" ")).not.toContain("SOLO_PAGINA_7");
   }, 25_000);
   it("rechaza ruta fuera de la raíz sin parsear", async () => {
     await expect(abrirPdfSeguro(join(raiz, "..", "fuera.pdf"), raiz)).rejects.toThrow();
