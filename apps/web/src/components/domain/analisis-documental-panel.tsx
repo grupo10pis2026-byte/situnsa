@@ -1,3 +1,4 @@
+import { AlertTriangle, CheckCircle2, Info } from "lucide-react";
 import { useAnalizarDocumento } from "../../api/analisis-documental.js";
 import { cn } from "../../utils/cn.js";
 import { Button } from "../ui/button.js";
@@ -107,7 +108,7 @@ export function AnalisisDocumentalPanel({ documentoId }: { documentoId: string }
               )}
             </div>
 
-            {/* Lista de controles de verificación */}
+            {/* Lista de controles de verificación con iconos formales */}
             <div>
               <p className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                 Puntos de control normativo:
@@ -117,7 +118,7 @@ export function AnalisisDocumentalPanel({ documentoId }: { documentoId: string }
                   <li
                     key={control.tipo}
                     className={cn(
-                      "flex items-start gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium",
+                      "flex items-start gap-2 rounded-lg border px-2.5 py-1.5 text-xs font-medium",
                       control.estado === "CONFORME"
                         ? "border-green-200 bg-green-50/80 text-green-900"
                         : control.estado === "NO_EVALUABLE"
@@ -125,12 +126,14 @@ export function AnalisisDocumentalPanel({ documentoId }: { documentoId: string }
                           : "border-amber-200 bg-amber-50/80 text-amber-900",
                     )}
                   >
-                    <span className="font-bold shrink-0">
-                      {control.estado === "CONFORME"
-                        ? "✓"
-                        : control.estado === "NO_EVALUABLE"
-                          ? "–"
-                          : "⚠"}
+                    <span className="shrink-0 mt-0.5">
+                      {control.estado === "CONFORME" ? (
+                        <CheckCircle2 size={13} className="text-emerald-700" />
+                      ) : control.estado === "NO_EVALUABLE" ? (
+                        <Info size={13} className="text-slate-500" />
+                      ) : (
+                        <AlertTriangle size={13} className="text-amber-700" />
+                      )}
                     </span>
                     <span>{control.mensaje}</span>
                   </li>
@@ -138,13 +141,18 @@ export function AnalisisDocumentalPanel({ documentoId }: { documentoId: string }
               </ul>
             </div>
 
-            {/* Inconsistencias con etiquetas diferenciables, fragmento detectado y valor esperado */}
+            {/* Inconsistencias con resumen y desplegable interactivo */}
             {!!resultado.hallazgos.length && (
-              <div className="space-y-2 pt-2">
-                <p className="text-xs font-bold text-red-900 uppercase tracking-wider">
-                  Inconsistencias y observaciones detectadas ({resultado.hallazgos.length}):
-                </p>
-                <ul className="space-y-3">
+              <div className="space-y-2 pt-1">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <p className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                    Inconsistencias y observaciones detectadas ({resultado.hallazgos.length}):
+                  </p>
+                  <span className="text-[11px] text-slate-500">
+                    Haga clic en cada observación para desplegar el fragmento
+                  </span>
+                </div>
+                <ul className="space-y-2">
                   {resultado.hallazgos.map((hallazgo, indice) => (
                     <ItemHallazgo
                       key={`${hallazgo.tipo}-${indice}`}
@@ -161,9 +169,12 @@ export function AnalisisDocumentalPanel({ documentoId }: { documentoId: string }
             )}
 
             {!resultado.hallazgos.length && resultado.estado === "COMPLETADO" && (
-              <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-xs text-green-800 font-medium">
-                ✓ No se identificaron discrepancias en la carátula, presentación ni estructura del
-                resumen.
+              <div className="rounded-lg border border-green-200 bg-green-50/80 p-3 text-xs text-green-900 font-medium flex items-center gap-2">
+                <CheckCircle2 size={16} className="text-emerald-700 shrink-0" />
+                <span>
+                  La carátula, la presentación y la estructura del resumen cumplen con la guía
+                  oficial.
+                </span>
               </div>
             )}
 

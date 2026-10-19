@@ -7,6 +7,7 @@ import { tienePlantilla } from "@pis/domain/dist/documentos/plantillas.js";
 import { cargaHabilitadaTesista } from "@pis/domain/dist/expediente/checklist-catalogo.js";
 import {
   AlertTriangle,
+  CheckCircle2,
   Edit3,
   Eye,
   FileText,
@@ -465,25 +466,35 @@ export function DocumentoCard(p: Props) {
           ) : revision.data ? (
             <div className="space-y-3">
               {revision.data.hallazgos.length === 0 ? (
-                <div className="rounded-xl border border-green-200 bg-verde-inst-100/50 p-4 text-center">
+                <div className="rounded-xl border border-green-200 bg-verde-inst-100/50 p-4 text-center flex items-center justify-center gap-2">
+                  <CheckCircle2 size={16} className="text-verde-inst-700 shrink-0" />
                   <p className="text-sm font-semibold text-verde-inst-700">
-                    ✓ La carátula, la presentación y el resumen cumplen con las especificaciones de
-                    la guía oficial.
+                    La carátula, la presentación y el resumen cumplen con las especificaciones de la
+                    guía oficial.
                   </p>
                 </div>
               ) : (
-                <ul className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
-                  {revision.data.hallazgos.map((hallazgo, index) => (
-                    <ItemHallazgo
-                      key={`${hallazgo.campo}-${index}`}
-                      campo={hallazgo.campo}
-                      mensaje={hallazgo.mensaje}
-                      severidad={hallazgo.severidad}
-                      esperado={hallazgo.esperado}
-                      encontrado={hallazgo.encontrado}
-                    />
-                  ))}
-                </ul>
+                <div className="space-y-3">
+                  <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-2.5 text-xs text-amber-900 flex items-start gap-2">
+                    <AlertTriangle size={15} className="text-amber-700 shrink-0 mt-0.5" />
+                    <span>
+                      Se detectaron {revision.data.hallazgos.length} observaciones. Toque cada una
+                      para ver el fragmento específico del documento y la redacción esperada.
+                    </span>
+                  </div>
+                  <ul className="space-y-2.5 max-h-[60vh] overflow-y-auto pr-1">
+                    {revision.data.hallazgos.map((hallazgo, index) => (
+                      <ItemHallazgo
+                        key={`${hallazgo.campo}-${index}`}
+                        campo={hallazgo.campo}
+                        mensaje={hallazgo.mensaje}
+                        severidad={hallazgo.severidad}
+                        esperado={hallazgo.esperado}
+                        encontrado={hallazgo.encontrado}
+                      />
+                    ))}
+                  </ul>
+                </div>
               )}
             </div>
           ) : (

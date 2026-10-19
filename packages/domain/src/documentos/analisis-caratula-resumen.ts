@@ -340,23 +340,6 @@ export function analizarCaratulaResumen(
         coincide ? persona.nombre : "No detectado en la carátula",
       );
     }
-
-    if (persona.dni !== undefined) {
-      const valido = /^\d{8}$/u.test(persona.dni);
-      const encontrado = valido && new RegExp(`(?<!\\d)${persona.dni}(?!\\d)`, "u").test(caratula);
-      agregar(
-        `${tipo}_DNI`,
-        !valido || !legible ? "NO_EVALUABLE" : encontrado ? "CONFORME" : "ADVERTENCIA",
-        !valido
-          ? "Falta un DNI válido de referencia."
-          : encontrado
-            ? "El DNI esperado figura en la carátula."
-            : "No se encontró el DNI esperado en la carátula.",
-        1,
-        persona.dni,
-        encontrado ? persona.dni : "No detectado en la carátula",
-      );
-    }
   }
 
   if (!datos.tesistas.length) {

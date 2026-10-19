@@ -50,14 +50,10 @@ describe("motor puro de carátula y resumen", () => {
       ).toBe("ADVERTENCIA");
     },
   );
-  it("conserva el cero inicial del DNI", () => {
-    expect(analizar().controles.find((c) => c.tipo === "TESISTA_1_DNI")?.estado).toBe("CONFORME");
-  });
-  it.each(["01234568", "9012345670"])("no usa similitud ni subcadenas para DNI: %s", (dni) => {
-    expect(
-      analizar(caratula.replace("01234567", dni)).controles.find((c) => c.tipo === "TESISTA_1_DNI")
-        ?.estado,
-    ).toBe("ADVERTENCIA");
+  it("no evalúa DNI en la carátula según formato oficial", () => {
+    const r = analizar();
+    expect(r.controles.some((c) => c.tipo.includes("DNI"))).toBe(false);
+    expect(r.hallazgos.some((h) => h.tipo.includes("DNI"))).toBe(false);
   });
   it("verifica todos los tesistas", () => {
     const resultado = analizarCaratulaResumen(
