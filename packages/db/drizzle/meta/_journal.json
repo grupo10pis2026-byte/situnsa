@@ -127,6 +127,13 @@
       "when": 1792348800000,
       "tag": "0017_quitar_anexo_17_duplicado",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1792400000000,
+      "tag": "0018_outstanding_vargas",
+      "breakpoints": true
     }
   ]
 }

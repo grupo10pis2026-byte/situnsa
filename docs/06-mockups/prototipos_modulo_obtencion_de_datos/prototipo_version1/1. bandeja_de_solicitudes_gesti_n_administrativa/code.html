@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+
+<html lang="es"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_dashboard" name="shell-type"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"surface-container-low":"#f0f3ff","inverse-on-surface":"#ecf1ff","on-primary-fixed-variant":"#314863","surface-variant":"#d8e3fb","surface-container-high":"#dee8ff","on-tertiary-fixed-variant":"#003ea8","secondary-container":"#9fcafd","on-tertiary":"#ffffff","on-surface-variant":"#43474d","tertiary-container":"#002265","on-surface":"#111c2d","error-container":"#ffdad6","on-primary":"#ffffff","primary-fixed":"#d1e4ff","outline-variant":"#c3c6ce","surface-dim":"#cfdaf2","primary":"#001428","tertiary-fixed-dim":"#b4c5ff","on-error-container":"#93000a","background":"#f9f9ff","on-primary-container":"#7991af","inverse-primary":"#b0c9e8","secondary":"#35618e","tertiary":"#001039","surface-bright":"#f9f9ff","secondary-fixed-dim":"#9fcafd","on-primary-fixed":"#011d35","inverse-surface":"#263143","primary-container":"#0f2942","on-secondary":"#ffffff","error":"#ba1a1a","on-secondary-container":"#275582","on-secondary-fixed":"#001d36","on-secondary-fixed-variant":"#184975","surface-tint":"#49607c","on-error":"#ffffff","tertiary-fixed":"#dbe1ff","surface-container-lowest":"#ffffff","surface":"#f9f9ff","primary-fixed-dim":"#b0c9e8","surface-container-highest":"#d8e3fb","outline":"#74777e","on-tertiary-container":"#5d88ff","surface-container":"#e7eeff","on-tertiary-fixed":"#00174b","on-background":"#111c2d","secondary-fixed":"#d1e4ff"},borderRadius:{DEFAULT:"0.125rem",lg:"0.25rem",xl:"0.5rem",full:"0.75rem"},spacing:{"space-md":"1rem","space-lg":"1.5rem","space-sm":"0.5rem","space-xs":"0.25rem","gutter-sm":"1rem",margin:"2rem","margin-sm":"1rem","space-xl":"2.5rem",gutter:"1.5rem"},fontFamily:{"label-sm":["Inter"],"headline-md":["Inter"],"body-lg":["Inter"],"headline-lg-mobile":["Inter"],"label-lg":["Inter"],"headline-lg":["Inter"],"headline-sm":["Inter"],"body-sm":["Inter"],"code-sm":["Inter"],"headline-xl":["Inter"],"label-md":["Inter"],"body-md":["Inter"],"headline-xl-mobile":["Inter"]},fontSize:{"label-sm":["11px",{lineHeight:"14px",letterSpacing:"0.04em",fontWeight:"600"}],"headline-md":["18px",{lineHeight:"26px",letterSpacing:"-0.01em",fontWeight:"600"}],"body-lg":["16px",{lineHeight:"26px",fontWeight:"400"}],"headline-lg-mobile":["20px",{lineHeight:"28px",letterSpacing:"-0.01em",fontWeight:"700"}],"label-lg":["14px",{lineHeight:"20px",letterSpacing:"0.01em",fontWeight:"600"}],"headline-lg":["24px",{lineHeight:"32px",letterSpacing:"-0.015em",fontWeight:"700"}],"headline-sm":["16px",{lineHeight:"24px",letterSpacing:"-0.005em",fontWeight:"600"}],"body-sm":["13px",{lineHeight:"18px",fontWeight:"400"}],"code-sm":["12px",{lineHeight:"16px",fontWeight:"500"}],"headline-xl":["32px",{lineHeight:"40px",letterSpacing:"-0.02em",fontWeight:"700"}],"label-md":["12px",{lineHeight:"16px",letterSpacing:"0.02em",fontWeight:"600"}],"body-md":["14px",{lineHeight:"22px",fontWeight:"400"}],"headline-xl-mobile":["26px",{lineHeight:"34px",letterSpacing:"-0.01em",fontWeight:"700"}]}}}};</script></head><body class="bg-background font-body-md text-body-md text-on-surface antialiased"><aside class="fixed left-0 top-0 h-full w-64 bg-surface-container-lowest shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-50 flex flex-col justify-between"><div class="flex flex-col"><div class="h-16 px-space-md flex items-center gap-space-sm bg-primary-container text-on-primary"><span class="material-symbols-outlined text-secondary-fixed">account_balance</span><div class="flex flex-col leading-tight"><span class="font-label-md text-label-md uppercase tracking-wider text-secondary-fixed">Universidad Nacional</span><span class="font-label-sm text-label-sm text-surface-container-high">Sistema SUT</span></div></div><div class="px-space-md py-space-sm"><div class="font-label-sm text-label-sm uppercase tracking-wider text-outline px-space-xs py-space-xs">Módulos Principales</div></div><nav class="flex flex-col gap-space-xs px-space-sm" data-active-classes="bg-primary-container text-on-primary font-label-lg rounded-xl"><a aria-current="page" class="flex items-center gap-space-sm px-space-md py-space-sm transition-colors bg-primary-container text-on-primary font-label-lg rounded-xl" data-path="bandeja-de-solicitudes" href="#"><span class="material-symbols-outlined text-[20px]">inbox</span><span class="font-label-lg text-label-lg">Bandeja de Solicitudes</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="portal-del-tesista" href="#"><span class="material-symbols-outlined text-[20px]">school</span><span class="font-label-lg text-label-lg">Portal del Tesista</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="expedientes-y-grados" href="#"><span class="material-symbols-outlined text-[20px]">folder_shared</span><span class="font-label-lg text-label-lg">Expedientes y Grados</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="taller-de-tesis" href="#"><span class="material-symbols-outlined text-[20px]">menu_book</span><span class="font-label-lg text-label-lg">Taller de Tesis</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="documentos-oficiales" href="#"><span class="material-symbols-outlined text-[20px]">verified</span><span class="font-label-lg text-label-lg">Documentos Oficiales</span></a></nav></div><div class="p-space-md bg-surface-container-low"><div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-secondary">shield</span><div class="flex flex-col"><span class="font-label-sm text-label-sm text-on-surface font-semibold">Auditoría y Certificación</span><span class="font-code-sm text-code-sm text-outline">SUT v4.2.1-Oficial</span></div></div></div></aside><div class="pl-64"><header class="fixed top-0 left-64 right-0 h-16 bg-surface-container-lowest/90 backdrop-blur-md shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-margin"><div class="flex items-center gap-space-md"><span class="font-headline-sm text-headline-sm text-primary-container tracking-tight">Universidad Nacional - Sistema de Titulación</span><span class="hidden xl:inline-block bg-surface-container px-space-sm py-space-xs rounded-xl font-label-sm text-label-sm text-secondary">Periodo Académico 2024-II</span></div><div class="flex items-center gap-space-lg"><div class="flex items-center gap-space-xs text-outline"><button aria-label="Buscar expediente" class="p-space-xs rounded-xl hover:bg-surface-container-high hover:text-on-surface transition-colors" type="button"><span class="material-symbols-outlined text-[22px]">search</span></button><button aria-label="Notificaciones institucionales" class="relative p-space-xs rounded-xl hover:bg-surface-container-high hover:text-on-surface transition-colors" type="button"><span class="material-symbols-outlined text-[22px]">notifications</span><span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-error"></span></button></div><div class="h-6 w-px bg-surface-container-highest"></div><div class="flex items-center gap-space-sm"><div class="hidden md:flex flex-col text-right leading-tight"><span class="font-label-md text-label-md text-on-surface font-semibold">Magnolia C.</span><span class="font-label-sm text-label-sm text-outline">Administrador General</span></div><img alt="Profile" class="w-8 h-8 rounded-full object-cover ring-2 ring-primary-container/20" src="https://lh3.googleusercontent.com/aida/AEtjO1W06tREAenpiRUEbszvdM-9Y5wuRoVDBodEF4eAX6pQIG1-wAj-j04LFw8nz9n0-cVggM5KsF7I8PAPVW_tTUEqz7sFRDLaAiP7LfF7S_Mp5VWePz_i3BjsAZ8YK4PybvaWqbp9zcJ-c-lZKTODnBKImFV0fTtSvGI0AJkzEY3EZooxQpXEYVv_5iUhAehNApPu-hXF-fCTAxtLJtx2f-gAsKIA9ao87lDeSrSbR3FvenaT0OJ4LbJ4C-g"/></div></div></header><main class="relative pt-16 bg-background min-h-screen"><div class="flex flex-col w-full">
+<div class="flex flex-row w-full min-h-[calc(100vh-4rem)]">
+<!-- Sub-Sidebar Departamental / Contextual -->
+<aside class="w-60 shrink-0 bg-surface-container-lowest flex flex-col justify-between py-space-md px-space-sm shadow-[1px_0_4px_rgba(15,41,66,0.03)] z-10">
+<div class="flex flex-col gap-space-sm">
+<div class="px-space-sm py-space-xs flex items-center justify-between">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-outline font-semibold">Gestión Grados</span>
+<span class="font-code-sm text-code-sm bg-surface-container-high text-secondary px-1.5 py-0.5 rounded-full font-bold">DIR-2025</span>
+</div>
+<nav class="flex flex-col gap-1">
+<button class="w-full flex items-center justify-between px-space-sm py-2.5 rounded-xl bg-primary text-on-primary shadow-sm text-left group transition-all" type="button">
+<div class="flex items-center gap-2.5 min-w-0">
+<span class="material-symbols-outlined text-[20px] text-secondary-container">mark_email_unread</span>
+<span class="font-label-lg text-label-lg truncate">Bandeja de Entrada</span>
+</div>
+<span class="font-label-sm text-label-sm bg-error text-on-error font-bold px-2 py-0.5 rounded-full shrink-0 animate-pulse">14</span>
+</button>
+<button class="w-full flex items-center justify-between px-space-sm py-2.5 rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface text-left transition-colors" type="button">
+<div class="flex items-center gap-2.5 min-w-0">
+<span class="material-symbols-outlined text-[20px] text-outline">snippet_folder</span>
+<span class="font-label-lg text-label-lg truncate">Expedientes SET</span>
+</div>
+<span class="font-label-sm text-label-sm text-outline">128</span>
+</button>
+<button class="w-full flex items-center justify-between px-space-sm py-2.5 rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface text-left transition-colors" type="button">
+<div class="flex items-center gap-2.5 min-w-0">
+<span class="material-symbols-outlined text-[20px] text-outline">inventory_2</span>
+<span class="font-label-lg text-label-lg truncate">Gestión de Documentos</span>
+</div>
+</button>
+<button class="w-full flex items-center justify-between px-space-sm py-2.5 rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface text-left transition-colors" type="button">
+<div class="flex items-center gap-2.5 min-w-0">
+<span class="material-symbols-outlined text-[20px] text-outline">auto_stories</span>
+<span class="font-label-lg text-label-lg truncate">Taller de Tesis</span>
+</div>
+<span class="font-label-sm text-label-sm bg-surface-container-highest text-secondary px-1.5 py-0.5 rounded">G-1</span>
+</button>
+<button class="w-full flex items-center justify-between px-space-sm py-2.5 rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface text-left transition-colors" type="button">
+<div class="flex items-center gap-2.5 min-w-0">
+<span class="material-symbols-outlined text-[20px] text-outline">insights</span>
+<span class="font-label-lg text-label-lg truncate">Estadísticas y Reportes</span>
+</div>
+</button>
+<button class="w-full flex items-center justify-between px-space-sm py-2.5 rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface text-left transition-colors" type="button">
+<div class="flex items-center gap-2.5 min-w-0">
+<span class="material-symbols-outlined text-[20px] text-outline">tune</span>
+<span class="font-label-lg text-label-lg truncate">Configuración de Parámetros</span>
+</div>
+</button>
+</nav>
+</div>
+<!-- Quick Session Badge -->
+<div class="bg-surface-container-low p-space-sm rounded-xl flex items-center gap-2.5">
+<div class="w-2.5 h-2.5 rounded-full bg-secondary shrink-0 ring-4 ring-secondary-fixed/40"></div>
+<div class="flex flex-col min-w-0 leading-tight">
+<span class="font-label-sm text-label-sm font-semibold text-primary truncate">Revisión en Vivo</span>
+<span class="font-code-sm text-code-sm text-outline truncate">Servidor Activo SUT-01</span>
+</div>
+</div>
+</aside>
+<!-- Área Principal (62% app layout) -->
+<section class="flex-1 min-w-0 flex flex-col p-space-lg gap-space-md overflow-y-auto">
+<!-- Encabezado de Sección y Métricas -->
+<div class="flex flex-col gap-space-sm">
+<div class="flex items-center justify-between flex-wrap gap-space-sm">
+<div>
+<div class="flex items-center gap-2">
+<span class="font-headline-lg text-headline-lg text-primary tracking-tight font-bold">Bandeja de Solicitudes Entrantes</span>
+<span class="font-code-sm text-code-sm px-2 py-0.5 bg-primary-fixed text-primary font-semibold rounded-full">Periodo Activo</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Control de registros presentados vía Portal del Tesista para apertura de expediente institucional.</p>
+</div>
+<div class="flex items-center gap-2">
+<button class="h-9 px-3 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-primary font-label-md text-label-md flex items-center gap-1.5 transition-colors shadow-sm" type="button">
+<span class="material-symbols-outlined text-[18px]">sync</span>
+<span>Actualizar</span>
+</button>
+<button class="h-9 px-3 rounded-lg bg-surface-container-lowest hover:bg-surface-container-high text-primary font-label-md text-label-md flex items-center gap-1.5 transition-colors shadow-sm" type="button">
+<span class="material-symbols-outlined text-[18px]">file_download</span>
+<span>Exportar XLS</span>
+</button>
+</div>
+</div>
+<!-- Metric Badges Row -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-space-md">
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex items-center justify-between relative overflow-hidden">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-outline font-semibold">Solicitudes Nuevas</span>
+<span class="font-headline-xl text-headline-xl text-primary font-bold mt-1">14</span>
+<span class="font-code-sm text-code-sm text-secondary font-medium mt-0.5">Requieren evaluación inicial</span>
+</div>
+<div class="w-12 h-12 rounded-xl bg-error-container/60 text-error flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[26px]">mark_email_unread</span>
+</div>
+<div class="absolute bottom-0 left-0 right-0 h-1 bg-error"></div>
+</div>
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex items-center justify-between relative overflow-hidden">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-outline font-semibold">En Revisión Jurídica / Académica</span>
+<span class="font-headline-xl text-headline-xl text-secondary font-bold mt-1">8</span>
+<span class="font-code-sm text-code-sm text-outline font-medium mt-0.5">Con observaciones parciales</span>
+</div>
+<div class="w-12 h-12 rounded-xl bg-secondary-fixed/50 text-secondary flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[26px]">pending_actions</span>
+</div>
+<div class="absolute bottom-0 left-0 right-0 h-1 bg-secondary"></div>
+</div>
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex items-center justify-between relative overflow-hidden">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-outline font-semibold">Expedientes Creados (Mes)</span>
+<span class="font-headline-xl text-headline-xl text-primary-container font-bold mt-1">45</span>
+<span class="font-code-sm text-code-sm text-on-surface-variant font-medium mt-0.5">+18% respecto a Febrero</span>
+</div>
+<div class="w-12 h-12 rounded-xl bg-surface-container-high text-primary flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[26px]">task_alt</span>
+</div>
+<div class="absolute bottom-0 left-0 right-0 h-1 bg-primary"></div>
+</div>
+</div>
+</div>
+<!-- Filtros y Barra de Búsqueda -->
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col gap-3">
+<div class="flex flex-col md:flex-row items-center gap-space-sm justify-between">
+<div class="relative w-full md:w-80">
+<span class="material-symbols-outlined absolute left-3 top-2.5 text-[20px] text-outline">search</span>
+<input class="w-full h-10 pl-10 pr-3 rounded-lg bg-surface-container-low text-on-surface font-body-md text-body-md placeholder-outline/70 focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-secondary/40 transition-all" placeholder="Buscar por CUI, DNI o Nombres..." type="text" value="Marco Antonio Valdivia"/>
+</div>
+<div class="flex items-center gap-2 w-full md:w-auto flex-wrap">
+<div class="flex items-center gap-1 bg-surface-container-low px-2 py-1 rounded-lg">
+<span class="font-label-sm text-label-sm text-outline uppercase mr-1">Modalidad:</span>
+<select class="bg-transparent font-label-md text-label-md text-primary focus:outline-none py-1">
+<option selected="">Todas las modalidades</option>
+<option>Tesis Vía Regular</option>
+<option>Taller de Tesis</option>
+<option>Suficiencia Profesional</option>
+</select>
+</div>
+<div class="flex items-center gap-1 bg-surface-container-low p-1 rounded-lg">
+<button class="px-2.5 py-1 rounded-md font-label-sm text-label-sm text-outline hover:text-primary transition-colors" type="button">Todos (22)</button>
+<button class="px-2.5 py-1 rounded-md font-label-sm text-label-sm bg-surface-container-lowest text-primary font-bold shadow-xs" type="button">Pendientes (14)</button>
+<button class="px-2.5 py-1 rounded-md font-label-sm text-label-sm text-outline hover:text-primary transition-colors" type="button">Observados (5)</button>
+<button class="px-2.5 py-1 rounded-md font-label-sm text-label-sm text-outline hover:text-primary transition-colors" type="button">Aprobados (3)</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Tabla de Solicitudes Entrantes -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden flex flex-col flex-1">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low/70 text-outline font-label-sm text-label-sm uppercase tracking-wider">
+<th class="py-3 px-space-md font-semibold">Fecha Recepción</th>
+<th class="py-3 px-space-md font-semibold">Postulante</th>
+<th class="py-3 px-space-md font-semibold">CUI</th>
+<th class="py-3 px-space-md font-semibold">Programa / Escuela</th>
+<th class="py-3 px-space-md font-semibold">Modalidad</th>
+<th class="py-3 px-space-md font-semibold text-center">Estado</th>
+<th class="py-3 px-space-md font-semibold text-right">Acción</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container-low font-body-md text-body-md">
+<!-- Fila Seleccionada: Marco Antonio Valdivia Ramos -->
+<tr class="bg-primary/5 hover:bg-primary/10 transition-colors cursor-pointer relative shadow-[inset_4px_0_0_0_#0f2942]">
+<td class="py-3.5 px-space-md whitespace-nowrap font-code-sm text-code-sm text-primary font-semibold">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px] text-secondary">schedule</span>
+<span>14 Mar 2025, 09:30</span>
+</div>
+</td>
+<td class="py-3.5 px-space-md">
+<div class="flex items-center gap-2.5">
+<div class="w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center font-bold text-xs uppercase shrink-0">
+                      MV
+                    </div>
+<div class="flex flex-col min-w-0">
+<span class="font-label-lg text-label-lg font-bold text-primary truncate">Marco Antonio Valdivia Ramos</span>
+<span class="font-body-sm text-body-sm text-outline truncate">marco.valdivia@unsa.edu.pe</span>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-space-md font-code-sm text-code-sm text-primary font-bold">20182941</td>
+<td class="py-3.5 px-space-md font-body-sm text-body-sm text-on-surface truncate max-w-[150px]">Ing. de Sistemas</td>
+<td class="py-3.5 px-space-md">
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-primary font-label-sm text-label-sm font-medium">Tesis Vía Regular</span>
+</td>
+<td class="py-3.5 px-space-md text-center">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 font-label-sm text-label-sm font-bold shadow-xs">
+<span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping"></span>
+                    Pendiente
+                  </span>
+</td>
+<td class="py-3.5 px-space-md text-right">
+<span class="material-symbols-outlined text-[20px] text-primary">arrow_forward_ios</span>
+</td>
+</tr>
+<!-- Fila 2: Lucía Fernanda Morales -->
+<tr class="hover:bg-surface-container-low transition-colors cursor-pointer">
+<td class="py-3.5 px-space-md whitespace-nowrap font-code-sm text-code-sm text-outline">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px] text-outline">schedule</span>
+<span>14 Mar 2025, 08:15</span>
+</div>
+</td>
+<td class="py-3.5 px-space-md">
+<div class="flex items-center gap-2.5">
+<div class="w-8 h-8 rounded-full bg-secondary-fixed text-primary font-bold text-xs uppercase flex items-center justify-center shrink-0">
+                      LM
+                    </div>
+<div class="flex flex-col min-w-0">
+<span class="font-label-lg text-label-lg text-on-surface font-semibold truncate">Lucía Fernanda Morales Salas</span>
+<span class="font-body-sm text-body-sm text-outline truncate">lmorales@unsa.edu.pe</span>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-space-md font-code-sm text-code-sm text-on-surface">20190342</td>
+<td class="py-3.5 px-space-md font-body-sm text-body-sm text-on-surface truncate max-w-[150px]">Medicina Humana</td>
+<td class="py-3.5 px-space-md">
+<span class="px-2 py-0.5 rounded bg-surface-container text-secondary font-label-sm text-label-sm">Tesis Vía Regular</span>
+</td>
+<td class="py-3.5 px-space-md text-center">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 font-label-sm text-label-sm font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                    Pendiente
+                  </span>
+</td>
+<td class="py-3.5 px-space-md text-right">
+<span class="material-symbols-outlined text-[20px] text-outline">chevron_right</span>
+</td>
+</tr>
+<!-- Fila 3: Jorge Ernesto Mendoza -->
+<tr class="hover:bg-surface-container-low transition-colors cursor-pointer">
+<td class="py-3.5 px-space-md whitespace-nowrap font-code-sm text-code-sm text-outline">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px] text-outline">schedule</span>
+<span>13 Mar 2025, 17:40</span>
+</div>
+</td>
+<td class="py-3.5 px-space-md">
+<div class="flex items-center gap-2.5">
+<div class="w-8 h-8 rounded-full bg-surface-container-high text-on-surface font-bold text-xs uppercase flex items-center justify-center shrink-0">
+                      JM
+                    </div>
+<div class="flex flex-col min-w-0">
+<span class="font-label-lg text-label-lg text-on-surface font-semibold truncate">Jorge Ernesto Mendoza Quispe</span>
+<span class="font-body-sm text-body-sm text-outline truncate">jmendozaq@unsa.edu.pe</span>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-space-md font-code-sm text-code-sm text-on-surface">20171099</td>
+<td class="py-3.5 px-space-md font-body-sm text-body-sm text-on-surface truncate max-w-[150px]">Derecho</td>
+<td class="py-3.5 px-space-md">
+<span class="px-2 py-0.5 rounded bg-surface-container-highest text-on-surface-variant font-label-sm text-label-sm">Taller de Tesis</span>
+</td>
+<td class="py-3.5 px-space-md text-center">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 font-label-sm text-label-sm font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                    Pendiente
+                  </span>
+</td>
+<td class="py-3.5 px-space-md text-right">
+<span class="material-symbols-outlined text-[20px] text-outline">chevron_right</span>
+</td>
+</tr>
+<!-- Fila 4: Diana Beatriz Cáceres -->
+<tr class="hover:bg-surface-container-low transition-colors cursor-pointer">
+<td class="py-3.5 px-space-md whitespace-nowrap font-code-sm text-code-sm text-outline">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px] text-outline">schedule</span>
+<span>13 Mar 2025, 15:20</span>
+</div>
+</td>
+<td class="py-3.5 px-space-md">
+<div class="flex items-center gap-2.5">
+<div class="w-8 h-8 rounded-full bg-surface-variant text-primary font-bold text-xs uppercase flex items-center justify-center shrink-0">
+                      DC
+                    </div>
+<div class="flex flex-col min-w-0">
+<span class="font-label-lg text-label-lg text-on-surface font-semibold truncate">Diana Beatriz Cáceres Paucar</span>
+<span class="font-body-sm text-body-sm text-outline truncate">dcaceresp@unsa.edu.pe</span>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-space-md font-code-sm text-code-sm text-on-surface">20183312</td>
+<td class="py-3.5 px-space-md font-body-sm text-body-sm text-on-surface truncate max-w-[150px]">Contabilidad</td>
+<td class="py-3.5 px-space-md">
+<span class="px-2 py-0.5 rounded bg-surface-container text-secondary font-label-sm text-label-sm">Tesis Vía Regular</span>
+</td>
+<td class="py-3.5 px-space-md text-center">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 font-label-sm text-label-sm font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                    Pendiente
+                  </span>
+</td>
+<td class="py-3.5 px-space-md text-right">
+<span class="material-symbols-outlined text-[20px] text-outline">chevron_right</span>
+</td>
+</tr>
+<!-- Fila 5: Gabriel Alejandro Ponce -->
+<tr class="hover:bg-surface-container-low transition-colors cursor-pointer">
+<td class="py-3.5 px-space-md whitespace-nowrap font-code-sm text-code-sm text-outline">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px] text-outline">schedule</span>
+<span>12 Mar 2025, 12:10</span>
+</div>
+</td>
+<td class="py-3.5 px-space-md">
+<div class="flex items-center gap-2.5">
+<div class="w-8 h-8 rounded-full bg-error-container text-error font-bold text-xs uppercase flex items-center justify-center shrink-0">
+                      GP
+                    </div>
+<div class="flex flex-col min-w-0">
+<span class="font-label-lg text-label-lg text-on-surface font-semibold truncate">Gabriel Alejandro Ponce Vega</span>
+<span class="font-body-sm text-body-sm text-outline truncate">gponcev@unsa.edu.pe</span>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-space-md font-code-sm text-code-sm text-on-surface">20164801</td>
+<td class="py-3.5 px-space-md font-body-sm text-body-sm text-on-surface truncate max-w-[150px]">Ing. Civil</td>
+<td class="py-3.5 px-space-md">
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-primary font-label-sm text-label-sm">Suficiencia</span>
+</td>
+<td class="py-3.5 px-space-md text-center">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-orange-50 text-orange-700 font-label-sm text-label-sm font-semibold">
+                    Observado
+                  </span>
+</td>
+<td class="py-3.5 px-space-md text-right">
+<span class="material-symbols-outlined text-[20px] text-outline">chevron_right</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Paginador de Tabla -->
+<div class="bg-surface-container-low/50 px-space-md py-3 flex items-center justify-between text-outline font-label-sm text-label-sm mt-auto">
+<span>Mostrando 1 a 5 de 14 solicitudes entrantes</span>
+<div class="flex items-center gap-1">
+<button class="p-1 rounded hover:bg-surface-container-high transition-colors" disabled="" type="button">
+<span class="material-symbols-outlined text-[18px]">chevron_left</span>
+</button>
+<span class="px-2 py-0.5 rounded bg-surface-container-lowest text-primary font-bold shadow-xs">1</span>
+<button class="px-2 py-0.5 rounded hover:bg-surface-container-high transition-colors text-on-surface" type="button">2</button>
+<button class="px-2 py-0.5 rounded hover:bg-surface-container-high transition-colors text-on-surface" type="button">3</button>
+<button class="p-1 rounded hover:bg-surface-container-high transition-colors" type="button">
+<span class="material-symbols-outlined text-[18px]">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Panel Lateral Derecho (38% Detalle de Solicitud de Marco Valdivia) -->
+<aside class="w-[480px] shrink-0 bg-surface-container-lowest flex flex-col shadow-[-2px_0_12px_rgba(15,41,66,0.06)] overflow-y-auto">
+<!-- Header del Panel -->
+<div class="p-space-lg bg-surface-container-low/60 flex flex-col gap-space-xs sticky top-0 z-20 backdrop-blur-md">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="font-label-sm text-label-sm font-bold uppercase tracking-wider text-secondary">Solicitud Oficial</span>
+<span class="font-code-sm text-code-sm px-2 py-0.5 rounded bg-secondary-fixed text-primary font-bold">#SOL-2025-0842</span>
+</div>
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 font-label-sm text-label-sm font-bold">
+<span class="w-2 h-2 rounded-full bg-amber-500"></span>
+            Pendiente de Evaluación
+          </span>
+</div>
+<div class="flex items-center justify-between text-outline font-label-sm text-label-sm mt-1">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">calendar_today</span>
+            Enviado: 14 Mar 2025, 09:30 AM
+          </span>
+<span class="font-code-sm text-code-sm">SUT-HASH: d8f4e2...b9</span>
+</div>
+</div>
+<!-- Contenido Detalle -->
+<div class="p-space-lg flex flex-col gap-space-lg">
+<!-- Resumen del Estudiante -->
+<div class="bg-surface-container-low p-space-md rounded-xl flex flex-col gap-3 shadow-xs">
+<div class="flex items-start gap-3">
+<img class="w-14 h-14 rounded-xl object-cover shrink-0 shadow-sm ring-2 ring-primary-container/10" data-alt="Official clean headshot photograph of student Marco Antonio Valdivia wearing a dark blazer with university crest, neutral studio background, crisp lighting, academic portal profile picture" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCDuL8IiESDvZC_WKaf9pvkcKdZYyX1JV7sZoSyI8MZPqEQOjJUY49loWA8cDRUQ_NzslkIPQIhNo-zSEK4W1FEAavxAm4NN2_GJ_acnbPTiP_5xKwzvx9UxlNm_6Cv7ePM_irC8zg7Nh5I21xg4b5BiXD4xc85bxcXfJb1YxB3O549sR84caM4x9cnEJzgrS5FL08yz-zlCBlXfgp5VLWHiIwB8cf4jeAkQZSMfELIA7Pvgbirwmp_"/>
+<div class="flex flex-col min-w-0">
+<span class="font-headline-md text-headline-md font-bold text-primary truncate leading-tight">Marco Antonio Valdivia Ramos</span>
+<span class="font-label-sm text-label-sm text-secondary font-semibold">Ingeniería de Sistemas</span>
+<span class="font-code-sm text-code-sm text-outline mt-0.5">Plan de Estudios 2018 - Egresado Apto</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-2 pt-2 bg-surface-container-lowest/80 p-2.5 rounded-lg">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-outline uppercase">CUI Institucional</span>
+<span class="font-code-sm text-code-sm font-bold text-primary">20182941</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-outline uppercase">DNI</span>
+<span class="font-code-sm text-code-sm font-bold text-primary">72491028</span>
+</div>
+<div class="flex flex-col mt-1">
+<span class="font-label-sm text-label-sm text-outline uppercase">Teléfono</span>
+<span class="font-body-sm text-body-sm text-on-surface font-medium">+51 954 112 334</span>
+</div>
+<div class="flex flex-col mt-1">
+<span class="font-label-sm text-label-sm text-outline uppercase">Correo Institucional</span>
+<span class="font-body-sm text-body-sm text-on-surface truncate font-medium" title="marco.valdivia@unsa.edu.pe">marco.valdivia@unsa.edu.pe</span>
+</div>
+</div>
+</div>
+<!-- Título y Modalidad -->
+<div class="flex flex-col gap-2">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm uppercase font-bold text-outline">Proyecto de Titulación</span>
+<span class="font-label-sm text-label-sm bg-surface-container-high px-2 py-0.5 rounded text-primary font-medium">Tesis Vía Regular</span>
+</div>
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-xs">
+<p class="font-headline-sm text-headline-sm text-primary font-bold leading-snug">
+              "Diseño e implementación de un sistema de trazabilidad documental basado en blockchain para grados académicos"
+            </p>
+<div class="flex items-center gap-4 mt-3 text-outline font-label-sm text-label-sm">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-secondary">person_search</span>
+                Asesor Propuesto: <strong class="text-primary ml-1">Dr. Carlos Rendón P.</strong>
+</span>
+</div>
+</div>
+</div>
+<!-- Documentos Adjuntos y Cards Interactivas -->
+<div class="flex flex-col gap-space-sm">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm uppercase font-bold text-outline">Documentos Requeridos (3)</span>
+<span class="font-code-sm text-code-sm text-secondary font-semibold">Verificación SHA-256</span>
+</div>
+<!-- Doc 1: Expediente_17 -->
+<div class="bg-surface-container-low p-space-sm rounded-xl flex items-center justify-between hover:bg-surface-container transition-colors group">
+<div class="flex items-center gap-3 min-w-0">
+<div class="w-10 h-10 rounded-lg bg-error-container text-error flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[22px]">picture_as_pdf</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-label-lg text-label-lg text-primary font-semibold truncate group-hover:text-secondary">Expediente_17_MarcoValdivia.pdf</span>
+<span class="font-code-sm text-code-sm text-outline">1.4 MB • Firmado digitalmente</span>
+</div>
+</div>
+<button class="h-8 px-2.5 rounded-lg bg-surface-container-lowest text-primary hover:bg-primary hover:text-on-primary font-label-sm text-label-sm font-semibold flex items-center gap-1 transition-all shadow-xs shrink-0" type="button">
+<span class="material-symbols-outlined text-[16px]">visibility</span>
+<span>Ver PDF</span>
+</button>
+</div>
+<!-- Doc 2: Caratula Oficial -->
+<div class="bg-surface-container-low p-space-sm rounded-xl flex items-center justify-between hover:bg-surface-container transition-colors group">
+<div class="flex items-center gap-3 min-w-0">
+<div class="w-10 h-10 rounded-lg bg-error-container text-error flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[22px]">picture_as_pdf</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-label-lg text-label-lg text-primary font-semibold truncate group-hover:text-secondary">Carátula_Oficial_Aprobada.pdf</span>
+<span class="font-code-sm text-code-sm text-outline">420 KB • Formato SUT v4</span>
+</div>
+</div>
+<button class="h-8 px-2.5 rounded-lg bg-surface-container-lowest text-primary hover:bg-primary hover:text-on-primary font-label-sm text-label-sm font-semibold flex items-center gap-1 transition-all shadow-xs shrink-0" type="button">
+<span class="material-symbols-outlined text-[16px]">visibility</span>
+<span>Ver PDF</span>
+</button>
+</div>
+<!-- Doc 3: Plan de Tesis -->
+<div class="bg-surface-container-low p-space-sm rounded-xl flex items-center justify-between hover:bg-surface-container transition-colors group">
+<div class="flex items-center gap-3 min-w-0">
+<div class="w-10 h-10 rounded-lg bg-secondary-fixed text-primary flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[22px]">description</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-label-lg text-label-lg text-primary font-semibold truncate group-hover:text-secondary">Plan_de_Tesis_vFinal.pdf</span>
+<span class="font-code-sm text-code-sm text-outline">3.8 MB • Con Turnitin (7%)</span>
+</div>
+</div>
+<button class="h-8 px-2.5 rounded-lg bg-surface-container-lowest text-primary hover:bg-primary hover:text-on-primary font-label-sm text-label-sm font-semibold flex items-center gap-1 transition-all shadow-xs shrink-0" type="button">
+<span class="material-symbols-outlined text-[16px]">visibility</span>
+<span>Ver PDF</span>
+</button>
+</div>
+<!-- Preview Incrustado / Mock Visor Rápido -->
+<div class="p-space-sm bg-surface-container-high/40 rounded-xl flex flex-col gap-2">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm font-semibold text-primary flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-secondary">preview</span>
+                Visor Rápido Integrado
+              </span>
+<span class="font-code-sm text-code-sm text-outline">Pág. 1 de 24</span>
+</div>
+<div class="h-28 rounded-lg bg-surface-container-lowest p-3 shadow-inner flex flex-col justify-between overflow-hidden relative">
+<div class="flex flex-col gap-1">
+<div class="h-3 w-3/4 bg-surface-container-high rounded animate-pulse"></div>
+<div class="h-2 w-1/2 bg-surface-container rounded"></div>
+<div class="h-2 w-5/6 bg-surface-container rounded mt-2"></div>
+<div class="h-2 w-4/6 bg-surface-container rounded"></div>
+</div>
+<div class="flex items-center justify-between text-outline font-code-sm text-code-sm">
+<span>Constancia de Matrícula adjunta validada</span>
+<span class="text-secondary font-bold">100% Legible</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Bloque de Observación / Subsanación (Desplegado) -->
+<div class="flex flex-col gap-2 pt-2">
+<div class="flex items-center justify-between">
+<label class="font-label-sm text-label-sm uppercase font-bold text-error flex items-center gap-1" for="observacion-input">
+<span class="material-symbols-outlined text-[16px]">edit_note</span>
+              Motivo de Observación / Requerimiento de Subsanación
+            </label>
+<span class="font-code-sm text-code-sm text-outline">Notificación por Correo</span>
+</div>
+<div class="relative">
+<textarea class="w-full p-space-sm rounded-xl bg-surface-container-low text-on-surface font-body-md text-body-md placeholder-outline focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-error/40 transition-all resize-none shadow-xs" id="observacion-input" placeholder="Especifique los documentos faltantes o correcciones necesarias que se notificarán automáticamente al correo del estudiante..." rows="3"></textarea>
+</div>
+</div>
+<!-- Acciones Administrativas Críticas -->
+<div class="flex flex-col gap-3 pt-2 mt-auto">
+<!-- Botón Verde Grande de Éxito -->
+<button class="w-full h-12 rounded-xl bg-[#16A34A] hover:bg-[#15803D] active:bg-[#166534] text-white font-label-lg text-label-lg font-bold flex items-center justify-center gap-2 shadow-md transition-all group" type="button">
+<span class="material-symbols-outlined text-[24px] group-hover:scale-110 transition-transform">check_circle</span>
+<span>Aceptar / Crear Expediente SET</span>
+<span class="ml-1 text-xs opacity-90 font-code-sm bg-white/20 px-2 py-0.5 rounded">Genera #SET-2025</span>
+</button>
+<!-- Botón Rojo de Alerta / Observar -->
+<div class="grid grid-cols-2 gap-2">
+<button class="h-10 rounded-xl bg-[#DC2626] hover:bg-[#B91C1C] text-white font-label-md text-label-md font-semibold flex items-center justify-center gap-1.5 shadow-sm transition-all" type="button">
+<span class="material-symbols-outlined text-[18px]">warning</span>
+<span>Observar / Rechazar</span>
+</button>
+<button class="h-10 rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-primary font-label-md text-label-md font-semibold flex items-center justify-center gap-1.5 transition-all shadow-xs" type="button">
+<span class="material-symbols-outlined text-[18px]">folder_zip</span>
+<span>Descargar ZIP</span>
+</button>
+</div>
+</div>
+</div>
+</aside>
+</div>
+</div></main></div></body></html>

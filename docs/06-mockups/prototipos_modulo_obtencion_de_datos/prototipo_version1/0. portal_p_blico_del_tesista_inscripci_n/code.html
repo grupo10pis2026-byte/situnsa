@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+
+<html lang="es"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_dashboard" name="shell-type"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"surface-container-low":"#f0f3ff","inverse-on-surface":"#ecf1ff","on-primary-fixed-variant":"#314863","surface-variant":"#d8e3fb","surface-container-high":"#dee8ff","on-tertiary-fixed-variant":"#003ea8","secondary-container":"#9fcafd","on-tertiary":"#ffffff","on-surface-variant":"#43474d","tertiary-container":"#002265","on-surface":"#111c2d","error-container":"#ffdad6","on-primary":"#ffffff","primary-fixed":"#d1e4ff","outline-variant":"#c3c6ce","surface-dim":"#cfdaf2","primary":"#001428","tertiary-fixed-dim":"#b4c5ff","on-error-container":"#93000a","background":"#f9f9ff","on-primary-container":"#7991af","inverse-primary":"#b0c9e8","secondary":"#35618e","tertiary":"#001039","surface-bright":"#f9f9ff","secondary-fixed-dim":"#9fcafd","on-primary-fixed":"#011d35","inverse-surface":"#263143","primary-container":"#0f2942","on-secondary":"#ffffff","error":"#ba1a1a","on-secondary-container":"#275582","on-secondary-fixed":"#001d36","on-secondary-fixed-variant":"#184975","surface-tint":"#49607c","on-error":"#ffffff","tertiary-fixed":"#dbe1ff","surface-container-lowest":"#ffffff","surface":"#f9f9ff","primary-fixed-dim":"#b0c9e8","surface-container-highest":"#d8e3fb","outline":"#74777e","on-tertiary-container":"#5d88ff","surface-container":"#e7eeff","on-tertiary-fixed":"#00174b","on-background":"#111c2d","secondary-fixed":"#d1e4ff"},borderRadius:{DEFAULT:"0.125rem",lg:"0.25rem",xl:"0.5rem",full:"0.75rem"},spacing:{"space-md":"1rem","space-lg":"1.5rem","space-sm":"0.5rem","space-xs":"0.25rem","gutter-sm":"1rem",margin:"2rem","margin-sm":"1rem","space-xl":"2.5rem",gutter:"1.5rem"},fontFamily:{"label-sm":["Inter"],"headline-md":["Inter"],"body-lg":["Inter"],"headline-lg-mobile":["Inter"],"label-lg":["Inter"],"headline-lg":["Inter"],"headline-sm":["Inter"],"body-sm":["Inter"],"code-sm":["Inter"],"headline-xl":["Inter"],"label-md":["Inter"],"body-md":["Inter"],"headline-xl-mobile":["Inter"]},fontSize:{"label-sm":["11px",{lineHeight:"14px",letterSpacing:"0.04em",fontWeight:"600"}],"headline-md":["18px",{lineHeight:"26px",letterSpacing:"-0.01em",fontWeight:"600"}],"body-lg":["16px",{lineHeight:"26px",fontWeight:"400"}],"headline-lg-mobile":["20px",{lineHeight:"28px",letterSpacing:"-0.01em",fontWeight:"700"}],"label-lg":["14px",{lineHeight:"20px",letterSpacing:"0.01em",fontWeight:"600"}],"headline-lg":["24px",{lineHeight:"32px",letterSpacing:"-0.015em",fontWeight:"700"}],"headline-sm":["16px",{lineHeight:"24px",letterSpacing:"-0.005em",fontWeight:"600"}],"body-sm":["13px",{lineHeight:"18px",fontWeight:"400"}],"code-sm":["12px",{lineHeight:"16px",fontWeight:"500"}],"headline-xl":["32px",{lineHeight:"40px",letterSpacing:"-0.02em",fontWeight:"700"}],"label-md":["12px",{lineHeight:"16px",letterSpacing:"0.02em",fontWeight:"600"}],"body-md":["14px",{lineHeight:"22px",fontWeight:"400"}],"headline-xl-mobile":["26px",{lineHeight:"34px",letterSpacing:"-0.01em",fontWeight:"700"}]}}}};</script></head><body class="bg-background font-body-md text-body-md text-on-surface antialiased"><aside class="fixed left-0 top-0 h-full w-64 bg-surface-container-lowest shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-50 flex flex-col justify-between"><div class="flex flex-col"><div class="h-16 px-space-md flex items-center gap-space-sm bg-primary-container text-on-primary"><span class="material-symbols-outlined text-secondary-fixed">account_balance</span><div class="flex flex-col leading-tight"><span class="font-label-md text-label-md uppercase tracking-wider text-secondary-fixed">Universidad Nacional</span><span class="font-label-sm text-label-sm text-surface-container-high">Sistema SUT</span></div></div><div class="px-space-md py-space-sm"><div class="font-label-sm text-label-sm uppercase tracking-wider text-outline px-space-xs py-space-xs">Módulos Principales</div></div><nav class="flex flex-col gap-space-xs px-space-sm" data-active-classes="bg-primary-container text-on-primary font-label-lg rounded-xl"><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="bandeja-de-solicitudes" href="#"><span class="material-symbols-outlined text-[20px]">inbox</span><span class="font-label-lg text-label-lg">Bandeja de Solicitudes</span></a><a aria-current="page" class="flex items-center gap-space-sm px-space-md py-space-sm transition-colors bg-primary-container text-on-primary font-label-lg rounded-xl" data-path="portal-del-tesista" href="#"><span class="material-symbols-outlined text-[20px]">school</span><span class="font-label-lg text-label-lg">Portal del Tesista</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="expedientes-y-grados" href="#"><span class="material-symbols-outlined text-[20px]">folder_shared</span><span class="font-label-lg text-label-lg">Expedientes y Grados</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="taller-de-tesis" href="#"><span class="material-symbols-outlined text-[20px]">menu_book</span><span class="font-label-lg text-label-lg">Taller de Tesis</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="documentos-oficiales" href="#"><span class="material-symbols-outlined text-[20px]">verified</span><span class="font-label-lg text-label-lg">Documentos Oficiales</span></a></nav></div><div class="p-space-md bg-surface-container-low"><div class="flex items-center gap-space-sm"><span class="material-symbols-outlined text-secondary">shield</span><div class="flex flex-col"><span class="font-label-sm text-label-sm text-on-surface font-semibold">Auditoría y Certificación</span><span class="font-code-sm text-code-sm text-outline">SUT v4.2.1-Oficial</span></div></div></div></aside><div class="pl-64"><header class="fixed top-0 left-64 right-0 h-16 bg-surface-container-lowest/90 backdrop-blur-md shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-margin"><div class="flex items-center gap-space-md"><span class="font-headline-sm text-headline-sm text-primary-container tracking-tight">Universidad Nacional - Sistema de Titulación</span><span class="hidden xl:inline-block bg-surface-container px-space-sm py-space-xs rounded-xl font-label-sm text-label-sm text-secondary">Periodo Académico 2024-II</span></div><div class="flex items-center gap-space-lg"><div class="flex items-center gap-space-xs text-outline"><button aria-label="Buscar expediente" class="p-space-xs rounded-xl hover:bg-surface-container-high hover:text-on-surface transition-colors" type="button"><span class="material-symbols-outlined text-[22px]">search</span></button><button aria-label="Notificaciones institucionales" class="relative p-space-xs rounded-xl hover:bg-surface-container-high hover:text-on-surface transition-colors" type="button"><span class="material-symbols-outlined text-[22px]">notifications</span><span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-error"></span></button></div><div class="h-6 w-px bg-surface-container-highest"></div><div class="flex items-center gap-space-sm"><div class="hidden md:flex flex-col text-right leading-tight"><span class="font-label-md text-label-md text-on-surface font-semibold">Magnolia C.</span><span class="font-label-sm text-label-sm text-outline">Administrador General</span></div><img alt="Profile" class="w-8 h-8 rounded-full object-cover ring-2 ring-primary-container/20" src="https://lh3.googleusercontent.com/aida/AEtjO1W06tREAenpiRUEbszvdM-9Y5wuRoVDBodEF4eAX6pQIG1-wAj-j04LFw8nz9n0-cVggM5KsF7I8PAPVW_tTUEqz7sFRDLaAiP7LfF7S_Mp5VWePz_i3BjsAZ8YK4PybvaWqbp9zcJ-c-lZKTODnBKImFV0fTtSvGI0AJkzEY3EZooxQpXEYVv_5iUhAehNApPu-hXF-fCTAxtLJtx2f-gAsKIA9ao87lDeSrSbR3FvenaT0OJ4LbJ4C-g"/></div></div></header><main class="relative pt-16 bg-background min-h-screen"><div class="flex flex-col w-full">
+<div class="px-margin py-space-lg max-w-[1400px] mx-auto w-full flex flex-col gap-space-lg">
+<!-- Encabezado Institucional Principal -->
+<header class="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col gap-space-md">
+<div class="flex flex-wrap items-center justify-between gap-space-sm">
+<div class="flex items-center gap-space-xs">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-secondary-fixed text-on-secondary-fixed font-label-sm text-label-sm uppercase tracking-wider">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse"></span>
+            Convocatoria 2025-I Abierta
+          </span>
+<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-surface-container text-on-surface-variant font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px]">schedule</span>
+            10-15 minutos
+          </span>
+</div>
+<div class="flex items-center gap-space-xs text-on-surface-variant font-code-sm text-code-sm">
+<span class="material-symbols-outlined text-[16px] text-secondary">verified_user</span>
+<span>Expediente Digital Oficial • SUT-UN</span>
+</div>
+</div>
+<div class="flex flex-col gap-1 max-w-4xl">
+<h1 class="font-headline-lg text-headline-lg text-primary tracking-tight">
+          Inscripción a Trámite de Titulación o Taller de Tesis
+        </h1>
+<p class="font-body-md text-body-md text-on-surface-variant leading-relaxed">
+          Complete los datos solicitados para formalizar su inicio de trámite de grado académico o inscripción al taller de titulación. Reemplaza de manera definitiva la recepción de expedientes físicos y por correo electrónico.
+        </p>
+</div>
+<!-- Barra de Estado / Pasos del Proceso -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-space-sm pt-space-xs">
+<div class="flex items-center gap-space-sm bg-surface-container-low p-space-sm rounded-lg">
+<div class="w-7 h-7 rounded-full bg-primary-container text-on-primary flex items-center justify-center font-label-sm text-label-sm font-semibold">1</div>
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface font-semibold uppercase tracking-wide">Fase Inicial</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Filiación del Tesista</span>
+</div>
+</div>
+<div class="flex items-center gap-space-sm bg-surface-container-low p-space-sm rounded-lg">
+<div class="w-7 h-7 rounded-full bg-surface-container-highest text-on-surface-variant flex items-center justify-center font-label-sm text-label-sm font-semibold">2</div>
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface font-semibold uppercase tracking-wide">Línea y Modalidad</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Registro de Tema</span>
+</div>
+</div>
+<div class="flex items-center gap-space-sm bg-surface-container-low p-space-sm rounded-lg">
+<div class="w-7 h-7 rounded-full bg-surface-container-highest text-on-surface-variant flex items-center justify-center font-label-sm text-label-sm font-semibold">3</div>
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface font-semibold uppercase tracking-wide">Anexos Oficiales</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Validación de PDFs</span>
+</div>
+</div>
+</div>
+</header>
+<!-- Formulario de Registro Estructurado -->
+<form class="flex flex-col gap-space-lg" id="registroForm" onsubmit="event.preventDefault();">
+<!-- SECCIÓN 1: DATOS PERSONALES -->
+<section class="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col gap-space-md">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-sm">
+<div class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-primary-container">
+<span class="material-symbols-outlined text-[20px]">person</span>
+</div>
+<div>
+<h2 class="font-headline-sm text-headline-sm text-primary">Sección 1: Datos Personales del Graduando</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Información de identidad conforme al Registro Nacional de Identificación y Estado Civil</p>
+</div>
+</div>
+<span class="font-label-sm text-label-sm uppercase bg-surface-container-low text-secondary px-2.5 py-1 rounded">Obligatorio</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-space-md">
+<!-- Nombres Completos -->
+<div class="flex flex-col gap-1 lg:col-span-2">
+<label class="font-label-md text-label-md text-on-surface font-semibold" for="nombres">
+              Nombres y Apellidos Completos <span class="text-error">*</span>
+</label>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-3 text-outline text-[20px] pointer-events-none">badge</span>
+<input class="w-full h-10 pl-10 pr-3 rounded-lg bg-surface-container-lowest text-on-surface font-body-md text-body-md focus:bg-surface-container-low transition-colors shadow-sm outline-none focus:ring-2 focus:ring-secondary/40" id="nombres" name="nombres" placeholder="Ej. Juan Carlos Mamani Quispe" required="" type="text"/>
+</div>
+</div>
+<!-- DNI -->
+<div class="flex flex-col gap-1">
+<label class="font-label-md text-label-md text-on-surface font-semibold" for="dni">
+              Documento de Identidad (DNI) <span class="text-error">*</span>
+</label>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-3 text-outline text-[20px] pointer-events-none">fingerprint</span>
+<input class="w-full h-10 pl-10 pr-3 rounded-lg bg-surface-container-lowest text-on-surface font-body-md text-body-md focus:bg-surface-container-low transition-colors shadow-sm outline-none focus:ring-2 focus:ring-secondary/40" id="dni" maxlength="8" name="dni" pattern="[0-9]{8}" placeholder="8 dígitos" required="" type="text"/>
+</div>
+</div>
+<!-- CUI -->
+<div class="flex flex-col gap-1">
+<label class="font-label-md text-label-md text-on-surface font-semibold" for="cui">
+              Código Único de Identificación (CUI) <span class="text-error">*</span>
+</label>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-3 text-outline text-[20px] pointer-events-none">pin</span>
+<input class="w-full h-10 pl-10 pr-3 rounded-lg bg-surface-container-lowest text-on-surface font-body-md text-body-md focus:bg-surface-container-low transition-colors shadow-sm outline-none focus:ring-2 focus:ring-secondary/40" id="cui" maxlength="10" name="cui" pattern="[0-9]{10}" placeholder="10 dígitos numéricos" required="" type="text"/>
+</div>
+</div>
+<!-- Nacionalidad -->
+<div class="flex flex-col gap-1">
+<label class="font-label-md text-label-md text-on-surface font-semibold" for="nacionalidad">
+              Nacionalidad <span class="text-error">*</span>
+</label>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-3 text-outline text-[20px] pointer-events-none">public</span>
+<select class="w-full h-10 pl-10 pr-8 rounded-lg bg-surface-container-lowest text-on-surface font-body-md text-body-md appearance-none focus:bg-surface-container-low transition-colors shadow-sm outline-none focus:ring-2 focus:ring-secondary/40" id="nacionalidad" name="nacionalidad" required="">
+<option selected="" value="Peruana">Peruana</option>
+<option value="Extranjera">Extranjera (Residencia / Pasaporte)</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 text-outline text-[20px] pointer-events-none">expand_more</span>
+</div>
+</div>
+<!-- Ciudad -->
+<div class="flex flex-col gap-1">
+<label class="font-label-md text-label-md text-on-surface font-semibold" for="ciudad">
+              Ciudad de Residencia <span class="text-error">*</span>
+</label>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-3 text-outline text-[20px] pointer-events-none">location_city</span>
+<input class="w-full h-10 pl-10 pr-3 rounded-lg bg-surface-container-lowest text-on-surface font-body-md text-body-md focus:bg-surface-container-low transition-colors shadow-sm outline-none focus:ring-2 focus:ring-secondary/40" id="ciudad" name="ciudad" placeholder="Ej. Arequipa" required="" type="text"/>
+</div>
+</div>
+<!-- Dirección -->
+<div class="flex flex-col gap-1 lg:col-span-2">
+<label class="font-label-md text-label-md text-on-surface font-semibold" for="direccion">
+              Dirección Domiciliaria Actual <span class="text-error">*</span>
+</label>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-3 text-outline text-[20px] pointer-events-none">home_pin</span>
+<input class="w-full h-10 pl-10 pr-3 rounded-lg bg-surface-container-lowest text-on-surface font-body-md text-body-md focus:bg-surface-container-low transition-colors shadow-sm outline-none focus:ring-2 focus:ring-secondary/40" id="direccion" name="direccion" placeholder="Av. Universitaria 1024, Dpto 301" required="" type="text"/>
+</div>
+</div>
+<!-- Teléfono -->
+<div class="flex flex-col gap-1">
+<label class="font-label-md text-label-md text-on-surface font-semibold" for="telefono">
+              Teléfono de Contacto <span class="text-error">*</span>
+</label>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-3 text-outline text-[20px] pointer-events-none">call</span>
+<input class="w-full h-10 pl-10 pr-3 rounded-lg bg-surface-container-lowest text-on-surface font-body-md text-body-md focus:bg-surface-container-low transition-colors shadow-sm outline-none focus:ring-2 focus:ring-secondary/40" id="telefono" name="telefono" placeholder="+51 987 654 321" required="" type="tel"/>
+</div>
+</div>
+<!-- Correo Electrónico con nota visual -->
+<div class="flex flex-col gap-1 lg:col-span-3">
+<div class="flex flex-wrap items-center justify-between gap-1">
+<label class="font-label-md text-label-md text-on-surface font-semibold" for="correo">
+                Correo Electrónico de Notificaciones <span class="text-error">*</span>
+</label>
+<div class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-surface-container text-secondary font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[15px]">info</span>
+<span>Puede ser correo personal o institucional</span>
+</div>
+</div>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-3 text-outline text-[20px] pointer-events-none">mail</span>
+<input class="w-full h-10 pl-10 pr-3 rounded-lg bg-surface-container-lowest text-on-surface font-body-md text-body-md focus:bg-surface-container-low transition-colors shadow-sm outline-none focus:ring-2 focus:ring-secondary/40" id="correo" name="correo" placeholder="usuario@unsa.edu.pe o personal@gmail.com" required="" type="email"/>
+</div>
+</div>
+</div>
+</section>
+<!-- SECCIÓN 2: DATOS ACADÉMICOS -->
+<section class="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col gap-space-md">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-sm">
+<div class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-primary-container">
+<span class="material-symbols-outlined text-[20px]">school</span>
+</div>
+<div>
+<h2 class="font-headline-sm text-headline-sm text-primary">Sección 2: Datos Académicos y Tema de Grado</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Selección del programa oficial, modalidad reglamentaria y propuesta preliminar</p>
+</div>
+</div>
+<span class="font-label-sm text-label-sm uppercase bg-surface-container-low text-secondary px-2.5 py-1 rounded">Académico</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-space-md">
+<!-- Programa Académico -->
+<div class="flex flex-col gap-1">
+<label class="font-label-md text-label-md text-on-surface font-semibold" for="programa">
+              Programa Académico / Escuela Profesional <span class="text-error">*</span>
+</label>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-3 text-outline text-[20px] pointer-events-none">domain</span>
+<select class="w-full h-10 pl-10 pr-8 rounded-lg bg-surface-container-lowest text-on-surface font-body-md text-body-md appearance-none focus:bg-surface-container-low transition-colors shadow-sm outline-none focus:ring-2 focus:ring-secondary/40" id="programa" name="programa" required="">
+<option disabled="" selected="" value="">Seleccione su escuela profesional</option>
+<option value="sistemas">Ingeniería de Sistemas e Informática</option>
+<option value="derecho">Derecho y Ciencias Políticas</option>
+<option value="medicina">Medicina Humana</option>
+<option value="administracion">Administración de Empresas</option>
+<option value="arquitectura">Arquitectura y Urbanismo</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 text-outline text-[20px] pointer-events-none">expand_more</span>
+</div>
+</div>
+<!-- Modalidad -->
+<div class="flex flex-col gap-1">
+<label class="font-label-md text-label-md text-on-surface font-semibold" for="modalidad">
+              Modalidad de Titulación <span class="text-error">*</span>
+</label>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-3 text-outline text-[20px] pointer-events-none">auto_stories</span>
+<select class="w-full h-10 pl-10 pr-8 rounded-lg bg-surface-container-lowest text-on-surface font-body-md text-body-md appearance-none focus:bg-surface-container-low transition-colors shadow-sm outline-none focus:ring-2 focus:ring-secondary/40" id="modalidad" name="modalidad" required="">
+<option disabled="" selected="" value="">Seleccione la modalidad a tramitar</option>
+<option value="regular">Tesis de Investigación Vía Regular</option>
+<option value="taller">Taller de Tesis / Suficiencia Profesional</option>
+<option value="articulo">Artículo Científico Publicado</option>
+<option value="examen">Examen de Grado Profesional</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 text-outline text-[20px] pointer-events-none">expand_more</span>
+</div>
+</div>
+<!-- Título Preliminar de la Tesis -->
+<div class="flex flex-col gap-1 md:col-span-2">
+<div class="flex items-center justify-between">
+<label class="font-label-md text-label-md text-on-surface font-semibold" for="tituloTesis">
+                Título Preliminar o Propuesta de Investigación <span class="text-error">*</span>
+</label>
+<span class="font-code-sm text-code-sm text-outline" id="charCount">0/240 caracteres</span>
+</div>
+<textarea class="w-full p-3 rounded-lg bg-surface-container-lowest text-on-surface font-body-md text-body-md focus:bg-surface-container-low transition-colors shadow-sm outline-none focus:ring-2 focus:ring-secondary/40 resize-none" id="tituloTesis" maxlength="240" name="tituloTesis" oninput="document.getElementById('charCount').textContent = `${this.value.length}/240 caracteres`" placeholder="Ej. Implementación de una arquitectura de microservicios para la optimización de trámites universitarios en la Universidad Nacional." required="" rows="3"></textarea>
+<span class="font-body-sm text-body-sm text-outline">
+              El título será evaluado por la comisión de grados y títulos para la posterior emisión de resolución de asesoría.
+            </span>
+</div>
+</div>
+</section>
+<!-- SECCIÓN 3: CARGA DE ARCHIVOS -->
+<section class="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col gap-space-md">
+<div class="flex flex-wrap items-center justify-between gap-space-xs">
+<div class="flex items-center gap-space-sm">
+<div class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-primary-container">
+<span class="material-symbols-outlined text-[20px]">upload_file</span>
+</div>
+<div>
+<h2 class="font-headline-sm text-headline-sm text-primary">Sección 3: Carga de Archivos Oficiales</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Suba la documentación reglamentaria en formato PDF (Tamaño máx. 15MB por documento)</p>
+</div>
+</div>
+<div class="flex items-center gap-2 bg-surface-container px-3 py-1.5 rounded-lg text-secondary font-code-sm text-code-sm">
+<span class="material-symbols-outlined text-[16px]">picture_as_pdf</span>
+<span>Estándar PDF/A admitido</span>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-space-md">
+<!-- Documento 1: Expediente 17 -->
+<div class="bg-surface-container-low p-space-md rounded-xl flex flex-col justify-between gap-space-md hover:bg-surface-container transition-colors">
+<div class="flex flex-col gap-2">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-secondary font-semibold">Anexo I</span>
+<span class="material-symbols-outlined text-secondary text-[20px]">description</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-semibold">Expediente 17</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Formato único de trámite FUT y comprobante de matrícula oficial escaneado.</p>
+</div>
+<!-- Drag & Drop Zone -->
+<div class="bg-surface-container-lowest rounded-lg p-space-sm flex flex-col items-center justify-center text-center gap-2 cursor-pointer shadow-sm group">
+<input accept=".pdf" class="hidden" id="fileExpediente" onchange="actualizarArchivo(this, 'statusExpediente', '1,240 KB')" type="file"/>
+<label class="cursor-pointer flex flex-col items-center gap-1.5 w-full" for="fileExpediente">
+<span class="material-symbols-outlined text-outline text-[32px] group-hover:text-secondary transition-colors">cloud_upload</span>
+<span class="font-label-md text-label-md text-primary font-semibold">Arrastre el PDF aquí</span>
+<span class="font-code-sm text-code-sm text-outline">o haga clic para examinar</span>
+</label>
+</div>
+<!-- Estado de Archivo Adjunto -->
+<div class="flex items-center justify-between p-2 rounded-lg bg-surface-container-lowest shadow-sm" id="statusExpediente">
+<div class="flex items-center gap-2 min-w-0">
+<span class="material-symbols-outlined text-error text-[20px] flex-shrink-0">picture_as_pdf</span>
+<div class="flex flex-col truncate">
+<span class="font-label-sm text-label-sm text-on-surface truncate">FUT_Comprobante_2025.pdf</span>
+<span class="font-code-sm text-code-sm text-outline">842 KB</span>
+</div>
+</div>
+<span class="font-label-sm text-label-sm text-secondary bg-surface-container px-2 py-0.5 rounded font-semibold flex-shrink-0">Válido</span>
+</div>
+</div>
+<!-- Documento 2: Carátula -->
+<div class="bg-surface-container-low p-space-md rounded-xl flex flex-col justify-between gap-space-md hover:bg-surface-container transition-colors">
+<div class="flex flex-col gap-2">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-secondary font-semibold">Anexo II</span>
+<span class="material-symbols-outlined text-secondary text-[20px]">article</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-semibold">Carátula Institucional</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Carátula del proyecto según plantilla institucional aprobada con firmas.</p>
+</div>
+<!-- Drag & Drop Zone -->
+<div class="bg-surface-container-lowest rounded-lg p-space-sm flex flex-col items-center justify-center text-center gap-2 cursor-pointer shadow-sm group">
+<input accept=".pdf" class="hidden" id="fileCaratula" onchange="actualizarArchivo(this, 'statusCaratula', '420 KB')" type="file"/>
+<label class="cursor-pointer flex flex-col items-center gap-1.5 w-full" for="fileCaratula">
+<span class="material-symbols-outlined text-outline text-[32px] group-hover:text-secondary transition-colors">cloud_upload</span>
+<span class="font-label-md text-label-md text-primary font-semibold">Arrastre el PDF aquí</span>
+<span class="font-code-sm text-code-sm text-outline">o haga clic para examinar</span>
+</label>
+</div>
+<!-- Estado de Archivo Adjunto -->
+<div class="flex items-center justify-between p-2 rounded-lg bg-surface-container-lowest shadow-sm" id="statusCaratula">
+<div class="flex items-center gap-2 min-w-0">
+<span class="material-symbols-outlined text-error text-[20px] flex-shrink-0">picture_as_pdf</span>
+<div class="flex flex-col truncate">
+<span class="font-label-sm text-label-sm text-on-surface truncate">Caratula_Oficial_Aprobada.pdf</span>
+<span class="font-code-sm text-code-sm text-outline">312 KB</span>
+</div>
+</div>
+<span class="font-label-sm text-label-sm text-secondary bg-surface-container px-2 py-0.5 rounded font-semibold flex-shrink-0">Válido</span>
+</div>
+</div>
+<!-- Documento 3: Plan de Tesis -->
+<div class="bg-surface-container-low p-space-md rounded-xl flex flex-col justify-between gap-space-md hover:bg-surface-container transition-colors">
+<div class="flex flex-col gap-2">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-secondary font-semibold">Anexo III</span>
+<span class="material-symbols-outlined text-secondary text-[20px]">menu_book</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-semibold">Plan de Tesis Formal</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Documento formal en PDF con resumen ejecutivo, cronograma y planteamiento.</p>
+</div>
+<!-- Drag & Drop Zone -->
+<div class="bg-surface-container-lowest rounded-lg p-space-sm flex flex-col items-center justify-center text-center gap-2 cursor-pointer shadow-sm group">
+<input accept=".pdf" class="hidden" id="filePlan" onchange="actualizarArchivo(this, 'statusPlan', '2,840 KB')" type="file"/>
+<label class="cursor-pointer flex flex-col items-center gap-1.5 w-full" for="filePlan">
+<span class="material-symbols-outlined text-outline text-[32px] group-hover:text-secondary transition-colors">cloud_upload</span>
+<span class="font-label-md text-label-md text-primary font-semibold">Arrastre el PDF aquí</span>
+<span class="font-code-sm text-code-sm text-outline">o haga clic para examinar</span>
+</label>
+</div>
+<!-- Estado de Archivo Adjunto -->
+<div class="flex items-center justify-between p-2 rounded-lg bg-surface-container-lowest shadow-sm" id="statusPlan">
+<div class="flex items-center gap-2 min-w-0">
+<span class="material-symbols-outlined text-error text-[20px] flex-shrink-0">picture_as_pdf</span>
+<div class="flex flex-col truncate">
+<span class="font-label-sm text-label-sm text-on-surface truncate">Plan_Tesis_Arquitectura.pdf</span>
+<span class="font-code-sm text-code-sm text-outline">2,840 KB</span>
+</div>
+</div>
+<span class="font-label-sm text-label-sm text-secondary bg-surface-container px-2 py-0.5 rounded font-semibold flex-shrink-0">Válido</span>
+</div>
+</div>
+</div>
+</section>
+<!-- PIE DEL FORMULARIO: DECLARACIÓN JURADA Y BOTONES DE ACCIÓN -->
+<footer class="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col gap-space-lg">
+<!-- Declaración Jurada -->
+<div class="flex items-start gap-3 p-space-md rounded-lg bg-surface-container-low">
+<input class="mt-1 w-5 h-5 rounded text-secondary focus:ring-secondary/40 cursor-pointer accent-secondary" id="declaracion" name="declaracion" required="" type="checkbox"/>
+<label class="font-body-md text-body-md text-on-surface leading-snug cursor-pointer select-none" for="declaracion">
+<span class="font-semibold text-primary">Declaración Jurada de Veracidad:</span> Declaro bajo juramento que los datos y documentos proporcionados en esta solicitud son auténticos y verídicos, asumiendo la responsabilidad legal y administrativa conforme a los reglamentos de titulación y ley universitaria vigente.
+          </label>
+</div>
+<!-- Barra de Botones -->
+<div class="flex flex-col-reverse sm:flex-row items-center justify-between gap-space-md pt-space-xs">
+<button class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-space-md h-11 rounded-lg bg-surface-container text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface font-label-lg text-label-lg transition-colors" onclick="guardarBorrador()" type="button">
+<span class="material-symbols-outlined text-[20px]">save</span>
+            Guardar Borrador
+          </button>
+<div class="flex flex-col sm:flex-row items-center gap-space-sm w-full sm:w-auto">
+<span class="font-label-sm text-label-sm text-outline text-center sm:text-right">
+              Paso final: Registro en servidor central
+            </span>
+<button class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-space-lg h-11 rounded-lg bg-primary-container text-on-primary hover:bg-primary font-label-lg text-label-lg shadow-md transition-all" onclick="enviarSolicitud()" type="submit">
+<span>Enviar Solicitud</span>
+<span class="material-symbols-outlined text-[20px]">arrow_forward</span>
+</button>
+</div>
+</div>
+<!-- Alerta de Confirmación interactiva (inicialmente oculta) -->
+<div class="hidden p-space-md rounded-lg bg-surface-container text-on-surface flex items-center justify-between gap-2 shadow-sm" id="toastSuccess">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary">check_circle</span>
+<span class="font-body-md text-body-md font-semibold">Solicitud tramitada con éxito. Se ha generado el código temporal EXP-2025-0982.</span>
+</div>
+<button class="text-outline hover:text-on-surface" onclick="this.parentElement.classList.add('hidden')" type="button">
+<span class="material-symbols-outlined text-[18px]">close</span>
+</button>
+</div>
+</footer>
+</form>
+</div>
+</div>
+<script>
+  function actualizarArchivo(input, statusId, pesoDefecto) {
+    if (input.files && input.files[0]) {
+      const file = input.files[0];
+      const container = document.getElementById(statusId);
+      const nameEl = container.querySelector('.truncate span:first-child');
+      const sizeEl = container.querySelector('.truncate span:last-child');
+      
+      nameEl.textContent = file.name;
+      const sizeKB = Math.round(file.size / 1024);
+      sizeEl.textContent = sizeKB > 1024 ? `${(sizeKB/1024).toFixed(1)} MB` : `${sizeKB} KB`;
+    }
+  }
+
+  function guardarBorrador() {
+    alert("Borrador guardado localmente en su sesión. Puede continuar completando sus datos en cualquier momento.");
+  }
+
+  function enviarSolicitud() {
+    const form = document.getElementById('registroForm');
+    const chk = document.getElementById('declaracion');
+    if (!chk.checked) {
+      alert("Por favor marque la casilla de Declaración Jurada para proceder con el envío formal.");
+      chk.focus();
+      return;
+    }
+    const toast = document.getElementById('toastSuccess');
+    toast.classList.remove('hidden');
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+  }
+</script></main></div></body></html>

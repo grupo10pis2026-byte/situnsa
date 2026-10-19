@@ -20,12 +20,16 @@ import { NuevoExpedientePage } from "./routes/expedientes-nuevo.js";
 import { HomePage } from "./routes/index.js";
 import { InscripcionesPage } from "./routes/inscripciones.js";
 import { LoginPage } from "./routes/login.js";
+import { MesaDePartesPage } from "./routes/mesa-de-partes.js";
 import { MiTallerPage } from "./routes/mi-taller.js";
 import { MiTramitePage } from "./routes/mi-tramite.js";
 import { MisPagosPage } from "./routes/mis-pagos.js";
 import { MisTalleresPage } from "./routes/mis-talleres.js";
 import { PagosTallerPage } from "./routes/pagos-taller.js";
 import { RestablecerPage } from "./routes/restablecer.js";
+import { SolicitudDetallePage } from "./routes/solicitudes.$id.js";
+import { SolicitudesPage } from "./routes/solicitudes.js";
+import { SubsanarSolicitudPage } from "./routes/subsanar-solicitud.$token.js";
 import { TallerDetallePage } from "./routes/taller-detalle.js";
 import { AsesoresPage, TalleresPage } from "./routes/talleres-asesores.js";
 import { TalleresNuevoPage } from "./routes/talleres-nuevo.js";
@@ -157,6 +161,28 @@ const pagosTallerRoute = createRoute({
   beforeLoad: guard("/pagos-taller"),
   component: PagosTallerPage,
 });
+const mesaDePartesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/mesa-de-partes",
+  component: MesaDePartesPage,
+});
+const subsanarRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/subsanar/$token",
+  component: SubsanarSolicitudPage,
+});
+const solicitudesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/solicitudes",
+  beforeLoad: guard("/solicitudes"),
+  component: SolicitudesPage,
+});
+const solicitudDetalleRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/solicitudes/$id",
+  beforeLoad: guard("/solicitudes/x"),
+  component: SolicitudDetallePage,
+});
 const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
@@ -164,6 +190,10 @@ const routeTree = rootRoute.addChildren([
   restablecerRoute,
   configuracionRoute,
   adminRoute,
+  solicitudesRoute,
+  solicitudDetalleRoute,
+  mesaDePartesRoute,
+  subsanarRoute,
   miTramiteRoute,
   asesorRoute,
   nuevoRoute,

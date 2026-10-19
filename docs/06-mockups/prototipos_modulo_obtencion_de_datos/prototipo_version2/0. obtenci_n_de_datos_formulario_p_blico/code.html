@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+
+<html class="h-full bg-slate-50" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Mesa de Partes Virtual - Inscripción y Titulación FIPS UNSA</title>
+<!-- Tailwind CSS CDN with forms and container queries -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Configuration for UNSA institutional branding -->
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            unsa: {
+              50: '#fdf2f4',
+              100: '#fbe6e9',
+              200: '#f7cfd6',
+              600: '#8c192d',
+              700: '#701424',
+              800: '#5b121c',
+              900: '#430e15'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+<!-- BEGIN: Custom Styles -->
+<style data-purpose="custom-elements">
+    /* Subtle focus outline consistent with corporate system */
+    input:focus, select:focus, textarea:focus {
+      outline: 2px solid transparent !important;
+      border-color: #701424 !important;
+      box-shadow: 0 0 0 3px rgba(112, 20, 36, 0.15) !important;
+    }
+    .custom-scroll::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+  </style>
+<!-- END: Custom Styles -->
+</head>
+<body class="min-h-full font-sans text-slate-800 antialiased flex flex-col justify-between selection:bg-unsa-700 selection:text-white">
+<!-- BEGIN: Institutional Top Header -->
+<header class="w-full bg-white border-b border-slate-200 shadow-sm" data-purpose="institutional-header">
+<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
+<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+<!-- University & Faculty Crest/Text Information -->
+<div class="flex items-center space-x-4">
+<div class="w-12 h-12 rounded-lg bg-unsa-700 flex items-center justify-center text-white font-bold text-xl shadow-inner tracking-wider">
+            UNSA
+          </div>
+<div>
+<p class="text-xs font-semibold tracking-wider text-slate-500 uppercase">Universidad Nacional de San Agustín de Arequipa</p>
+<h1 class="text-base sm:text-lg font-bold text-slate-900 leading-tight">Facultad de Ingeniería de Producción y Servicios (FIPS)</h1>
+<p class="text-xs font-medium text-unsa-700">Unidad de Segunda Especialidad e Investigación</p>
+</div>
+</div>
+<!-- System Tag & Help Notice -->
+<div class="flex items-center gap-2 self-start md:self-center">
+<span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse"></span>
+            Canal Público Abierto
+          </span>
+<span class="text-xs text-slate-500 hidden lg:inline-block">Sin necesidad de autenticación</span>
+</div>
+</div>
+</div>
+</header>
+<!-- END: Institutional Top Header -->
+<!-- BEGIN: Main Form Page Container -->
+<main class="max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1" data-purpose="form-wrapper">
+<!-- Title and Subtitle Block -->
+<div class="mb-8">
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+<div>
+<h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Registro de Nuevo Expediente</h2>
+<p class="text-sm text-slate-600 mt-1">
+            Mesa de Partes Virtual - Solicitud de Inscripción y Obtención de Datos de Titulación. El sistema generará su código único y enlace de seguimiento.
+          </p>
+</div>
+</div>
+<!-- BEGIN: Trámite & Participantes Selectors -->
+<div class="mt-6 flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2">
+<!-- Procedimiento Selector (Regular vs Taller) -->
+<div aria-label="Modalidad del Trámite" class="inline-flex p-1 bg-slate-200/80 rounded-xl" role="group">
+<button aria-current="page" class="px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg bg-white text-slate-900 shadow-sm transition-all focus:outline-none" type="button">
+            1.1. Formulario de Vía Regular
+          </button>
+<button class="px-4 py-2 text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 rounded-lg transition-all focus:outline-none" type="button">
+            1.2. Formulario de Taller de Tesis
+          </button>
+</div>
+<!-- Participants Counter Toggle (1 vs 2) -->
+<div class="flex items-center gap-2">
+<span class="text-xs font-semibold text-slate-500 uppercase tracking-wide mr-1">Tesistas:</span>
+<div class="inline-flex p-1 bg-slate-200/80 rounded-xl">
+<button class="px-4 py-1.5 text-xs font-bold rounded-lg bg-unsa-700 text-white shadow-sm transition-all focus:outline-none" id="btn-individual" type="button">
+              1 PARTICIPANTE
+            </button>
+<button class="px-4 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 rounded-lg transition-all focus:outline-none" id="btn-pareja" type="button">
+              2 PARTICIPANTES
+            </button>
+</div>
+</div>
+</div>
+<!-- END: Trámite & Participantes Selectors -->
+<!-- BEGIN: Stepper Component -->
+<nav aria-label="Progreso del trámite" class="mt-6 border-t border-b border-slate-200 py-3.5 bg-white px-4 rounded-xl shadow-xs">
+<ol class="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs font-medium">
+<!-- Step 1 -->
+<li class="flex items-center space-x-2.5 text-unsa-700">
+<span class="flex items-center justify-center w-6 h-6 rounded-full bg-unsa-700 text-white text-xs font-bold ring-2 ring-unsa-100">1</span>
+<span class="font-bold truncate">Datos Académicos</span>
+</li>
+<!-- Step 2 -->
+<li class="flex items-center space-x-2.5 text-slate-700">
+<span class="flex items-center justify-center w-6 h-6 rounded-full bg-slate-200 text-slate-700 text-xs font-semibold">2</span>
+<span class="truncate font-semibold">Datos Personales</span>
+</li>
+<!-- Step 3 -->
+<li class="flex items-center space-x-2.5 text-slate-500">
+<span class="flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-500 text-xs">3</span>
+<span class="truncate">Carga de Archivos</span>
+</li>
+<!-- Step 4 -->
+<li class="flex items-center space-x-2.5 text-slate-500">
+<span class="flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-500 text-xs">4</span>
+<span class="truncate">Declaración y Envío</span>
+</li>
+</ol>
+</nav>
+<!-- END: Stepper Component -->
+</div>
+<!-- BEGIN: Form Structure -->
+<form class="space-y-6" data-purpose="registration-form" id="expediente-form" onsubmit="event.preventDefault();">
+<!-- ========================================== -->
+<!-- SECCIÓN 1: DATOS ACADÉMICOS                -->
+<!-- ========================================== -->
+<section class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden" data-purpose="section-academic-data">
+<div class="px-6 py-4 border-b border-slate-100 bg-slate-50/70 flex items-center justify-between">
+<div class="flex items-center space-x-2.5">
+<svg class="w-5 h-5 text-unsa-700" fill="none" stroke="currentColor" stroke-width="1.8" viewbox="0 0 24 24">
+<path d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<div>
+<h3 class="text-sm font-bold uppercase tracking-wider text-slate-900">Registro del Título de Tesis y Programa</h3>
+<p class="text-xs text-slate-500">Información obligatoria para la apertura del expediente y generación de dictámenes.</p>
+</div>
+</div>
+<span class="text-xs font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-600">Paso 1</span>
+</div>
+<div class="p-6 space-y-5">
+<!-- Título Preliminar de la Tesis -->
+<div>
+<label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2" for="titulo_tesis">
+              Título de la Tesis / Proyecto de Investigación <span class="text-unsa-700">*</span>
+</label>
+<textarea class="w-full text-sm rounded-lg border-slate-300 shadow-xs focus:ring-0 placeholder:text-slate-400" id="titulo_tesis" name="titulo_tesis" placeholder="Ejemplo: Diseño e implementación de un sistema web para la gestión de expedientes de titulación..." required="" rows="3"></textarea>
+<p class="mt-1 text-xs text-slate-400">Debe coincidir con la carátula y el plan de tesis presentado.</p>
+</div>
+<!-- Programa y Modalidad (2 columnas) -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+<div>
+<label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2" for="programa">
+                Programa de Segunda Especialidad <span class="text-unsa-700">*</span>
+</label>
+<select class="w-full text-sm rounded-lg border-slate-300 shadow-xs focus:ring-0 text-slate-700 bg-white" id="programa" name="programa" required="">
+<option disabled="" selected="" value="">Seleccione un programa académico</option>
+<option value="sistemas">Segunda Especialidad en Ingeniería de Sistemas</option>
+<option value="produccion">Segunda Especialidad en Ingeniería de Producción</option>
+<option value="industrial">Segunda Especialidad en Ingeniería Industrial</option>
+<option value="electronica">Segunda Especialidad en Ingeniería Electrónica</option>
+<option value="telecomunicaciones">Segunda Especialidad en Telecomunicaciones</option>
+</select>
+</div>
+<div>
+<label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2" for="modalidad">
+                Modalidad de Titulación <span class="text-unsa-700">*</span>
+</label>
+<select class="w-full text-sm rounded-lg border-slate-300 shadow-xs focus:ring-0 text-slate-700 bg-white" id="modalidad" name="modalidad" required="">
+<option selected="" value="plan_articulo">Plan de Tesis (Formato Artículo de Investigación)</option>
+<option value="tesis_tradicional">Tesis Tradicional</option>
+<option value="trabajo_academico">Trabajo Académico de Experiencia Profesional</option>
+</select>
+</div>
+</div>
+</div>
+</section>
+<!-- ========================================== -->
+<!-- SECCIÓN 2: DATOS PERSONALES DEL TESISTA 01 -->
+<!-- ========================================== -->
+<section class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden" data-purpose="section-participant-1">
+<div class="px-6 py-4 border-b border-slate-100 bg-slate-50/70 flex items-center justify-between">
+<div class="flex items-center space-x-2.5">
+<svg class="w-5 h-5 text-unsa-700" fill="none" stroke="currentColor" stroke-width="1.8" viewbox="0 0 24 24">
+<path d="M15.75 6a3.75 3.75 0 11-7 0 3.75 3.75 0 017 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<div>
+<h3 class="text-sm font-bold uppercase tracking-wider text-slate-900">Registro de Participante 01 (Tesista Titular)</h3>
+<p class="text-xs text-slate-500">Datos primarios del autor responsable para resoluciones y notificaciones.</p>
+</div>
+</div>
+<span class="text-xs font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-600">Paso 2</span>
+</div>
+<div class="p-6 space-y-4">
+<!-- Nombres y Apellidos -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div>
+<label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5" for="nombres_p1">
+                Nombres Completos <span class="text-unsa-700">*</span>
+</label>
+<input class="w-full text-sm rounded-lg border-slate-300 shadow-xs focus:ring-0 placeholder:text-slate-400" id="nombres_p1" name="nombres_p1" placeholder="Ej. Juan Carlos" required="" type="text"/>
+</div>
+<div>
+<label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5" for="apellidos_p1">
+                Apellidos <span class="text-unsa-700">*</span>
+</label>
+<input class="w-full text-sm rounded-lg border-slate-300 shadow-xs focus:ring-0 placeholder:text-slate-400" id="apellidos_p1" name="apellidos_p1" placeholder="Ej. Pérez Quispe" required="" type="text"/>
+</div>
+</div>
+<!-- DNI y CUI -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div>
+<label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5" for="dni_p1">
+                DNI / Documento de Identidad <span class="text-unsa-700">*</span>
+</label>
+<input class="w-full text-sm rounded-lg border-slate-300 shadow-xs focus:ring-0 placeholder:text-slate-400" id="dni_p1" maxlength="8" name="dni_p1" pattern="[0-9]{8}" placeholder="8 dígitos numéricos" required="" type="text"/>
+</div>
+<div>
+<label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5" for="cui_p1">
+                CUI / Código Universitario <span class="text-unsa-700">*</span>
+</label>
+<input class="w-full text-sm rounded-lg border-slate-300 shadow-xs focus:ring-0 placeholder:text-slate-400" id="cui_p1" name="cui_p1" placeholder="Ej. 20240001" required="" type="text"/>
+</div>
+</div>
+<!-- Correo y Teléfono -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div>
+<label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5" for="correo_p1">
+                Correo Electrónico <span class="text-unsa-700">*</span>
+</label>
+<input class="w-full text-sm rounded-lg border-slate-300 shadow-xs focus:ring-0 placeholder:text-slate-400" id="correo_p1" name="correo_p1" placeholder="correo@ejemplo.com o institucional" required="" type="email"/>
+<span class="text-[11px] text-slate-400 mt-1 inline-block">Se enviará la confirmación y clave de acceso a este correo.</span>
+</div>
+<div>
+<label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5" for="telefono_p1">
+                Teléfono / WhatsApp <span class="text-unsa-700">*</span>
+</label>
+<input class="w-full text-sm rounded-lg border-slate-300 shadow-xs focus:ring-0 placeholder:text-slate-400" id="telefono_p1" name="telefono_p1" placeholder="Ej. 987654321" required="" type="tel"/>
+</div>
+</div>
+<!-- Ubicación: Nacionalidad, Ciudad, Dirección -->
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
+<div>
+<label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5" for="nacionalidad_p1">
+                Nacionalidad
+              </label>
+<input class="w-full text-sm rounded-lg border-slate-300 shadow-xs focus:ring-0 text-slate-700" id="nacionalidad_p1" name="nacionalidad_p1" type="text" value="Peruana"/>
+</div>
+<div>
+<label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5" for="ciudad_p1">
+                Ciudad de Residencia
+              </label>
+<input class="w-full text-sm rounded-lg border-slate-300 shadow-xs focus:ring-0 text-slate-700" id="ciudad_p1" name="ciudad_p1" placeholder="Ej. Arequipa" type="text"/>
+</div>
+<div>
+<label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5" for="direccion_p1">
+                Dirección Domiciliaria
+              </label>
+<input class="w-full text-sm rounded-lg border-slate-300 shadow-xs focus:ring-0 text-slate-700" id="direccion_p1" name="direccion_p1" placeholder="Calle, Urb., Nro." type="text"/>
+</div>
+</div>
+</div>
+</section>
+<!-- ========================================== -->
+<!-- SECCIÓN 2.1: TESISTA 02 (CO-TESISTA)        -->
+<!-- ========================================== -->
+<section class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden" data-purpose="section-participant-2" id="panel-participante-2">
+<div class="px-6 py-4 border-b border-slate-100 bg-slate-50/70 flex items-center justify-between">
+<div class="flex items-center space-x-2.5">
+<svg class="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" stroke-width="1.8" viewbox="0 0 24 24">
+<path d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<div>
+<h3 class="text-sm font-bold uppercase tracking-wider text-slate-900">Registro de Participante 02 (Co-tesista Opcional)</h3>
+<p class="text-xs text-slate-500">Solo aplicable para modalidades grupales o en coautoría.</p>
+</div>
+</div>
+<!-- Checkbox toggle to activate participant 2 -->
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" id="toggle-p2" type="checkbox"/>
+<div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-unsa-700"></div>
+<span class="ml-2 text-xs font-semibold text-slate-700">Habilitar Co-tesista</span>
+</label>
+</div>
+<div class="p-6 space-y-4 opacity-50 pointer-events-none transition-all duration-200" id="campos-participante-2">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div>
+<label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5" for="nombres_p2">
+                Nombres Completos
+              </label>
+<input class="w-full text-sm rounded-lg border-slate-300 shadow-xs focus:ring-0 placeholder:text-slate-400" id="nombres_p2" name="nombres_p2" placeholder="Ej. María Elena" type="text"/>
+</div>
+<div>
+<label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5" for="apellidos_p2">
+                Apellidos
+              </label>
+<input class="w-full text-sm rounded-lg border-slate-300 shadow-xs focus:ring-0 placeholder:text-slate-400" id="apellidos_p2" name="apellidos_p2" placeholder="Ej. Torres Flores" type="text"/>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div>
+<label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5" for="dni_p2">
+                DNI / Documento de Identidad
+              </label>
+<input class="w-full text-sm rounded-lg border-slate-300 shadow-xs focus:ring-0 placeholder:text-slate-400" id="dni_p2" maxlength="8" name="dni_p2" placeholder="8 dígitos numéricos" type="text"/>
+</div>
+<div>
+<label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5" for="cui_p2">
+                CUI / Código Universitario
+              </label>
+<input class="w-full text-sm rounded-lg border-slate-300 shadow-xs focus:ring-0 placeholder:text-slate-400" id="cui_p2" name="cui_p2" placeholder="Ej. 202112233" type="text"/>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div>
+<label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5" for="correo_p2">
+                Correo Electrónico
+              </label>
+<input class="w-full text-sm rounded-lg border-slate-300 shadow-xs focus:ring-0 placeholder:text-slate-400" id="correo_p2" name="correo_p2" placeholder="maria.torres@unsa.edu.pe" type="email"/>
+</div>
+<div>
+<label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5" for="telefono_p2">
+                Teléfono / WhatsApp
+              </label>
+<input class="w-full text-sm rounded-lg border-slate-300 shadow-xs focus:ring-0 placeholder:text-slate-400" id="telefono_p2" name="telefono_p2" placeholder="Ej. 999333444" type="tel"/>
+</div>
+</div>
+</div>
+</section>
+<!-- ========================================== -->
+<!-- SECCIÓN 3: CARGA DE ARCHIVOS               -->
+<!-- ========================================== -->
+<section class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden" data-purpose="section-file-upload">
+<div class="px-6 py-4 border-b border-slate-100 bg-slate-50/70 flex items-center justify-between">
+<div class="flex items-center space-x-2.5">
+<svg class="w-5 h-5 text-unsa-700" fill="none" stroke="currentColor" stroke-width="1.8" viewbox="0 0 24 24">
+<path d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m3.75 9v6m3-3H9m1.5-12H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<div>
+<h3 class="text-sm font-bold uppercase tracking-wider text-slate-900">Carga de Documentos Obligatorios</h3>
+<p class="text-xs text-slate-500">Archivos en formato PDF únicamente (tamaño máximo por documento: 20MB).</p>
+</div>
+</div>
+<span class="text-xs font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-600">Paso 3</span>
+</div>
+<div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-5">
+<!-- Documento 1: Expediente 17 (FUD) -->
+<div class="border border-dashed border-slate-300 rounded-xl p-4 bg-slate-50/50 flex flex-col justify-between hover:border-unsa-700/50 transition-colors">
+<div>
+<div class="flex items-center justify-between mb-2">
+<span class="text-xs font-bold uppercase tracking-wider text-slate-700">1. Solicitud (Expediente 17)</span>
+<span class="text-[10px] bg-red-100 text-unsa-700 px-1.5 py-0.5 rounded font-semibold">Obligatorio</span>
+</div>
+<p class="text-xs text-slate-500 mb-4">Formato Único de Trámite (FUD) escaneado con firma del solicitante.</p>
+</div>
+<div class="border-t border-slate-200/80 pt-3">
+<label class="cursor-pointer flex items-center justify-center gap-2 px-3 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 active:bg-slate-100 transition shadow-2xs">
+<svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24"><path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+<span>Seleccionar PDF</span>
+<input accept=".pdf" class="hidden" onchange="this.parentElement.nextElementSibling.innerText = this.files[0]?.name || 'Ningún archivo'" type="file"/>
+</label>
+<div class="mt-2 text-[11px] text-center text-slate-400 truncate">Ningún archivo seleccionado</div>
+</div>
+</div>
+<!-- Documento 2: Carátula Oficial FIPS -->
+<div class="border border-dashed border-slate-300 rounded-xl p-4 bg-slate-50/50 flex flex-col justify-between hover:border-unsa-700/50 transition-colors">
+<div>
+<div class="flex items-center justify-between mb-2">
+<span class="text-xs font-bold uppercase tracking-wider text-slate-700">2. Carátula Oficial FIPS</span>
+<span class="text-[10px] bg-red-100 text-unsa-700 px-1.5 py-0.5 rounded font-semibold">Obligatorio</span>
+</div>
+<p class="text-xs text-slate-500 mb-4">Carátula formal del proyecto según formato normativo vigente.</p>
+</div>
+<div class="border-t border-slate-200/80 pt-3">
+<label class="cursor-pointer flex items-center justify-center gap-2 px-3 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 active:bg-slate-100 transition shadow-2xs">
+<svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24"><path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+<span>Seleccionar PDF</span>
+<input accept=".pdf" class="hidden" onchange="this.parentElement.nextElementSibling.innerText = this.files[0]?.name || 'Ningún archivo'" type="file"/>
+</label>
+<div class="mt-2 text-[11px] text-center text-slate-400 truncate">Ningún archivo seleccionado</div>
+</div>
+</div>
+<!-- Documento 3: Plan de Tesis Preliminar -->
+<div class="border border-dashed border-slate-300 rounded-xl p-4 bg-slate-50/50 flex flex-col justify-between hover:border-unsa-700/50 transition-colors">
+<div>
+<div class="flex items-center justify-between mb-2">
+<span class="text-xs font-bold uppercase tracking-wider text-slate-700">3. Plan de Tesis Completo</span>
+<span class="text-[10px] bg-red-100 text-unsa-700 px-1.5 py-0.5 rounded font-semibold">Obligatorio</span>
+</div>
+<p class="text-xs text-slate-500 mb-4">Borrador preliminar o proyecto de investigación para revisión de la comisión.</p>
+</div>
+<div class="border-t border-slate-200/80 pt-3">
+<label class="cursor-pointer flex items-center justify-center gap-2 px-3 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 active:bg-slate-100 transition shadow-2xs">
+<svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24"><path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+<span>Seleccionar PDF</span>
+<input accept=".pdf" class="hidden" onchange="this.parentElement.nextElementSibling.innerText = this.files[0]?.name || 'Ningún archivo'" type="file"/>
+</label>
+<div class="mt-2 text-[11px] text-center text-slate-400 truncate">Ningún archivo seleccionado</div>
+</div>
+</div>
+</div>
+</section>
+<!-- ========================================== -->
+<!-- SECCIÓN 4: DECLARACIÓN Y ACCIÓN DE ENVÍO   -->
+<!-- ========================================== -->
+<section class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-5" data-purpose="section-submission">
+<!-- Declaración Jurada Checkbox -->
+<div class="flex items-start space-x-3 bg-slate-50 p-4 rounded-lg border border-slate-200">
+<input class="h-4 w-4 mt-0.5 rounded border-slate-300 text-unsa-700 focus:ring-unsa-700" id="declaracion" name="declaracion" required="" type="checkbox"/>
+<label class="text-xs text-slate-700 leading-relaxed cursor-pointer select-none" for="declaracion">
+<span class="font-bold text-slate-900 uppercase">Declaración Jurada de Veracidad:</span> Declaro bajo juramento que toda la información consignada y los documentos adjuntos son fidedignos y corresponden a la normativa de grados y títulos de la FIPS - UNSA. Asumo total responsabilidad ante cualquier discrepancia.
+          </label>
+</div>
+<!-- Automatic Process Notice -->
+<div class="flex items-center space-x-3 text-xs text-slate-600 px-1">
+<svg class="w-5 h-5 text-amber-600 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewbox="0 0 24 24">
+<path d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<p>
+            Al pulsar <strong class="text-slate-800">Enviar Solicitud</strong>, el sistema generará automáticamente un código correlativo (ej. <span class="font-mono font-semibold text-slate-800">SET-2026-XXXX</span>) y enviará una copia de confirmación por correo electrónico.
+          </p>
+</div>
+<!-- Botón Principal de Envío -->
+<div class="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3">
+<button class="px-5 py-2.5 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white border border-slate-300 rounded-lg shadow-2xs hover:bg-slate-50 transition text-center" type="button">
+            Limpiar Formulario
+          </button>
+<button class="inline-flex items-center justify-center gap-2.5 px-8 py-3 rounded-lg text-sm font-bold uppercase tracking-wider text-white bg-unsa-700 hover:bg-unsa-800 active:bg-unsa-900 shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-unsa-700" id="btn-submit" type="submit">
+<svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+<path d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span>Enviar Solicitud de Titulación</span>
+</button>
+</div>
+</section>
+</form>
+<!-- END: Form Structure -->
+</main>
+<!-- END: Main Form Page Container -->
+<!-- BEGIN: Institutional Public Footer -->
+<footer class="mt-12 bg-white border-t border-slate-200 py-6" data-purpose="institutional-footer">
+<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-xs text-slate-500 space-y-2">
+<p class="font-medium text-slate-700">
+        Universidad Nacional de San Agustín de Arequipa • Facultad de Ingeniería de Producción y Servicios
+      </p>
+<p>
+        Unidad de Grados y Títulos FIPS • Pabellón de Ingeniería de Sistemas, Ciudad Universitaria • Contacto: <a class="text-unsa-700 underline font-medium" href="mailto:gradosytitulos.fips@unsa.edu.pe">gradosytitulos.fips@unsa.edu.pe</a>
+</p>
+<p class="text-[11px] text-slate-400">
+        © 2026 FIPS UNSA. Sistema de Gestión de Expedientes de Titulación. Todos los derechos reservados.
+      </p>
+</div>
+</footer>
+<!-- END: Institutional Public Footer -->
+<!-- BEGIN: Logic Scripts for Toggle Interactivity -->
+<script data-purpose="toggle-participants">
+    const btnInd = document.getElementById('btn-individual');
+    const btnPar = document.getElementById('btn-pareja');
+    const toggleP2 = document.getElementById('toggle-p2');
+    const panelP2Campos = document.getElementById('campos-participante-2');
+    const panelP2 = document.getElementById('panel-participante-2');
+
+    function updateP2State(enabled) {
+      if (enabled) {
+        panelP2Campos.classList.remove('opacity-50', 'pointer-events-none');
+        panelP2.classList.add('border-unsa-200', 'ring-1', 'ring-unsa-100');
+        toggleP2.checked = true;
+        
+        // Update top pill styles
+        btnPar.classList.add('bg-unsa-700', 'text-white');
+        btnPar.classList.remove('text-slate-600');
+        btnInd.classList.remove('bg-unsa-700', 'text-white');
+        btnInd.classList.add('text-slate-600');
+      } else {
+        panelP2Campos.classList.add('opacity-50', 'pointer-events-none');
+        panelP2.classList.remove('border-unsa-200', 'ring-1', 'ring-unsa-100');
+        toggleP2.checked = false;
+
+        // Update top pill styles
+        btnInd.classList.add('bg-unsa-700', 'text-white');
+        btnInd.classList.remove('text-slate-600');
+        btnPar.classList.remove('bg-unsa-700', 'text-white');
+        btnPar.classList.add('text-slate-600');
+      }
+    }
+
+    // Header buttons
+    btnInd.addEventListener('click', () => updateP2State(false));
+    btnPar.addEventListener('click', () => updateP2State(true));
+
+    // Section inline switch
+    toggleP2.addEventListener('change', (e) => updateP2State(e.target.checked));
+  </script>
+<!-- END: Logic Scripts for Toggle Interactivity -->
+</body></html>

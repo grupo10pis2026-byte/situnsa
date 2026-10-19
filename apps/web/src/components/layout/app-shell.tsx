@@ -3,6 +3,7 @@ import {
   ClipboardCheck,
   FilePlus,
   GraduationCap,
+  Inbox,
   LayoutList,
   LogOut,
   Menu,
@@ -39,6 +40,7 @@ function navPorRol(rol: string | undefined): Item[] {
     ];
   }
   return [
+    { to: "/solicitudes", etiqueta: "Bandeja de Solicitudes", icono: <Inbox size={18} /> },
     { to: "/admin", etiqueta: "Listado de Expedientes", icono: <LayoutList size={18} /> },
     { to: "/expedientes/nuevo", etiqueta: "Nuevo Expediente", icono: <FilePlus size={18} /> },
     { to: "/inscripciones", etiqueta: "Validación", icono: <ClipboardCheck size={18} /> },

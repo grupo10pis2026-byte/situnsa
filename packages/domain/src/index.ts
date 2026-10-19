@@ -21,3 +21,5 @@ export * from "./shared/result.js";
 export * from "./taller/asistencia.js";
 export * from "./taller/pase.js";
 export * from "./taller/sesiones.js";
+export * from "./solicitud/plazos-solicitud.js";
+export * from "./solicitud/solicitud.aggregate.js";
