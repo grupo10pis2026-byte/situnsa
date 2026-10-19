@@ -1,17 +1,22 @@
-import { AlertTriangle, CheckCircle2, Info } from "lucide-react";
+import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import { useAnalizarDocumento } from "../../api/analisis-documental.js";
 import { cn } from "../../utils/cn.js";
 import { Button } from "../ui/button.js";
 import { Card } from "../ui/card.js";
-import { ItemHallazgo } from "./item-hallazgo.js";
 
 /**
  * Panel de DocumentoCard en /expedientes/$id y /mi-tramite para PLAN_ESTRUCTURADO.
  * Consume POST /api/documentos/:id/analisis mediante useAnalizarDocumento.
- * Se remonta por documentoId: una respuesta de v1 no se muestra en v2.
- * Muestra controles y resumen; la revisión de IA permanece sin solicitar.
+ * Muestra el resumen compacto de carátula/título y delega el informe detallado
+ * con observaciones y fragmentos al modal emergente.
  */
-export function AnalisisDocumentalPanel({ documentoId }: { documentoId: string }) {
+export function AnalisisDocumentalPanel({
+  documentoId,
+  onVerDetalles,
+}: {
+  documentoId: string;
+  onVerDetalles?: () => void;
+}) {
   const analisis = useAnalizarDocumento(documentoId);
   const resultado = analisis.data?.documentoId === documentoId ? analisis.data : null;
 
@@ -108,85 +113,33 @@ export function AnalisisDocumentalPanel({ documentoId }: { documentoId: string }
               )}
             </div>
 
-            {/* Lista de controles de verificación con iconos formales */}
-            <div>
-              <p className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                Puntos de control normativo:
-              </p>
-              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                {resultado.controles.map((control) => (
-                  <li
-                    key={control.tipo}
-                    className={cn(
-                      "flex items-start gap-2 rounded-lg border px-2.5 py-1.5 text-xs font-medium",
-                      control.estado === "CONFORME"
-                        ? "border-green-200 bg-green-50/80 text-green-900"
-                        : control.estado === "NO_EVALUABLE"
-                          ? "border-slate-200 bg-slate-100/70 text-slate-700"
-                          : "border-amber-200 bg-amber-50/80 text-amber-900",
-                    )}
-                  >
-                    <span className="shrink-0 mt-0.5">
-                      {control.estado === "CONFORME" ? (
-                        <CheckCircle2 size={13} className="text-emerald-700" />
-                      ) : control.estado === "NO_EVALUABLE" ? (
-                        <Info size={13} className="text-slate-500" />
-                      ) : (
-                        <AlertTriangle size={13} className="text-amber-700" />
-                      )}
-                    </span>
-                    <span>{control.mensaje}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Inconsistencias con resumen y desplegable interactivo */}
-            {!!resultado.hallazgos.length && (
-              <div className="space-y-2 pt-1">
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <p className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                    Inconsistencias y observaciones detectadas ({resultado.hallazgos.length}):
-                  </p>
-                  <span className="text-[11px] text-slate-500">
-                    Haga clic en cada observación para desplegar el fragmento
-                  </span>
-                </div>
-                <ul className="space-y-2">
-                  {resultado.hallazgos.map((hallazgo, indice) => (
-                    <ItemHallazgo
-                      key={`${hallazgo.tipo}-${indice}`}
-                      campo={hallazgo.tipo}
-                      mensaje={hallazgo.mensaje}
-                      severidad={hallazgo.severidad}
-                      pagina={hallazgo.pagina}
-                      esperado={hallazgo.esperado ?? hallazgo.sugerencia}
-                      encontrado={hallazgo.encontrado ?? hallazgo.evidencia}
-                    />
-                  ))}
-                </ul>
+            {onVerDetalles && (
+              <div className="pt-1">
+                <Button
+                  variante="contorno"
+                  tamano="sm"
+                  type="button"
+                  onClick={onVerDetalles}
+                  className={cn(
+                    "w-full flex items-center justify-center gap-2 border font-medium text-xs py-2 shadow-xs transition-colors",
+                    resultado.hallazgos.length > 0
+                      ? "border-amber-300 bg-amber-50/70 text-amber-900 hover:bg-amber-100"
+                      : "border-emerald-300 bg-emerald-50/70 text-emerald-900 hover:bg-emerald-100",
+                  )}
+                >
+                  {resultado.hallazgos.length > 0 ? (
+                    <>
+                      <AlertTriangle size={15} className="text-amber-700 shrink-0" />
+                      <span>Ver informe completo y {resultado.hallazgos.length} observaciones</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 size={15} className="text-emerald-700 shrink-0" />
+                      <span>Ver informe completo y controles normativos (Conforme)</span>
+                    </>
+                  )}
+                </Button>
               </div>
-            )}
-
-            {!resultado.hallazgos.length && resultado.estado === "COMPLETADO" && (
-              <div className="rounded-lg border border-green-200 bg-green-50/80 p-3 text-xs text-green-900 font-medium flex items-center gap-2">
-                <CheckCircle2 size={16} className="text-emerald-700 shrink-0" />
-                <span>
-                  La carátula, la presentación y la estructura del resumen cumplen con la guía
-                  oficial.
-                </span>
-              </div>
-            )}
-
-            {resultado.resumen && (
-              <details className="text-xs rounded-lg border border-slate-200 bg-white p-2.5">
-                <summary className="font-semibold text-slate-700 cursor-pointer">
-                  Ver resumen extraído ({resultado.resumenCompleto ? "Completo" : "Parcial"})
-                </summary>
-                <p className="mt-2 whitespace-pre-wrap text-slate-800 bg-slate-50 p-2 rounded border border-slate-100 font-mono text-[11px]">
-                  {resultado.resumen}
-                </p>
-              </details>
             )}
           </div>
         )}

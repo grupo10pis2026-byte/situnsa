@@ -459,18 +459,47 @@ export function DocumentoCard(p: Props) {
               ? "Se encontraron inconsistencias en la carátula o el contenido del documento."
               : "La revisión no detectó observaciones en la carátula."
           }
-          ancho="max-w-xl"
+          ancho="max-w-2xl"
         >
           {revision.isPending ? (
             <p className="text-sm text-grafito-600">Analizando el documento…</p>
           ) : revision.data ? (
-            <div className="space-y-3">
+            <div className="space-y-3.5">
+              <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-700 bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-slate-900">{p.nombre}</span>
+                  {p.version !== null && (
+                    <span className="rounded bg-slate-200 px-1.5 py-0.5 text-[11px] font-semibold text-slate-800">
+                      v{p.version}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span
+                    className={cn(
+                      "font-semibold px-2 py-0.5 rounded text-[11px]",
+                      revision.data.estado === "COMPLETADO"
+                        ? "bg-green-100 text-green-800"
+                        : "bg-amber-100 text-amber-800",
+                    )}
+                  >
+                    {revision.data.estado === "COMPLETADO"
+                      ? "Análisis completado"
+                      : "Análisis en proceso"}
+                  </span>
+                  <span>·</span>
+                  <span>
+                    Páginas: <strong>{revision.data.paginasAnalizadas || "1–6"}</strong>
+                  </span>
+                </div>
+              </div>
+
               {revision.data.hallazgos.length === 0 ? (
                 <div className="rounded-xl border border-green-200 bg-verde-inst-100/50 p-4 text-center flex items-center justify-center gap-2">
                   <CheckCircle2 size={16} className="text-verde-inst-700 shrink-0" />
                   <p className="text-sm font-semibold text-verde-inst-700">
-                    La carátula, la presentación y el resumen cumplen con las especificaciones de la
-                    guía oficial.
+                    La carátula, la presentación y el resumen cumplen con todas las especificaciones
+                    de la guía oficial.
                   </p>
                 </div>
               ) : (
@@ -478,8 +507,9 @@ export function DocumentoCard(p: Props) {
                   <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-2.5 text-xs text-amber-900 flex items-start gap-2">
                     <AlertTriangle size={15} className="text-amber-700 shrink-0 mt-0.5" />
                     <span>
-                      Se detectaron {revision.data.hallazgos.length} observaciones. Toque cada una
-                      para ver el fragmento específico del documento y la redacción esperada.
+                      Se detectaron {revision.data.hallazgos.length} observaciones en la carátula o
+                      estructura. Haga clic en cada observación para desplegar el fragmento
+                      detectado y la redacción esperada.
                     </span>
                   </div>
                   <ul className="space-y-2.5 max-h-[60vh] overflow-y-auto pr-1">
@@ -527,7 +557,11 @@ export function DocumentoCard(p: Props) {
         </Dialogo>
       )}
       {p.documentoId && p.tipo === "PLAN_ESTRUCTURADO" && (
-        <AnalisisDocumentalPanel key={p.documentoId} documentoId={p.documentoId} />
+        <AnalisisDocumentalPanel
+          key={p.documentoId}
+          documentoId={p.documentoId}
+          onVerDetalles={() => setRevisionAbierta(true)}
+        />
       )}
       {pendiente && (
         <ConfirmDialog

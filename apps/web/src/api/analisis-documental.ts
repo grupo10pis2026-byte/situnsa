@@ -3,7 +3,7 @@
  * Ruta del servidor: POST /api/documentos/:id/analisis; contrato de @pis/contracts, sesión mediante apiFetch.
  */
 import { AnalisisDocumentoResponseSchema } from "@pis/contracts";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiBaseUrl } from "./client.js";
 import { errorDeRespuesta } from "./errores.js";
 import { apiFetch } from "./session.js";
@@ -14,6 +14,7 @@ import { apiFetch } from "./session.js";
  * revisionEditorial=false ejecuta únicamente los controles locales solicitados.
  */
 export function useAnalizarDocumento(documentoId: string) {
+  const qc = useQueryClient();
   return useMutation({
     mutationKey: ["analisis-documental", documentoId],
     mutationFn: async (revisionEditorial: boolean) => {
@@ -24,6 +25,9 @@ export function useAnalizarDocumento(documentoId: string) {
       });
       if (!response.ok) throw await errorDeRespuesta(response, "No se pudo analizar el documento");
       return AnalisisDocumentoResponseSchema.parse(await response.json());
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["documentos", documentoId, "revision"] });
     },
   });
 }
