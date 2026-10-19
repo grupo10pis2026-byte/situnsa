@@ -10,7 +10,7 @@ import {
   modalidadAEtiqueta,
   normalizarAdministrativo,
 } from "../expediente/modalidades.js";
-import { fechaLarga } from "./etiquetas.js";
+import { fechaLarga, formatoAutoridad } from "./etiquetas.js";
 
 export interface PersonaDocumento {
   readonly nombres: string;
@@ -73,12 +73,13 @@ export function toTitleCase(s: string): string {
     .replace(/(?:^|\s|\/)\S/g, (char) => char.toUpperCase());
 }
 
-/** RN-L08: "DR. NOMBRES APELLIDOS" usando el grado registrado del asesor. */
+/** RN-L08: Formato profesional con grado académico y Title Case ("Dr. Nombres Apellidos"). */
 export function formatoAsesor(p: PersonaDocumento | null): string {
   if (!p) return "";
   const grado = (p.grado ?? "").trim();
   const nombre = nombreCompleto(p);
-  return normalizarAdministrativo("asesorNombre", grado ? `${grado} ${nombre}` : nombre);
+  const completo = grado ? `${grado} ${nombre}` : nombre;
+  return formatoAutoridad(completo);
 }
 
 function texto(v: string | null | undefined): string {
@@ -93,7 +94,7 @@ function unirLista(partes: readonly string[]): string {
 
 const ORDEN_ROL = ["PRESIDENTE", "SECRETARIO", "VOCAL", "SUPLENTE"];
 
-/** Jurado en texto corrido: "DR. ANA RUIZ (presidente), …" (RN-L07: nombres en mayúsculas). */
+/** Jurado en texto corrido: "Dr. Ana Ruiz (presidente), …" con grados académicos en Title Case. */
 function textoJurado(exp: ExpedienteDocumento): string {
   const registrado = [...(exp.jurado ?? [])].sort(
     (x, y) => ORDEN_ROL.indexOf(x.rol) - ORDEN_ROL.indexOf(y.rol),
@@ -101,15 +102,15 @@ function textoJurado(exp: ExpedienteDocumento): string {
   if (registrado.length > 0) {
     return unirLista(
       registrado.map(
-        (j) => `${normalizarAdministrativo("asesorNombre", j.nombre)} (${j.rol.toLowerCase()})`,
+        (j) => `${formatoAutoridad(j.nombre)} (${j.rol.toLowerCase()})`,
       ),
     );
   }
   const a = exp.datosAdmin;
   const legacy: Array<[string, string]> = [
-    ["presidente", texto(a.presidenteE2)],
-    ["secretario", texto(a.secretarioE2)],
-    ["suplente", texto(a.suplenteE2)],
+    ["presidente", formatoAutoridad(texto(a.presidenteE2))],
+    ["secretario", formatoAutoridad(texto(a.secretarioE2))],
+    ["suplente", formatoAutoridad(texto(a.suplenteE2))],
   ];
   return unirLista(legacy.filter(([, n]) => n).map(([rol, n]) => `${n} (${rol})`));
 }
@@ -126,12 +127,18 @@ export function construirDatosDocumento(
   const p2Nombre = nombreCompleto(p2);
   const nombresConjuntos = [p1Nombre, p2Nombre].filter(Boolean).join(" y ");
   const dnisConjuntos = [p1?.dni, p2?.dni].filter((d): d is string => !!d).join(" / ");
-  const asesor = texto(a.asesorNombre) || formatoAsesor(exp.asesor);
+  const asesor = formatoAutoridad(texto(a.asesorNombre)) || formatoAsesor(exp.asesor);
+  const coasesor = formatoAutoridad(texto(a.coAsesor));
   const modFinal =
     texto(a.modalidadVirtual) || texto(a.modalidadFinal) || MODALIDAD_FINAL[exp.modalidad];
   // Fecha civil de Arequipa (UTC-5), no la del servidor.
   const fechaIso = hoy.toLocaleDateString("en-CA", { timeZone: "America/Lima" });
   const sust = exp.sustentacion ?? null;
+  const veredictoVal =
+    (sust?.actaVeredicto ? (VEREDICTO[sust.actaVeredicto] ?? sust.actaVeredicto) : null) ||
+    (texto(a.veredicto) ? (VEREDICTO[texto(a.veredicto)] ?? texto(a.veredicto)) : "");
+  const numeroActa = texto(a.numeroActa) || texto(a.actaNumero) || "001";
+
   const datos: Record<string, string> = {
     CODIGO: exp.codigo,
     TESIS: exp.titulo.trim(),
@@ -166,21 +173,21 @@ export function construirDatosDocumento(
     MOD_F: modFinal,
     "MODALIDAD FINAL": modFinal,
     ASESOR: asesor,
-    COASESOR: texto(a.coAsesor),
-    "CO ASESOR": texto(a.coAsesor),
+    COASESOR: coasesor,
+    "CO ASESOR": coasesor,
     DECRETO: texto(a.nroDecreto),
     "N° DECRETO": texto(a.nroDecreto),
     OFICIO: texto(a.nroOficio),
     RECOMENDACION: texto(a.recomendacion),
-    PRESIDENTE: texto(a.presidente),
-    SECRETARIO: texto(a.secretario),
-    INTEGRANTE: texto(a.integrante) || asesor || "DR. ASESOR PRUEBA",
+    PRESIDENTE: formatoAutoridad(texto(a.presidente)),
+    SECRETARIO: formatoAutoridad(texto(a.secretario)),
+    INTEGRANTE: formatoAutoridad(texto(a.integrante)) || asesor || "Dr. Asesor Prueba",
     "PRESIDENTE ETAPA 02":
-      texto(a.presidenteE2) || texto(a.presidente) || "Dr. Cecilio Mauro Villavicencio Melgarejo",
+      formatoAutoridad(texto(a.presidenteE2) || texto(a.presidente) || "Dr. Cecilio Mauro Villavicencio Melgarejo"),
     "SECRETARIO ETAPA 02":
-      texto(a.secretarioE2) || texto(a.secretario) || "Dr. Edwin Carlos Leoncio Gama Quispe",
-    "SUPLENTE ETAPA 02": texto(a.suplenteE2) || "Mg. Hugo Rufino Llamosas Barriga",
-    SUPLENTE: texto(a.suplenteE2) || "Mg. Hugo Rufino Llamosas Barriga",
+      formatoAutoridad(texto(a.secretarioE2) || texto(a.secretario) || "Dr. Edwin Carlos Leoncio Gama Quispe"),
+    "SUPLENTE ETAPA 02": formatoAutoridad(texto(a.suplenteE2) || "Mg. Hugo Rufino Llamosas Barriga"),
+    SUPLENTE: formatoAutoridad(texto(a.suplenteE2) || "Mg. Hugo Rufino Llamosas Barriga"),
     DECANAL: texto(a.decanal),
     "FECHA APERTURA": fechaLarga(a.fechaApertura),
     "FECHA PRESENTACION": fechaLarga(a.fechaPresentacion),
@@ -195,11 +202,27 @@ export function construirDatosDocumento(
       "lugarSustentacion",
       texto(sust?.lugar ?? a.lugarSustentacion),
     ),
-    VEREDICTO: sust?.actaVeredicto ? (VEREDICTO[sust.actaVeredicto] ?? sust.actaVeredicto) : "",
-    VERREDICTO:
-      (sust?.actaVeredicto ? (VEREDICTO[sust.actaVeredicto] ?? sust.actaVeredicto) : null) ||
-      texto(a.veredicto) ||
-      "UNANIMIDAD",
+    "LUGAR DE SUSTENTACION": normalizarAdministrativo(
+      "lugarSustentacion",
+      texto(sust?.lugar ?? a.lugarSustentacion),
+    ),
+    "LUGAR DE SUSTENTACIÓN": normalizarAdministrativo(
+      "lugarSustentacion",
+      texto(sust?.lugar ?? a.lugarSustentacion),
+    ),
+    VEREDICTO: veredictoVal,
+    VERREDICTO: veredictoVal,
+    NUMERO_ACTA: numeroActa,
+    "NUMERO DE ACTA": numeroActa,
+    "N° DE ACTA": numeroActa,
+    ACTA_NUMERO: numeroActa,
+    "N° DE TRÁMITE": exp.codigo,
+    "N° DE TRAMITE": exp.codigo,
+    "NRO DE TRAMITE": exp.codigo,
+    EXPEDIENTE: exp.codigo,
+    GRUPO: texto(a.grupo) || "GRUPO 01",
+    REPOSITORIO: texto(exp.validaciones?.urlRepositorio) || "http://repositorio.unsa.edu.pe",
+    ASE_MINU: toTitleCase(asesor),
     JURADO: textoJurado(exp),
     SIMILITUD:
       exp.validaciones?.similitud !== null && exp.validaciones?.similitud !== undefined
@@ -209,7 +232,9 @@ export function construirDatosDocumento(
     FECHA_EMISION: fechaLarga(fechaIso),
     ANIO: fechaIso.slice(0, 4),
     // Etiquetas de formato y compatibilidad con ETIQUETAS.docx
-    NOM_MIN: toTitleCase(nombresConjuntos),
+    NOM_MIN: p2
+      ? `${toTitleCase(p1Nombre)}\n${toTitleCase(p2Nombre)}`
+      : toTitleCase(nombresConjuntos),
     NOM_MIN02: toTitleCase(p2Nombre),
     NOM_MIN_1: toTitleCase(p1Nombre),
     NOM_MIN_2: toTitleCase(p2Nombre),
@@ -270,13 +295,14 @@ export function construirDatosDocumento(
         ? `${exp.validaciones.similitud} %`
         : texto(a.porcentajeTurnitin) || "0 %",
     FECHA_INVITACION: fechaLarga(a.fechaInvitacion) || fechaLarga(fechaIso),
+    "FECHA DE INVITACIÓN PÚBLICA": fechaLarga(a.fechaInvitacion) || fechaLarga(fechaIso),
+    "FECHA DE INVITACION PUBLICA": fechaLarga(a.fechaInvitacion) || fechaLarga(fechaIso),
     FECHA_OFICIO_OTI: fechaLarga(a.fechaOficioOti) || fechaLarga(fechaIso),
     FECHA_OFICIO_UGI: fechaLarga(a.fechaOficioUgi) || fechaLarga(fechaIso),
     "FECHA JURADOS":
       fechaLarga(a.fechaJurados ?? a.fechaNombramientoJurados) || fechaLarga(fechaIso),
     "FECHA DE NOMBRAMIENTO DE JURADOS":
       fechaLarga(a.fechaJurados ?? a.fechaNombramientoJurados) || fechaLarga(fechaIso),
-    ACTA_NUMERO: texto(a.actaNumero) || "001",
     OFICIO_OTI: texto(a.oficioOti) || "322-2026",
     OFICIO_UGI: texto(a.oficioUgi) || "XXX-2026",
     INFORME_SIMILITUD_NUM: texto(a.informeSimilitudNum) || "001",

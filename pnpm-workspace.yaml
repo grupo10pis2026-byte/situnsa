@@ -4,4 +4,5 @@ packages:
   - "e2e"
 allowBuilds:
   '@tailwindcss/oxide': true
+  core-js: set this to true or false
   esbuild: false

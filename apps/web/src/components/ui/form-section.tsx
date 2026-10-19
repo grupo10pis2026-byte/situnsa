@@ -12,6 +12,7 @@ export function FormSection({
   accion,
   children,
   className,
+  gridClassName,
 }: {
   icono?: ReactNode;
   titulo: string;
@@ -19,6 +20,7 @@ export function FormSection({
   accion?: ReactNode;
   children: ReactNode;
   className?: string;
+  gridClassName?: string;
 }) {
   return (
     <Card className={className}>
@@ -32,7 +34,11 @@ export function FormSection({
         descripcion={ayuda}
         accion={accion}
       />
-      <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 md:p-5 lg:grid-cols-4">
+      <div
+        className={
+          gridClassName || "grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 md:p-5 lg:grid-cols-4"
+        }
+      >
         {children}
       </div>
     </Card>

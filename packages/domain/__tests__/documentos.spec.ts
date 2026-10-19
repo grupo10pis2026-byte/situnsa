@@ -10,6 +10,7 @@ import {
   extraerEtiquetas,
   fechaIso,
   fechaLarga,
+  formatoAutoridad,
   horaLimpia,
   insertarEtiquetas,
 } from "../src/documentos/etiquetas.js";
@@ -89,21 +90,27 @@ describe("inserción de etiquetas (legacy insertarDatosEnDocumento)", () => {
 describe("datos del expediente (RN-L07/L08)", () => {
   const datos = construirDatosDocumento(EXP, new Date("2026-10-05T15:00:00Z"));
 
-  it("asesor en formato profesional y mayúsculas", () => {
-    expect(formatoAsesor(EXP.asesor)).toBe("DR. JUAN TORRES");
-    expect(datos.ASESOR).toBe("DR. JUAN TORRES");
+  it("asesor y autoridades en formato profesional Title Case (iniciales mayúsculas y prefijo)", () => {
+    expect(formatoAsesor(EXP.asesor)).toBe("Dr. Juan Torres");
+    expect(datos.ASESOR).toBe("Dr. Juan Torres");
+    expect(datos.PRESIDENTE).toBe("Dr. Ana Ruiz");
+    expect(formatoAutoridad("DR. CECILIO MAURO VILLAVICENCIO MELGAREJO")).toBe(
+      "Dr. Cecilio Mauro Villavicencio Melgarejo",
+    );
+    expect(formatoAutoridad("mg. hugo rufino llamosas barriga")).toBe(
+      "Mg. Hugo Rufino Llamosas Barriga",
+    );
   });
 
   it("la tesis conserva la escritura del autor; los administrativos van en mayúsculas", () => {
     expect(datos.TESIS).toBe("sistema de gestión de expedientes para la fips");
-    expect(datos.PRESIDENTE).toBe("dr. ana ruiz");
     expect(datos.MODALIDAD).toBe("Plan de Tesis");
     expect(datos.MOD_F).toBe("La Tesis");
     expect(datos["FECHA APERTURA"]).toBe("1 de septiembre de 2026");
     expect(datos.FECHA_EMISION).toBe("5 de octubre de 2026");
   });
 
-  it("en expediente de 2 tesistas ambos comparten el título de tesis (TESIS y TESIS 02)", () => {
+  it("en expediente de 2 tesistas ambos comparten el título de tesis y NOM_MIN tiene saltos de línea", () => {
     const exp2: ExpedienteDocumento = {
       ...EXP,
       participante2: { nombres: "Carlos", apellidos: "Gómez López", dni: "70223344" },
@@ -113,6 +120,7 @@ describe("datos del expediente (RN-L07/L08)", () => {
     expect(d2.TESIS).toBe("sistema de gestión de expedientes para la fips");
     expect(d2["TESIS 02"]).toBe("sistema de gestión de expedientes para la fips");
     expect(d2.TESIS02).toBe("sistema de gestión de expedientes para la fips");
+    expect(d2.NOM_MIN).toBe("María Pérez Quispe\nCarlos Gómez López");
   });
 });
 
@@ -137,6 +145,7 @@ describe("plantillas", () => {
       "OFICIO_UGI_REPOSITORIO",
       "RESOLUCION_DECANAL",
       "INFORME_SECRETARIA",
+      "ETIQUETAS",
     ]);
     for (const p of PLANTILLAS) expect(tipos.has(p.tipo) || extras.has(p.tipo)).toBe(true);
   });
@@ -179,7 +188,7 @@ describe("plantillas", () => {
     expect(completo.pendientes).toEqual([]);
     const texto = completo.parrafos.map((p) => p.map((x) => x.texto).join("")).join("\n");
     expect(texto).toContain(
-      "DR. ANA RUIZ (presidente), MG. ROSA DÍAZ (secretario) y ING. LUIS SOTO (vocal)",
+      "Dr. Ana Ruiz (presidente), Mg. Rosa Díaz (secretario) y Ing. Luis Soto (vocal)",
     );
     expect(texto).toContain("similitud del reporte Turnitin es de 12 %");
     expect(texto).toContain("APROBADO POR UNANIMIDAD");

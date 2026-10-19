@@ -25,5 +25,13 @@ services:
       - "1025:1025" # SMTP para Fastify
       - "8025:8025" # UI web dev
 
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    container_name: pis-gotenberg
+    restart: unless-stopped
+    ports:
+      - "3002:3000"
+
+
 volumes:
   pgdata:

@@ -2,32 +2,45 @@ import type { ExpedienteDetalleDTO } from "@pis/contracts";
 import { Link, useNavigate, useParams } from "@tanstack/react-router";
 import {
   ArrowLeft,
+  Edit3,
+  Eye,
   FileDown,
+  FileText,
   KeyRound,
   Lock,
   MessageSquareWarning,
   Trash2,
   Undo2,
+  UploadCloud,
+  Users,
   WandSparkles,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { destinoPorRol } from "../api/auth.js";
 import { ApiError } from "../api/errores.js";
+import { resolverNombreArchivoDescarga } from "@pis/domain/dist/documentos/plantillas.js";
 import {
   abrirArchivoProtegido,
+  descargarArchivoProtegido,
+  documentoDescargaUrl,
   formatoDescargaUrl,
   type GuardadoEstado,
+  reportarPresenciaExpediente,
+  type UsuarioConcurrente,
   useAnular,
   useEnviarAcceso,
   useExpedienteDetalle,
   useGenerarDocumentos,
   useLevantarObservacion,
+  useSubirDocumento,
 } from "../api/expedientes.js";
 import { esStaff } from "../api/guard.js";
 import { useObservar } from "../api/seguimiento.js";
 import { useSession } from "../api/session.js";
 import { DatosForm } from "../components/domain/datos-form.js";
 import { DocumentoCard } from "../components/domain/documento-card.js";
+import { ModalModificarFormato } from "../components/domain/modal-modificar-formato.js";
+import { ModalVistaPreviaFormato } from "../components/domain/modal-vista-previa-formato.js";
 import { ResumenTab } from "../components/domain/resumen-tab.js";
 import { AppShell } from "../components/layout/app-shell.js";
 import { Button, botonClases } from "../components/ui/button.js";
@@ -78,11 +91,35 @@ export function ExpedienteDetallePage() {
   const [guardado, setGuardado] = useState<GuardadoEstado>("sincronizado");
   const [conflicto, setConflicto] = useState<string | null>(null);
   const [eliminar, setEliminar] = useState(false);
+  const [concurrentes, setConcurrentes] = useState<UsuarioConcurrente[]>([]);
   const query = useExpedienteDetalle(id);
   const anular = useAnular(id);
   const avisar = useToast();
   const navigate = useNavigate();
   const { sesion } = useSession();
+
+  // Detección de concurrencia: ping de presencia cada 15s
+  useEffect(() => {
+    let activo = true;
+    async function pingPresencia() {
+      if (!id) return;
+      const nombreUsuario = sesion?.nombres?.trim() || undefined;
+      const res = await reportarPresenciaExpediente(id, nombreUsuario);
+      if (activo) {
+        setConcurrentes(res);
+      }
+    }
+
+    void pingPresencia();
+    const interval = setInterval(() => {
+      void pingPresencia();
+    }, 15_000);
+
+    return () => {
+      activo = false;
+      clearInterval(interval);
+    };
+  }, [id, sesion?.nombres]);
 
   if (query.isPending) {
     return (
@@ -163,6 +200,22 @@ export function ExpedienteDetallePage() {
         <ArrowLeft size={16} />
         {staff ? "Volver al listado" : "Volver a mi panel"}
       </Link>
+
+      {concurrentes.length > 0 && (
+        <div className="flex items-center gap-3 rounded-xl border border-amber-300 bg-amber-50/90 px-4 py-3 text-amber-900 shadow-sm animate-in fade-in">
+          <Users className="size-5 shrink-0 text-amber-600" />
+          <div className="min-w-0">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-amber-800">
+              Atención — Trabajo Concurrente Detectado
+            </p>
+            <p className="text-xs sm:text-sm text-amber-900">
+              <strong>{concurrentes.map((c) => `${c.nombre} (${c.rol})`).join(", ")}</strong>{" "}
+              también tiene abierto este expediente en este momento. Los cambios se sincronizan en tiempo real.
+            </p>
+          </div>
+        </div>
+      )}
+
       <PageHeader
         titulo={`Expediente ${d.codigo}`}
         descripcion={`${nombreTesista} · ${d.programa}`}
@@ -411,6 +464,171 @@ function AccesoPortal({ detalle: d }: { detalle: ExpedienteDetalleDTO }) {
   );
 }
 
+interface ExtraFormatoCardProps {
+  expedienteId: string;
+  expedienteCodigo: string;
+  formato: {
+    id: string;
+    tipo: string;
+    nombre: string;
+    version: number;
+    pendientes: string[];
+    documentoId?: string | null | undefined;
+    documentoEstado?: string | null | undefined;
+    documentoVersion?: number | null | undefined;
+  };
+  staff: boolean;
+  onVistaPrevia: (f: { id: string; tipo: string; nombre: string; version: number; pendientes: string[] }) => void;
+  onModificar: (f: { tipo: string; nombre: string; version: number; pendientes: string[] }) => void;
+}
+
+function ExtraFormatoCard({
+  expedienteId,
+  expedienteCodigo,
+  formato: g,
+  staff,
+  onVistaPrevia,
+  onModificar,
+}: ExtraFormatoCardProps) {
+  const avisar = useToast();
+  const subir = useSubirDocumento(expedienteId);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      await subir.mutateAsync({ tipo: g.tipo, file });
+      avisar(`Documento adjuntado exitosamente para ${g.nombre}`, "ok");
+    } catch (err) {
+      avisar(err instanceof Error ? err.message : "Error al adjuntar documento", "error");
+    } finally {
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  }
+
+  async function abrirAdjunto(documentoId: string) {
+    try {
+      await abrirArchivoProtegido(documentoDescargaUrl(documentoId));
+    } catch (err) {
+      avisar(err instanceof Error ? err.message : "No se pudo abrir el archivo adjunto", "error");
+    }
+  }
+
+  return (
+    <div className="flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-3 shadow-card hover:border-slate-300 transition-colors">
+      <div className="min-w-0">
+        <p className="truncate text-xs font-bold text-navy-950" title={g.nombre}>
+          {g.nombre}
+        </p>
+        <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-grafito-600">
+          <span className="font-semibold text-navy-900">v{g.version}</span>
+          <span>·</span>
+          {g.pendientes.length > 0 ? (
+            <span className="rounded bg-amber-100 px-1.5 py-0.2 text-[10px] text-amber-800 font-semibold">
+              {g.pendientes.length} pendientes
+            </span>
+          ) : (
+            <span className="rounded bg-emerald-100 px-1.5 py-0.2 text-[10px] text-emerald-800 font-semibold">
+              Completo
+            </span>
+          )}
+          {g.documentoId && (
+            <span className="rounded bg-sky-100 px-1.5 py-0.2 text-[10px] text-sky-800 font-semibold">
+              Adjunto v{g.documentoVersion ?? 1}
+            </span>
+          )}
+        </div>
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-slate-100 pt-2">
+        <Button
+          tamano="sm"
+          variante="contorno"
+          onClick={() =>
+            onVistaPrevia({
+              id: g.id,
+              tipo: g.tipo,
+              nombre: g.nombre,
+              version: g.version,
+              pendientes: g.pendientes,
+            })
+          }
+          title="Vista previa del formato en PDF con opciones de descarga"
+          type="button"
+        >
+          <Eye size={13} />
+          Vista Previa
+        </Button>
+        <Button
+          tamano="sm"
+          variante="contorno"
+          className="flex-1"
+          onClick={() =>
+            void descargarArchivoProtegido(
+              formatoDescargaUrl(g.id),
+              resolverNombreArchivoDescarga(expedienteCodigo, g.tipo, "docx"),
+            ).catch((e: unknown) =>
+              avisar(e instanceof Error ? e.message : "No se pudo descargar", "error"),
+            )
+          }
+          title={
+            g.pendientes.length > 0 ? `Pendiente: ${g.pendientes.join(", ")}` : undefined
+          }
+          type="button"
+        >
+          <FileDown size={13} />
+          Descargar
+        </Button>
+        {staff && (
+          <>
+            <Button
+              tamano="sm"
+              variante="contorno"
+              onClick={() => onModificar(g)}
+              title="Corregir datos de este formato y regenerar en PostgreSQL"
+              type="button"
+            >
+              <Edit3 size={13} />
+              Corregir
+            </Button>
+            <Button
+              tamano="sm"
+              variante={g.documentoId ? "contorno" : "primario"}
+              disabled={subir.isPending}
+              onClick={() => inputRef.current?.click()}
+              title="Adjuntar documento escaneado/firmado en PDF"
+              type="button"
+            >
+              <UploadCloud size={13} />
+              {subir.isPending ? "Subiendo…" : g.documentoId ? "Reemplazar" : "Adjuntar"}
+            </Button>
+            <input
+              ref={inputRef}
+              type="file"
+              accept=".pdf,application/pdf"
+              className="hidden"
+              onChange={(e) => void handleFileChange(e)}
+            />
+          </>
+        )}
+        {g.documentoId && (
+          <Button
+            tamano="sm"
+            variante="contorno"
+            onClick={() => void abrirAdjunto(g.documentoId!)}
+            title="Ver PDF escaneado/firmado adjunto"
+            type="button"
+            className="text-sky-700 border-sky-300 hover:bg-sky-50"
+          >
+            <FileText size={13} />
+            Ver Adjunto
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function DocumentosTab({
   etapa,
   detalle: d,
@@ -424,11 +642,25 @@ function DocumentosTab({
 }) {
   const generar = useGenerarDocumentos(d.id);
   const avisar = useToast();
+  const [formatoAModificar, setFormatoAModificar] = useState<{
+    tipo: string;
+    nombre: string;
+    version: number;
+    pendientes: string[];
+  } | null>(null);
+  const [formatoAVer, setFormatoAVer] = useState<{
+    id: string;
+    tipo: string;
+    nombre: string;
+    version: number;
+    pendientes?: string[];
+  } | null>(null);
+
   const cargados = items.filter((c) => c.documentoId !== null).length;
   const pct = items.length > 0 ? Math.round((cargados / items.length) * 100) : 0;
   const generados = d.generados.filter((g) => g.etapa === etapa);
   const generadoPorTipo = new Map(generados.map((g) => [g.tipo, g]));
-  // Formatos que no son tarjeta del checklist (carátula del plan, decreto).
+  // Formatos que no son tarjeta del checklist (carátula del plan, decreto, oficios, etc.).
   const extras = generados.filter((g) => !items.some((c) => c.tipo === g.tipo));
 
   async function onGenerar(): Promise<void> {
@@ -444,7 +676,7 @@ function DocumentosTab({
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <Card>
         <div className="flex flex-wrap items-center justify-between gap-3 p-4 md:px-5">
           <div>
@@ -487,31 +719,23 @@ function DocumentosTab({
           )}
         </div>
         {extras.length > 0 && (
-          <div className="flex flex-wrap gap-2 border-t border-slate-200/70 px-4 py-3 md:px-5">
-            {extras.map((g) => (
-              <Button
-                key={g.id}
-                tamano="sm"
-                variante="contorno"
-                onClick={() =>
-                  void abrirArchivoProtegido(formatoDescargaUrl(g.id)).catch((e: unknown) =>
-                    avisar(e instanceof Error ? e.message : "No se pudo abrir", "error"),
-                  )
-                }
-                title={
-                  g.pendientes.length > 0 ? `Pendiente: ${g.pendientes.join(", ")}` : undefined
-                }
-                type="button"
-              >
-                <FileDown size={14} />
-                {g.nombre} · v{g.version}
-                {g.pendientes.length > 0 && (
-                  <span className="rounded-full bg-aviso-100 px-1.5 text-[10px] font-bold text-aviso-800">
-                    {g.pendientes.length}
-                  </span>
-                )}
-              </Button>
-            ))}
+          <div className="border-t border-slate-200/70 p-4 md:px-5 bg-slate-50/40">
+            <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-navy-950">
+              Formatos Institucionales Emitidos ({extras.length})
+            </h3>
+            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+              {extras.map((g) => (
+                <ExtraFormatoCard
+                  key={g.id}
+                  expedienteId={d.id}
+                  expedienteCodigo={d.codigo}
+                  formato={g}
+                  staff={staff}
+                  onVistaPrevia={setFormatoAVer}
+                  onModificar={setFormatoAModificar}
+                />
+              ))}
+            </div>
           </div>
         )}
       </Card>
@@ -532,10 +756,26 @@ function DocumentosTab({
               requeridoEn={c.requeridoEn}
               subetapaActiva={d.subetapaActiva?.clave ?? null}
               formato={generadoPorTipo.get(c.tipo) ?? null}
+              onModificar={setFormatoAModificar}
+              onVistaPrevia={setFormatoAVer}
             />
           ))}
         </div>
       )}
+      <ModalModificarFormato
+        abierto={!!formatoAModificar}
+        onCerrar={() => setFormatoAModificar(null)}
+        expedienteId={d.id}
+        expediente={d}
+        etapa={etapa}
+        formato={formatoAModificar}
+      />
+      <ModalVistaPreviaFormato
+        abierto={!!formatoAVer}
+        onCerrar={() => setFormatoAVer(null)}
+        codigoExpediente={d.codigo}
+        formato={formatoAVer}
+      />
     </div>
   );
 }

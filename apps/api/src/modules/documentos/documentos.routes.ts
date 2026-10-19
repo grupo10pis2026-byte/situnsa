@@ -9,6 +9,7 @@ import { errorEnvelope, estadoHttp, PATRON_UUID } from "../../infra/http/errores
 import { LocalStorageService } from "../../infra/storage/local-storage.service.js";
 import { requireAuth } from "../../middleware/require-auth.js";
 import { leerChecklist } from "../expedientes/expedientes.repository.js";
+import { convertirDocxAPdf } from "../../infra/docx/docx-to-pdf.js";
 import { GenerarDocumentosUseCase } from "./use-cases/generar-documentos/generar-documentos.use-case.js";
 import { SubirDocumentoUseCase } from "./use-cases/subir-documento/subir-documento.use-case.js";
 import { VistoBuenoDocumentoUseCase } from "./use-cases/visto-bueno/visto-bueno.use-case.js";
@@ -276,6 +277,94 @@ export function registerDocumentosRoutes(app: FastifyInstance): void {
       await entregarArchivo(reply, storage, gen.ruta, {
         nombre: nombreDescarga,
         inline: false,
+      });
+    },
+  );
+
+  /** Vista previa y descarga en formato PDF del documento generado. */
+  app.get<{ Params: { id: string }; Querystring: { descargar?: string } }>(
+    "/api/documentos-generados/:id/pdf",
+    { preHandler: async (req, reply) => requireAuth(req, reply) },
+    async (req, reply) => {
+      if (!idValido(req, reply)) return;
+      const rows = await db
+        .select()
+        .from(documentosGenerados)
+        .where(eq(documentosGenerados.id, req.params.id))
+        .limit(1);
+      const gen = rows[0];
+      if (!gen) {
+        await reply.status(404).send(errorEnvelope("NO_ENCONTRADO", "Formato no encontrado"));
+        return;
+      }
+      const a = await autorizar(req.actor, {
+        permiso: ["documentos", "ver"],
+        expedienteId: gen.expedienteId,
+      });
+      if (!a.ok) {
+        await reply.status(a.status).send(a.body);
+        return;
+      }
+
+      const exp = await db
+        .select({
+          codigo: expedientes.codigo,
+        })
+        .from(expedientes)
+        .where(eq(expedientes.id, gen.expedienteId))
+        .limit(1);
+      const codigoExp = exp[0]?.codigo ?? "EXP";
+      const nombrePdf = resolverNombreArchivoDescarga(codigoExp, gen.tipo, "pdf");
+      const asciiSafe = nombrePdf
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^A-Za-z0-9._ -]/g, "_");
+      const disposition = req.query?.descargar === "1" ? "attachment" : "inline";
+
+      // Si el archivo almacenado ya es un PDF nativo
+      if (gen.archivoContenido && gen.archivoContenido.slice(0, 4).toString() === "%PDF") {
+        void reply
+          .header("Content-Type", "application/pdf")
+          .header(
+            "Content-Disposition",
+            `${disposition}; filename="${asciiSafe}"; filename*=UTF-8''${encodeURIComponent(nombrePdf)}`,
+          )
+          .header("Content-Length", gen.archivoContenido.length)
+          .send(gen.archivoContenido);
+        return;
+      }
+
+      // Convertir el DOCX oficial almacenado a PDF usando Gotenberg (LibreOffice headless)
+      if (gen.archivoContenido) {
+        try {
+          const pdfBuffer = await convertirDocxAPdf(gen.archivoContenido, `${gen.tipo}.docx`);
+          void reply
+            .header("Content-Type", "application/pdf")
+            .header(
+              "Content-Disposition",
+              `${disposition}; filename="${asciiSafe}"; filename*=UTF-8''${encodeURIComponent(nombrePdf)}`,
+            )
+            .header("Content-Length", pdfBuffer.length)
+            .send(pdfBuffer);
+          return;
+        } catch (err) {
+          req.log.error(err, "[documentos-generados/pdf] Error al convertir DOCX con Gotenberg");
+          await reply
+            .status(502)
+            .send(
+              errorEnvelope(
+                "CONVERSION_FALLIDA",
+                "No se pudo convertir el formato Word a PDF con el servicio de conversión Gotenberg.",
+              ),
+            );
+          return;
+        }
+      }
+
+      // Fallback si no hay contenido en BD: entregar desde volumen si existe
+      await entregarArchivo(reply, storage, gen.ruta, {
+        nombre: nombrePdf,
+        inline: req.query?.descargar !== "1",
       });
     },
   );

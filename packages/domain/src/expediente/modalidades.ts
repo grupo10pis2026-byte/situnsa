@@ -42,20 +42,12 @@ export function modalidadAEtiqueta(canon: ModalidadCanon): EtiquetaModalidad {
   return A_ETIQUETA[canon];
 }
 
-/** RN-L07: administrativos en MAYÚSCULAS (TESIS conserva escritura del autor). */
+/** RN-L07: administrativos en MAYÚSCULAS (nombres de autoridades y personas van en Title Case formal). */
 const CAMPOS_MAYUSCULAS = new Set([
   "programa",
   "nroDecreto",
   "recomendacion",
-  "presidente",
-  "asesorNombre",
-  "secretario",
-  "coAsesor",
   "nroOficio",
-  "integrante",
-  "presidenteE2",
-  "secretarioE2",
-  "suplenteE2",
   "decanal",
   "lugarSustentacion",
 ]);

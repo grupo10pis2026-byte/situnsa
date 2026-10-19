@@ -33,6 +33,8 @@ interface Props {
   formato?: { id: string; version: number; pendientes: string[] } | null;
   /** Callback para abrir modal de modificación y corrección */
   onModificar?: (formato: { tipo: string; nombre: string; version: number; pendientes: string[] }) => void;
+  /** Callback para abrir modal de vista previa oficial */
+  onVistaPrevia?: (formato: { id: string; tipo: string; nombre: string; version: number; pendientes: string[] }) => void;
 }
 
 const PERSONAL = ["ADMIN_FIPS", "SECRETARIA", "DECANO"];
@@ -197,6 +199,26 @@ export function DocumentoCard(p: Props) {
         )}
         {p.formato && (
           <>
+            {p.onVistaPrevia && (
+              <Button
+                tamano="sm"
+                variante="contorno"
+                onClick={() =>
+                  p.onVistaPrevia?.({
+                    id: p.formato!.id,
+                    tipo: p.tipo,
+                    nombre: p.nombre,
+                    version: p.formato!.version,
+                    pendientes: p.formato!.pendientes,
+                  })
+                }
+                title="Vista previa del formato en PDF con descarga A4"
+                type="button"
+              >
+                <Eye size={14} />
+                Vista Previa
+              </Button>
+            )}
             <Button
               tamano="sm"
               variante="contorno"

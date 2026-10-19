@@ -55,3 +55,48 @@ body {
     radial-gradient(60rem 30rem at 50% -10%, rgba(209, 168, 75, 0.16), transparent 60%),
     radial-gradient(40rem 24rem at 85% 110%, rgba(120, 21, 47, 0.35), transparent 60%), #0b1f30;
 }
+
+/** Visor oficial Word (.docx) con docx-preview */
+.docx-wrapper {
+  background: transparent !important;
+  padding: 16px 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  width: 100% !important;
+}
+
+.docx-wrapper > section.docx {
+  background: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+  margin-bottom: 24px !important;
+  border-radius: 2px !important;
+  box-sizing: border-box !important;
+}
+
+.docx table {
+  border-collapse: collapse !important;
+}
+
+.docx td, .docx th {
+  border-color: #000000;
+}
+
+.docx img {
+  display: inline-block !important;
+  max-width: 100% !important;
+}
+
+@media print {
+  .docx-wrapper {
+    padding: 0 !important;
+    background: transparent !important;
+  }
+  .docx-wrapper > section.docx {
+    box-shadow: none !important;
+    margin: 0 !important;
+    width: 100% !important;
+    page-break-after: always;
+    break-after: page;
+  }
+}

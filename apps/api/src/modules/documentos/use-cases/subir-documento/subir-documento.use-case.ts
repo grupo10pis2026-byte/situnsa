@@ -6,6 +6,7 @@ import {
   DomainError,
   fail,
   ok,
+  plantillaDe,
   type Result,
 } from "@pis/domain";
 import { and, desc, eq } from "drizzle-orm";
@@ -68,13 +69,28 @@ export class SubirDocumentoUseCase {
       );
     }
     const enCodigo = CHECKLIST_COMPLETO.find((d) => d.tipo === input.tipo);
-    if (this.catalogo && !this.catalogo.some((d) => d.tipo === input.tipo)) {
+    const plantilla = plantillaDe(input.tipo);
+    if (this.catalogo && !this.catalogo.some((d) => d.tipo === input.tipo) && !plantilla) {
+      return fail(new DomainError("DOCUMENTO_INVALIDO", `Tipo desconocido: ${input.tipo}`));
+    }
+    if (!enCodigo && !plantilla && !this.catalogo) {
       return fail(new DomainError("DOCUMENTO_INVALIDO", `Tipo desconocido: ${input.tipo}`));
     }
     const uow = new DrizzleUnitOfWork(db);
     const r = await uow.run(async (tx) => {
       const catalogo = this.catalogo ?? (await leerChecklist(tx));
-      const def = catalogo.find((d) => d.tipo === input.tipo) ?? enCodigo;
+      const def =
+        catalogo.find((d) => d.tipo === input.tipo) ??
+        enCodigo ??
+        (plantilla
+          ? {
+              tipo: plantilla.tipo,
+              nombre: plantilla.nombre,
+              etapa: (plantilla.etapa === "E2" || plantilla.etapa === "E6" ? plantilla.etapa : "E1") as "E1" | "E2",
+              obligatorio: false,
+              requeridoEn: null,
+            }
+          : null);
       if (!def)
         return fail(new DomainError("DOCUMENTO_INVALIDO", `Tipo desconocido: ${input.tipo}`));
       const exp = await tx

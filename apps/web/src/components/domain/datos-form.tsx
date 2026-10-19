@@ -9,7 +9,7 @@ import {
   ETIQUETAS_MODALIDAD_FINAL,
   modalidadAEtiqueta,
 } from "@pis/domain/dist/expediente/modalidades.js";
-import { ClipboardList, FileText, Users } from "lucide-react";
+import { ClipboardList, FileSignature, FileText, Users } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { useProgramas } from "../../api/catalogos.js";
 import { type GuardadoEstado, useActualizarDatos } from "../../api/expedientes.js";
@@ -158,16 +158,20 @@ const PERSONA_2: DefCampo[] = [
   { clave: "participante2Direccion", label: "DIRECCIÓN 02", control: "texto" },
 ];
 
-/** ETAPA 01 · DATOS DE DOCUMENTOS (card legacy exacta). */
-const DATOS_DOCUMENTOS: DefCampo[] = [
+/** N° DE OFICIO Y N° DE DECRETO (Valores únicos para cada expediente). */
+const NUMERACION_EXPEDIENTE: DefCampo[] = [
+  { clave: "nroOficio", label: "N° OFICIO", control: "texto" },
   { clave: "nroDecreto", label: "N° DECRETO", control: "texto" },
+];
+
+/** ETAPA 01 · DATOS DE DOCUMENTOS (terna y fechas). */
+const DATOS_DOCUMENTOS: DefCampo[] = [
   { clave: "presidente", label: "PRESIDENTE", control: "texto" },
   { clave: "asesorNombre", label: "ASESOR", control: "texto" },
   { clave: "secretario", label: "SECRETARIO", control: "texto" },
   { clave: "coAsesor", label: "CO ASESOR", control: "texto" },
   { clave: "fechaApertura", label: "FECHA APERTURA", control: "fecha" },
   { clave: "fechaPresentacion", label: "FECHA PRESENTACIÓN", control: "fecha" },
-  { clave: "nroOficio", label: "N° OFICIO", control: "texto" },
 ];
 
 const ETAPA_02: DefCampo[] = [
@@ -292,6 +296,16 @@ export function DatosForm({
 
   return (
     <div className="space-y-4">
+      {/* Sección única para N° de Oficio y N° de Decreto antes de Etapa 01 */}
+      <FormSection
+        icono={<FileSignature size={16} />}
+        titulo="N° DE OFICIO Y N° DE DECRETO"
+        ayuda="Valores únicos para este expediente, aplicables a todas sus etapas."
+        gridClassName="grid grid-cols-2 gap-3 p-3 max-w-xl md:p-4"
+      >
+        {campos(NUMERACION_EXPEDIENTE)}
+      </FormSection>
+
       {!grupo2 && (
         <FormSection
           icono={<Users size={16} />}
@@ -322,7 +336,7 @@ export function DatosForm({
           <FormSection
             icono={<FileText size={16} />}
             titulo="ETAPA 01 · DATOS DE DOCUMENTOS"
-            ayuda="Decreto, terna y fechas de apertura y presentación."
+            ayuda="Terna y fechas de apertura y presentación."
           >
             {campos(DATOS_DOCUMENTOS)}
           </FormSection>

@@ -434,15 +434,21 @@ export async function getDetalleById(
     asesor: row.asesorId ? (porId.get(row.asesorId) ?? null) : null,
     datosAdmin,
     checklist,
-    generados: generadosRows.map((g) => ({
-      id: g.id,
-      tipo: g.tipo,
-      nombre: plantillaDe(g.tipo)?.nombre ?? g.tipo,
-      etapa: g.etapa === "E2" || g.etapa === "E6" ? g.etapa : "E1",
-      version: g.version,
-      pendientes: g.pendientes,
-      createdAt: g.createdAt.toISOString(),
-    })),
+    generados: generadosRows.map((g) => {
+      const docAdjunto = porTipo.get(g.tipo);
+      return {
+        id: g.id,
+        tipo: g.tipo,
+        nombre: plantillaDe(g.tipo)?.nombre ?? g.tipo,
+        etapa: (g.etapa === "E2" || g.etapa === "E6" ? g.etapa : "E1") as "E1" | "E2" | "E6",
+        version: g.version,
+        pendientes: g.pendientes,
+        createdAt: g.createdAt.toISOString(),
+        documentoId: docAdjunto?.id ?? null,
+        documentoEstado: docAdjunto?.estado ?? null,
+        documentoVersion: docAdjunto?.version ?? null,
+      };
+    }),
     subetapas: subetapasDTO,
     subetapaActiva: activa
       ? { id: activa.id, clave: activa.clave, etapa: activa.etapa, orden: activa.orden }

@@ -1,9 +1,11 @@
 import {
   db,
   documentosGenerados,
+  expedientes,
   jurados,
   juradosExpediente,
   sustentaciones,
+  usuarios,
   validacionesInstitucionales,
 } from "@pis/db";
 import {
@@ -15,7 +17,9 @@ import {
   type EtapaPlantilla,
   type ExpedienteDocumento,
   fail,
+  fechaIso,
   fechaLarga,
+  formatoAutoridad,
   horaLimpia,
   ok,
   PLANTILLAS,
@@ -88,6 +92,77 @@ const ESTADOS_E6 = new Set(["EN_APROBACION", "TITULO_EMITIDO"]);
 /** Primera URL http(s) del detalle de la validación REPOSITORIO. */
 export function urlDeDetalle(detalle: string | null): string | null {
   return /https?:\/\/\S+/i.exec(detalle ?? "")?.[0] ?? null;
+}
+
+/** Mapea overrides del modal in-situ a columnas de base de datos de expedientes y usuarios. */
+export function extraerCambiosExpedienteYUsuarios(
+  overrides: Record<string, string>,
+): {
+  expediente: Record<string, unknown>;
+  participante1: Record<string, unknown>;
+  participante2: Record<string, unknown>;
+} {
+  const exp: Record<string, unknown> = {};
+  const p1: Record<string, unknown> = {};
+  const p2: Record<string, unknown> = {};
+
+  for (const [rawK, rawV] of Object.entries(overrides)) {
+    const k = rawK.trim().toUpperCase().replace(/\s+/g, "_");
+    const v = rawV.trim();
+    if (!v) continue;
+
+    // Expediente - Decretos, Oficios y Recomendación
+    if (k === "DECRETO" || k === "N°_DECRETO" || k === "NRO_DECRETO") exp.nroDecreto = v;
+    if (k === "OFICIO" || k === "N°_OFICIO" || k === "NRO_OFICIO") exp.nroOficio = v;
+    if (k === "RECOMENDACION" || k === "RECOMENDACIÓN") exp.recomendacion = v;
+
+    // Expediente - Autoridades
+    if (k === "COASESOR" || k === "CO_ASESOR") exp.coAsesor = formatoAutoridad(v);
+    if (k === "ASESOR") exp.asesorNombre = formatoAutoridad(v);
+    if (k === "PRESIDENTE") exp.presidente = formatoAutoridad(v);
+    if (k === "SECRETARIO") exp.secretario = formatoAutoridad(v);
+    if (k === "INTEGRANTE") exp.integrante = formatoAutoridad(v);
+    if (k === "PRESIDENTE_ETAPA_02" || k === "PRESIDENTE_E2") exp.presidenteE2 = formatoAutoridad(v);
+    if (k === "SECRETARIO_ETAPA_02" || k === "SECRETARIO_E2") exp.secretarioE2 = formatoAutoridad(v);
+    if (k === "SUPLENTE_ETAPA_02" || k === "SUPLENTE_E2" || k === "SUPLENTE") exp.suplenteE2 = formatoAutoridad(v);
+    if (k === "DECANAL" || k === "RESOLUCION_DECANAL") exp.decanal = v;
+
+    // Expediente - Sustentación y Fechas
+    if (k === "LUGAR_SUSTENTACION" || k === "LUGAR_SUSTENTACIÓN") exp.lugarSustentacion = v;
+    if (k === "HORA" || k === "HORAS_DE_LA_SUSTENTACION" || k === "HORA_SUSTENTACION") {
+      exp.horaSustentacion = horaLimpia(v) || v;
+    }
+    if (k === "FECHA_SUSTENTACION" || (k === "FECHA" && !exp.fechaSustentacion)) {
+      const iso = fechaIso(v);
+      if (iso) exp.fechaSustentacion = iso;
+    }
+    if (k === "FECHA_APERTURA") {
+      const iso = fechaIso(v);
+      if (iso) exp.fechaApertura = iso;
+    }
+    if (k === "FECHA_PRESENTACION") {
+      const iso = fechaIso(v);
+      if (iso) exp.fechaPresentacion = iso;
+    }
+
+    // Participante 1
+    if (k === "DIRECCION" || k === "DIRECCIÓN" || k === "DIRECCION_1" || k === "DIRECCION_01") p1.direccion = v;
+    if (k === "TELEFONO" || k === "TELÉFONO" || k === "TELEFONO_1" || k === "TELEFONO_01") p1.telefono = v;
+    if (k === "CIUDAD" || k === "CIUDAD_1" || k === "CIUDAD_01") p1.ciudad = v;
+    if (k === "NACIONALIDAD" || k === "NACIONALIDAD_1" || k === "NACIONALIDAD_01") p1.nacionalidad = v;
+    if (k === "CUI" || k === "CUI_1" || k === "CUI_01") p1.cui = v;
+    if (k === "CORREO" || k === "CORREO_1" || k === "CORREO_01" || k === "EMAIL") p1.email = v.toLowerCase();
+
+    // Participante 2
+    if (k === "DIRECCION02" || k === "DIRECCION_2" || k === "DIRECCION_02" || k === "DIRECCIÓN02") p2.direccion = v;
+    if (k === "TELEFONO02" || k === "TELEFONO_2" || k === "TELEFONO_02" || k === "TELÉFONO02") p2.telefono = v;
+    if (k === "CIUDAD02" || k === "CIUDAD_2" || k === "CIUDAD_02") p2.ciudad = v;
+    if (k === "NACIONALIDAD02" || k === "NACIONALIDAD_2" || k === "NACIONALIDAD_02") p2.nacionalidad = v;
+    if (k === "CUI02" || k === "CUI_2" || k === "CUI_02") p2.cui = v;
+    if (k === "CORREO02" || k === "CORREO_2" || k === "CORREO_02" || k === "EMAIL02") p2.email = v.toLowerCase();
+  }
+
+  return { expediente: exp, participante1: p1, participante2: p2 };
 }
 
 /**
@@ -256,6 +331,28 @@ export class GenerarDocumentosUseCase {
 
     const uow = new DrizzleUnitOfWork(db);
     const r = await uow.run(async (tx) => {
+      if (opts?.overrides) {
+        const cambios = extraerCambiosExpedienteYUsuarios(opts.overrides);
+        if (Object.keys(cambios.expediente).length > 0) {
+          await tx
+            .update(expedientes)
+            .set({ ...cambios.expediente, updatedAt: ahora })
+            .where(eq(expedientes.id, expedienteId));
+        }
+        if (Object.keys(cambios.participante1).length > 0 && detalle.participante1?.id) {
+          await tx
+            .update(usuarios)
+            .set(cambios.participante1)
+            .where(eq(usuarios.id, detalle.participante1.id));
+        }
+        if (Object.keys(cambios.participante2).length > 0 && detalle.participante2?.id) {
+          await tx
+            .update(usuarios)
+            .set(cambios.participante2)
+            .where(eq(usuarios.id, detalle.participante2.id));
+        }
+      }
+
       const generados: FormatoGenerado[] = [];
       for (const { plantilla, bytes, pendientes, ext } of renderizados) {
         const previo = await tx
