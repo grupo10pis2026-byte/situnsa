@@ -150,12 +150,6 @@ describe("datos del expediente (formato formal de nombres y títulos)", () => {
     expect(
       formatoTituloFormal("Diseño e Implementación de un Sistema de Monitoreo para la FIPS"),
     ).toBe("Diseño e Implementación de un Sistema de Monitoreo para la FIPS");
-=======
-    expect(d2.TESIS).toBe("sistema de gestión de expedientes para la fips");
-    expect(d2["TESIS 02"]).toBe("sistema de gestión de expedientes para la fips");
-    expect(d2.TESIS02).toBe("sistema de gestión de expedientes para la fips");
-    expect(d2.NOM_MIN).toBe("María Pérez Quispe\nCarlos Gómez López");
->>>>>>> feat/modulo-almacenamiento-y-gestion-documental
   });
 });
 

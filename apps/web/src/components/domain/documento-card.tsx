@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   Edit3,
   Eye,
+  FileDown,
   FileText,
   Stamp,
   UploadCloud,
@@ -17,6 +18,7 @@ import {
 } from "lucide-react";
 import { useRef, useState } from "react";
 import {
+  descargarArchivoProtegido,
   documentoDescargaUrl,
   formatoDescargaUrl,
   useGenerarDocumentos,
@@ -274,6 +276,14 @@ export function DocumentoCard(p: Props) {
       return;
     }
     void ejecutar(file);
+  }
+
+  async function descargarFormato(url: string, nombreSugerido: string): Promise<void> {
+    try {
+      await descargarArchivoProtegido(url, nombreSugerido);
+    } catch (e) {
+      avisar(e instanceof Error ? e.message : "No se pudo descargar el documento", "error");
+    }
   }
 
   return (

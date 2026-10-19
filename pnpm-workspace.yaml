@@ -4,7 +4,6 @@ packages:
   - "e2e"
 allowBuilds:
   '@tailwindcss/oxide': true
-  core-js: set this to true or false
   esbuild: false
 overrides:
   # Herramientas transitivas: parches verificados con build y drizzle-kit check.
