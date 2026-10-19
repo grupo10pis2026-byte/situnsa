@@ -5,7 +5,7 @@
   "packageManager": "pnpm@11.24.0",
   "type": "module",
   "scripts": {
-    "dev": "docker compose up -d postgres mailpit && turbo run dev --parallel",
+    "dev": "docker compose up -d && pnpm --filter @pis/api --filter @pis/web --parallel dev",
     "build": "turbo run build",
     "lint": "biome check .",
     "format": "biome check --write .",

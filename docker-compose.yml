@@ -1,4 +1,4 @@
-name: grupo10-dev
+name: situnsa
 services:
   postgres:
     image: postgres:16-alpine
