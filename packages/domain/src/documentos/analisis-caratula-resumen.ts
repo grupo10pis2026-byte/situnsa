@@ -498,3 +498,276 @@ export function analizarCaratulaResumen(
     hallazgos,
   };
 }
+
+export function esTipoBoleta(tipo: string): boolean {
+  const t = tipo.toUpperCase();
+  return (
+    t.includes("BOLETA") ||
+    t.includes("RECIBO") ||
+    t.includes("PAGO") ||
+    t.includes("COMPROBANTE") ||
+    t.includes("VOUCHER")
+  );
+}
+
+/**
+ * Analiza documentos subidos que no poseen una plantilla para autorrellenar:
+ * 1. Para boletas/comprobantes de pago:
+ *    - Verifica nombres del tesista (sin importar mayúsculas/minúsculas).
+ *    - Verifica número de DNI de 8 dígitos según el sistema.
+ * 2. Para los demás documentos (cartas de aceptación, DJ confidencialidad, anexo 33, etc.):
+ *    - Verifica nombres de los tesistas.
+ *    - Verifica DNI solo si el documento lo menciona.
+ *    - Verifica asesor solo si el documento a analizar lo contiene.
+ *    - Verifica título solo si el documento a analizar lo contiene.
+ */
+export function analizarDocumentoSubido(
+  tipo: string,
+  paginas: readonly PaginaDocumento[],
+  datos: DatosAnalisisDocumento,
+  _totalPaginas: number,
+): AnalisisDocumento {
+  const textoCompleto = paginas.map((p) => p.texto).join("\n");
+  const textoNormalizado = normalizarTextoDocumento(textoCompleto);
+  const controles: ControlDocumento[] = [];
+  const hallazgos: HallazgoDocumento[] = [];
+
+  const agregar = (
+    tipoCtrl: string,
+    estado: ControlDocumento["estado"],
+    mensaje: string,
+    pagina?: number,
+    esperado?: string,
+    encontrado?: string,
+  ) => {
+    controles.push({ tipo: tipoCtrl, estado, mensaje });
+    if (estado === "ADVERTENCIA") {
+      hallazgos.push({
+        tipo: tipoCtrl,
+        mensaje,
+        severidad: "ADVERTENCIA",
+        ...(pagina ? { pagina } : {}),
+        ...(esperado ? { esperado } : {}),
+        ...(encontrado ? { encontrado } : {}),
+      });
+    }
+  };
+
+  if (textoNormalizado.length < 15) {
+    agregar(
+      "DOCUMENTO_LEGIBILIDAD",
+      "NO_EVALUABLE",
+      "El archivo es un escaneo o imagen sin texto digital extraíble. Requiere revisión visual directa en el visor.",
+    );
+    return {
+      estado: "NO_EVALUABLE",
+      tituloDetectado: null,
+      similitudTitulo: null,
+      resumen: "",
+      resumenCompleto: false,
+      controles,
+      hallazgos,
+    };
+  }
+
+  const dnisEncontrados = Array.from(new Set(textoCompleto.match(/\b\d{8}\b/g) ?? []));
+  const esBoleta = esTipoBoleta(tipo);
+
+  if (esBoleta) {
+    // 1. REGLAS PARA BOLETAS / COMPROBANTES DE PAGO
+    for (const tesista of datos.tesistas) {
+      // DNI del tesista
+      if (tesista.dni) {
+        if (dnisEncontrados.includes(tesista.dni)) {
+          agregar(
+            "BOLETA_DNI",
+            "CONFORME",
+            `DNI ${tesista.dni} del tesista verificado en la boleta.`,
+          );
+        } else if (dnisEncontrados.length > 0) {
+          agregar(
+            "BOLETA_DNI",
+            "ADVERTENCIA",
+            `El DNI detectado en la boleta (${dnisEncontrados.join(", ")}) no coincide con el DNI del tesista registrado (${tesista.dni}).`,
+            1,
+            tesista.dni,
+            dnisEncontrados.join(", "),
+          );
+        } else {
+          agregar(
+            "BOLETA_DNI",
+            "ADVERTENCIA",
+            `No se detectó un número de DNI de 8 dígitos en la boleta (esperado: ${tesista.dni}).`,
+            1,
+            tesista.dni,
+            "No detectado",
+          );
+        }
+      }
+
+      // Nombre del tesista (sin importar mayúsculas o minúsculas)
+      const partesNombre = normalizarTextoDocumento(tesista.nombre)
+        .split(" ")
+        .filter((p) => p.length > 2);
+      const coincidencias = partesNombre.filter((p) => textoNormalizado.includes(p));
+
+      if (
+        contieneFrase(textoCompleto, tesista.nombre) ||
+        coincidencias.length === partesNombre.length
+      ) {
+        agregar(
+          "BOLETA_NOMBRE",
+          "CONFORME",
+          `Nombre del tesista (${tesista.nombre}) verificado en la boleta.`,
+        );
+      } else if (coincidencias.length >= 2) {
+        agregar(
+          "BOLETA_NOMBRE",
+          "CONFORME",
+          `Apellidos/nombres del tesista (${coincidencias.join(" ")}) identificados en la boleta.`,
+        );
+      } else {
+        agregar(
+          "BOLETA_NOMBRE",
+          "ADVERTENCIA",
+          `El nombre del tesista registrado (${tesista.nombre}) no fue detectado en la boleta.`,
+          1,
+          tesista.nombre,
+          "No detectado en el texto de la boleta",
+        );
+      }
+    }
+
+    return {
+      estado: "COMPLETADO",
+      tituloDetectado: null,
+      similitudTitulo: null,
+      resumen: "",
+      resumenCompleto: false,
+      controles,
+      hallazgos,
+    };
+  }
+
+  // 2. REGLAS PARA DEMÁS DOCUMENTOS SUBIDOS (ACEPTACION_ASESORIA, DJ_CONFIDENCIALIDAD, ANEXO_33, ETC.)
+  // A. Nombres de tesistas
+  for (const tesista of datos.tesistas) {
+    const partesNombre = normalizarTextoDocumento(tesista.nombre)
+      .split(" ")
+      .filter((p) => p.length > 2);
+    const coincidencias = partesNombre.filter((p) => textoNormalizado.includes(p));
+
+    if (
+      contieneFrase(textoCompleto, tesista.nombre) ||
+      coincidencias.length >= Math.min(2, partesNombre.length)
+    ) {
+      agregar("TESISTA", "CONFORME", `Tesista ${tesista.nombre} identificado en el documento.`);
+    } else {
+      agregar(
+        "TESISTA",
+        "ADVERTENCIA",
+        `No se detectó el nombre del tesista registrado (${tesista.nombre}) en el documento.`,
+        1,
+        tesista.nombre,
+        "No detectado",
+      );
+    }
+
+    // DNI: Solo si el documento contiene mención a DNI o números de 8 dígitos
+    const mencionaDni =
+      /\b(?:dni|d\.n\.i|documento\s+de\s+identidad|documento\s+nacional)\b/iu.test(textoCompleto);
+    if (tesista.dni && (mencionaDni || dnisEncontrados.length > 0)) {
+      if (dnisEncontrados.includes(tesista.dni)) {
+        agregar(
+          "DNI_TESISTA",
+          "CONFORME",
+          `DNI ${tesista.dni} del tesista verificado en el documento.`,
+        );
+      } else if (mencionaDni && dnisEncontrados.length > 0) {
+        agregar(
+          "DNI_TESISTA",
+          "ADVERTENCIA",
+          `El DNI consignado en el documento (${dnisEncontrados.join(", ")}) no coincide con el del tesista registrado (${tesista.dni}).`,
+          1,
+          tesista.dni,
+          dnisEncontrados.join(", "),
+        );
+      }
+    }
+  }
+
+  // B. Asesor: "solo si el documento a analizar los contenga"
+  const mencionaAsesor = /\b(?:asesor|asesora|asesor[ií]a|asesoramiento|docente\s+asesor)\b/iu.test(
+    textoCompleto,
+  );
+  if (mencionaAsesor) {
+    if (datos.asesor) {
+      const partesAsesor = normalizarTextoDocumento(datos.asesor.nombre)
+        .split(" ")
+        .filter((p) => p.length > 2);
+      const coincidenciasAsesor = partesAsesor.filter((p) => textoNormalizado.includes(p));
+
+      if (
+        contieneFrase(textoCompleto, datos.asesor.nombre) ||
+        coincidenciasAsesor.length >= Math.min(2, partesAsesor.length)
+      ) {
+        agregar("ASESOR", "CONFORME", `Asesor ${datos.asesor.nombre} verificado en el documento.`);
+      } else {
+        agregar(
+          "ASESOR",
+          "ADVERTENCIA",
+          `El documento menciona asesor pero no coincide con el registrado en el expediente (${datos.asesor.nombre}).`,
+          1,
+          datos.asesor.nombre,
+          "Nombre de asesor diferente en el documento",
+        );
+      }
+    } else {
+      agregar(
+        "ASESOR",
+        "NO_EVALUABLE",
+        "El documento hace referencia a asesor, pero no hay un asesor registrado en el expediente para contrastar.",
+      );
+    }
+  }
+
+  // C. Título: "solo si el documento a analizar los contenga"
+  let tituloDetectado: string | null = null;
+  let similitudTitulo: number | null = null;
+  const mencionaTitulo =
+    /\b(?:t[ií]tulo|denominad[oa]|proyecto\s+de\s+tesis|plan\s+de\s+tesis|trabajo\s+acad[eé]mico)\b/iu.test(
+      textoCompleto,
+    );
+
+  if (mencionaTitulo && datos.titulo) {
+    const similitud = similitudTituloDocumento(datos.titulo, textoCompleto);
+    similitudTitulo = similitud;
+    if (similitud >= 35 || contieneFrase(textoCompleto, datos.titulo)) {
+      tituloDetectado = datos.titulo;
+      agregar(
+        "TITULO",
+        "CONFORME",
+        "Referencia al título del proyecto/tesis verificada en el documento.",
+      );
+    } else {
+      agregar(
+        "TITULO",
+        "ADVERTENCIA",
+        "El documento hace referencia a un título o proyecto que difiere del registrado en el expediente.",
+        1,
+        datos.titulo,
+        "Título diferente en documento",
+      );
+    }
+  }
+
+  return {
+    estado: controles.some((c) => c.estado === "NO_EVALUABLE") ? "PARCIAL" : "COMPLETADO",
+    tituloDetectado,
+    similitudTitulo,
+    resumen: "",
+    resumenCompleto: false,
+    controles,
+    hallazgos,
+  };
+}

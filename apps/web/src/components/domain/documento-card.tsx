@@ -122,8 +122,6 @@ function RevisionBadge({
   hallazgos: Array<{ campo: string; mensaje: string }> | undefined;
   onAbrir: () => void;
 }) {
-  if (tipo !== "PLAN_ESTRUCTURADO") return null;
-
   if (cargando || estado === "PENDIENTE" || estado === "EN_PROCESO") {
     return (
       <span className="inline-flex items-center rounded-full border border-slate-300 bg-slate-200 px-2.5 py-0.5 text-[11px] font-semibold text-slate-600 animate-pulse cursor-default">
@@ -137,7 +135,9 @@ function RevisionBadge({
   const tieneObs = hallazgos && hallazgos.length > 0;
   const texto = tieneObs
     ? `${hallazgos.length} observación${hallazgos.length > 1 ? "es" : ""} detectada${hallazgos.length > 1 ? "s" : ""}`
-    : "Carátula conforme";
+    : tipo === "PLAN_ESTRUCTURADO"
+      ? "Carátula conforme"
+      : "Documento conforme";
 
   const clase = tieneObs
     ? "border-amber-300 bg-amber-100 text-amber-800 hover:bg-amber-200"
@@ -317,7 +317,7 @@ export function DocumentoCard(p: Props) {
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
           <StatusBadge estado={p.estado} />
-          {p.documentoId && p.tipo === "PLAN_ESTRUCTURADO" && (
+          {p.documentoId && !tieneFormatoGenerable && (
             <RevisionBadge
               tipo={p.tipo}
               cargando={revision.isFetching}
@@ -556,10 +556,11 @@ export function DocumentoCard(p: Props) {
           </div>
         </Dialogo>
       )}
-      {p.documentoId && p.tipo === "PLAN_ESTRUCTURADO" && (
+      {p.documentoId && !tieneFormatoGenerable && (
         <AnalisisDocumentalPanel
           key={p.documentoId}
           documentoId={p.documentoId}
+          tipo={p.tipo}
           onVerDetalles={() => setRevisionAbierta(true)}
         />
       )}

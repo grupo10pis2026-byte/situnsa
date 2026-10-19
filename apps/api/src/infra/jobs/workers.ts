@@ -205,10 +205,6 @@ export async function procesarRevisionDocumento(payload: RevisionDocumentoPayloa
       return;
     }
 
-    if (doc.tipo !== "PLAN_ESTRUCTURADO") {
-      return;
-    }
-
     // Asegurar que existe registro de revisión en estado EN_PROCESO
     const [existente] = await db
       .select({ id: documentoRevisiones.id })

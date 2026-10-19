@@ -103,21 +103,20 @@ export function registerDocumentosRoutes(app: FastifyInstance): void {
           return;
         }
         conservar = true;
-        if (tipo === "PLAN_ESTRUCTURADO") {
-          await db
-            .insert(documentoRevisiones)
-            .values({
-              documentoId: r.value.id,
-              expedienteId,
-              estado: "PENDIENTE",
-            })
-            .catch((e) => req.log.error(e, "Error al registrar revisión pendiente"));
-
-          await enqueueRevisionDocumento({
+        // Iniciar revisión documental automática para documentos subidos
+        await db
+          .insert(documentoRevisiones)
+          .values({
             documentoId: r.value.id,
             expedienteId,
-          });
-        }
+            estado: "PENDIENTE",
+          })
+          .catch((e) => req.log.error(e, "Error al registrar revisión pendiente"));
+
+        await enqueueRevisionDocumento({
+          documentoId: r.value.id,
+          expedienteId,
+        });
         await reply.status(201).send(r.value);
       } finally {
         await contenido.limpiar(conservar);
