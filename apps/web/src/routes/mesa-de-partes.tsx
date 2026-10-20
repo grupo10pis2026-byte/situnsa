@@ -5,8 +5,11 @@ import {
   ArrowLeft,
   ArrowRight,
   CheckCircle,
+  ExternalLink,
   FileText,
   GraduationCap,
+  Info,
+  Mail,
   Paperclip,
   Send,
   Upload,
@@ -73,36 +76,174 @@ export function MesaDePartesPage() {
   const [errorGlobal, setErrorGlobal] = useState<string | null>(null);
   const [resultadoExitoso, setResultadoExitoso] = useState<{ codigo: string } | null>(null);
 
-  // Lista de documentos requeridos según vía
-  const docsRequeridos =
+  // Lista de documentos requeridos según vía con guías y enlaces
+  interface RequisitoDoc {
+    clave: string;
+    nombre: string;
+    requerido: boolean;
+    esFoto?: boolean;
+    formatos?: string;
+    guiaTexto?: string;
+    guiaCorreo?: string;
+    guiaEnlaces?: Array<{ texto: string; url: string }>;
+    guiaManual?: {
+      texto: string;
+      enlace: { texto: string; url: string };
+      correoSoporte: string;
+    };
+  }
+
+  const docsRequeridos: RequisitoDoc[] =
     via === "REGULAR"
       ? [
           { clave: "FUT", nombre: "Solicitud de Inscripción / FUT", requerido: true },
           {
             clave: "PLAN_TESIS",
-            nombre: "Plan de Tesis o Trabajo Académico (PDF)",
+            nombre: "El Plan de Tesis o Plan de Trabajo Académico",
             requerido: true,
+            guiaTexto: "Se adjunta esquema. Utilizar el formato actualizado:",
+            guiaEnlaces: [
+              {
+                texto: "Descargar Formato Plan de Tesis (Google Docs)",
+                url: "https://docs.google.com/document/d/1rHSCqSIEXVKPxxQYG0jAPfF9hhZVCxbJ/edit?usp=drive_web&ouid=106454452671119045265&rtpof=true",
+              },
+              {
+                texto: "Descargar Plan de Trabajo Académico (Google Docs)",
+                url: "https://docs.google.com/document/d/1e3RGNju998E4rWh2pgwahXNyI269a0Ri/edit?rtpof=true&tab=t.0",
+              },
+            ],
           },
-          { clave: "CONSTANCIA_EGRESO", nombre: "Constancia de Egresado", requerido: true },
+          {
+            clave: "CONSTANCIA_NO_ADEUDO",
+            nombre: "Constancia de No Adeudo",
+            requerido: true,
+            guiaTexto:
+              "En caso de no contar con dicha información, deberá solicitarla al correo institucional de administración:",
+            guiaCorreo: "fips_usesp_administracion@unsa.edu.pe",
+          },
           {
             clave: "PAGO_TRAMITE",
             nombre: "Recibo de Pago por Derechos de Trámite",
             requerido: true,
+            guiaTexto:
+              "Adjuntar el abono correspondiente, generando su ticket con el correo institucional, indicando como concepto: PENSIÓN, a través del sistema UNSAPay:",
+            guiaEnlaces: [
+              {
+                texto: "Acceder a UNSAPay (ouis.unsa.edu.pe/unsapay/login)",
+                url: "https://ouis.unsa.edu.pe/unsapay/login",
+              },
+            ],
+            guiaManual: {
+              texto:
+                "Para conocer el paso a paso sobre cómo generar tu código de ticket, ingresa al manual:",
+              enlace: {
+                texto: "Manual de Procedimientos: Pagos UNSAPay",
+                url: "https://fips.unsa.edu.pe/usefc/pagos-unsapay/",
+              },
+              correoSoporte:
+                "En caso de no poder ingresar a su correo institucional, deberá solicitar el soporte correspondiente escribiendo al correo: soportecorreo@unsa.edu.pe",
+            },
           },
+          {
+            clave: "FOTO_ESTUDIANTE",
+            nombre:
+              cantidadTesistas === 2
+                ? "Fotografía del Tesista Titular (Fondo blanco)"
+                : "Fotografía del Estudiante (Fondo blanco)",
+            requerido: true,
+            esFoto: true,
+            formatos: ".pdf,.jpg,.jpeg,.png",
+            guiaTexto:
+              "Obligatorio: Adjuntar fotografía formal reciente con fondo blanco (formato PDF, JPG o PNG).",
+          },
+          ...(cantidadTesistas === 2
+            ? [
+                {
+                  clave: "FOTO_ESTUDIANTE_2",
+                  nombre: "Fotografía del Segundo Tesista (Fondo blanco)",
+                  requerido: true,
+                  esFoto: true,
+                  formatos: ".pdf,.jpg,.jpeg,.png",
+                  guiaTexto:
+                    "Obligatorio: Adjuntar fotografía formal reciente con fondo blanco del segundo participante (formato PDF, JPG o PNG).",
+                },
+              ]
+            : []),
           { clave: "IDIOMA", nombre: "Certificado de Idioma Extranjero", requerido: false },
         ]
       : [
           { clave: "SOLICITUD_TALLER", nombre: "Ficha de Inscripción al Taller", requerido: true },
-          { clave: "COMPROMISO", nombre: "Carta de Compromiso de Titulación", requerido: true },
+          {
+            clave: "COMPROMISO",
+            nombre: "Carta de Compromiso de Titulación",
+            requerido: true,
+            guiaTexto: "Descargue el formato oficial, complételo y adjúntelo firmado:",
+            guiaEnlaces: [
+              {
+                texto: "Descargar aquí Carta de compromiso (Google Drive)",
+                url: "https://drive.google.com/file/d/1oU8gFfeGe-nDMBzn1u7Cc8Uh0JDeDNq3/view?usp=drive_link",
+              },
+            ],
+          },
+          {
+            clave: "CONSTANCIA_NO_ADEUDO",
+            nombre: "Constancia de No Adeudo",
+            requerido: true,
+            guiaTexto: "En caso de no contar con dicha información, deberá solicitarla al correo:",
+            guiaCorreo: "fips_usesp_administracion@unsa.edu.pe",
+          },
           {
             clave: "PAGO_MATRICULA",
             nombre: "Recibo de Pago de Matrícula Taller",
             requerido: true,
+            guiaTexto:
+              "Adjuntar el abono correspondiente, generando su ticket con el correo institucional, indicando como concepto: PENSIÓN, a través del sistema UNSAPay:",
+            guiaEnlaces: [
+              {
+                texto: "Acceder a UNSAPay (ouis.unsa.edu.pe/unsapay/login)",
+                url: "https://ouis.unsa.edu.pe/unsapay/login",
+              },
+            ],
+            guiaManual: {
+              texto:
+                "Para conocer el paso a paso sobre cómo generar tu código de ticket, ingresa al manual:",
+              enlace: {
+                texto: "Manual de Procedimientos: Pagos UNSAPay",
+                url: "https://fips.unsa.edu.pe/usefc/pagos-unsapay/",
+              },
+              correoSoporte:
+                "En caso de no poder ingresar a su correo institucional, deberá solicitar el soporte correspondiente escribiendo al correo: soportecorreo@unsa.edu.pe",
+            },
           },
           { clave: "DNI_COPIA", nombre: "Copia de DNI Legible", requerido: true },
+          {
+            clave: "FOTO_ESTUDIANTE",
+            nombre:
+              cantidadTesistas === 2
+                ? "Fotografía del Tesista Titular (Fondo blanco)"
+                : "Fotografía del Estudiante (Fondo blanco)",
+            requerido: true,
+            esFoto: true,
+            formatos: ".pdf,.jpg,.jpeg,.png",
+            guiaTexto:
+              "Obligatorio: Adjuntar fotografía formal reciente con fondo blanco (formato PDF, JPG o PNG).",
+          },
+          ...(cantidadTesistas === 2
+            ? [
+                {
+                  clave: "FOTO_ESTUDIANTE_2",
+                  nombre: "Fotografía del Segundo Tesista (Fondo blanco)",
+                  requerido: true,
+                  esFoto: true,
+                  formatos: ".pdf,.jpg,.jpeg,.png",
+                  guiaTexto:
+                    "Obligatorio: Adjuntar fotografía formal reciente con fondo blanco del segundo participante (formato PDF, JPG o PNG).",
+                },
+              ]
+            : []),
         ];
 
-  function handleFileChange(clave: string, file: File | null) {
+  function handleFileChange(clave: string, file: File | null, esFoto = false) {
     if (!file) {
       setArchivos((prev) => {
         const copy = { ...prev };
@@ -112,9 +253,20 @@ export function MesaDePartesPage() {
       return;
     }
 
-    if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
-      setErrorGlobal(`El archivo "${file.name}" debe ser formato PDF`);
-      return;
+    if (esFoto) {
+      const extensionValida = /\.(pdf|jpe?g|png)$/i.test(file.name);
+      const mimeValido = ["application/pdf", "image/jpeg", "image/png", "image/jpg"].includes(
+        file.type,
+      );
+      if (!extensionValida && !mimeValido) {
+        setErrorGlobal(`La fotografía "${file.name}" debe ser formato JPG, PNG o PDF`);
+        return;
+      }
+    } else {
+      if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
+        setErrorGlobal(`El archivo "${file.name}" debe ser formato PDF`);
+        return;
+      }
     }
     if (file.size > 20 * 1024 * 1024) {
       setErrorGlobal(`El archivo "${file.name}" supera el límite máximo de 20MB`);
@@ -148,6 +300,10 @@ export function MesaDePartesPage() {
       setErrorGlobal("El DNI del postulante titular debe tener 8 dígitos numéricos");
       return false;
     }
+    if (p1.cui.trim() && !/^\d{8}$/.test(p1.cui.trim())) {
+      setErrorGlobal("El CUI del postulante titular debe tener exactamente 8 dígitos numéricos");
+      return false;
+    }
     if (!p1.email.trim() || !p1.email.includes("@")) {
       setErrorGlobal("Ingrese un correo electrónico válido para el postulante titular");
       return false;
@@ -160,6 +316,10 @@ export function MesaDePartesPage() {
       }
       if (!/^\d{8}$/.test(p2.dni.trim())) {
         setErrorGlobal("El DNI del segundo tesista debe tener 8 dígitos numéricos");
+        return false;
+      }
+      if (p2.cui.trim() && !/^\d{8}$/.test(p2.cui.trim())) {
+        setErrorGlobal("El CUI del segundo tesista debe tener exactamente 8 dígitos numéricos");
         return false;
       }
       if (p1.dni.trim() === p2.dni.trim()) {
@@ -233,7 +393,8 @@ export function MesaDePartesPage() {
       formData.append("datos", JSON.stringify(payload));
 
       for (const [clave, file] of Object.entries(archivos)) {
-        formData.append(`archivo_${clave}_1`, file);
+        const orden = clave.endsWith("_2") ? 2 : 1;
+        formData.append(`archivo_${clave}_${orden}`, file);
       }
 
       const res = await crearSolicitudPublica(formData);
@@ -539,12 +700,15 @@ export function MesaDePartesPage() {
                       onChange={(e) => setP1({ ...p1, dni: e.target.value.replace(/\D/g, "") })}
                     />
                   </Field>
-                  <Field etiqueta="CUI (Opcional)">
+                  <Field etiqueta="CUI (8 dígitos, opcional)">
                     <input
                       className="h-9 w-full rounded-lg border border-slate-300 px-3 text-xs font-mono text-grafito-900 shadow-card focus:border-navy-800 focus:outline-none"
+                      maxLength={8}
                       placeholder="20180456"
                       value={p1.cui}
-                      onChange={(e) => setP1({ ...p1, cui: e.target.value })}
+                      onChange={(e) =>
+                        setP1({ ...p1, cui: e.target.value.replace(/\D/g, "").slice(0, 8) })
+                      }
                     />
                   </Field>
                   <Field etiqueta="Teléfono / Celular">
@@ -631,12 +795,15 @@ export function MesaDePartesPage() {
                         onChange={(e) => setP2({ ...p2, dni: e.target.value.replace(/\D/g, "") })}
                       />
                     </Field>
-                    <Field etiqueta="CUI (Opcional)">
+                    <Field etiqueta="CUI (8 dígitos, opcional)">
                       <input
                         className="h-9 w-full rounded-lg border border-slate-300 px-3 text-xs font-mono text-grafito-900 shadow-card focus:border-navy-800 focus:outline-none"
+                        maxLength={8}
                         placeholder="20180457"
                         value={p2.cui}
-                        onChange={(e) => setP2({ ...p2, cui: e.target.value })}
+                        onChange={(e) =>
+                          setP2({ ...p2, cui: e.target.value.replace(/\D/g, "").slice(0, 8) })
+                        }
                       />
                     </Field>
                     <Field etiqueta="Teléfono / Celular">
@@ -689,55 +856,121 @@ export function MesaDePartesPage() {
                 </p>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {docsRequeridos.map((doc) => {
                   const cargado = archivos[doc.clave];
                   return (
                     <div
-                      className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border p-3.5 transition-colors ${
+                      className={`flex flex-col gap-3 rounded-xl border p-4 transition-colors ${
                         cargado
                           ? "border-verde-inst-300 bg-verde-inst-50/40"
                           : "border-slate-200 bg-white"
                       }`}
                       key={doc.clave}
                     >
-                      <div className="flex items-center gap-3">
-                        <span
-                          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
-                            cargado ? "bg-verde-inst-600 text-white" : "bg-slate-100 text-slate-500"
-                          }`}
-                        >
-                          {cargado ? <CheckCircle size={18} /> : <FileText size={18} />}
-                        </span>
-                        <div>
-                          <p className="text-xs font-bold text-navy-950">
-                            {doc.nombre}{" "}
-                            {doc.requerido && <span className="text-red-600 font-bold">*</span>}
-                          </p>
-                          <p className="text-[11px] text-grafito-600">
-                            {cargado
-                              ? `${cargado.name} (${Math.round(cargado.size / 1024)} KB)`
-                              : "No adjuntado aún"}
-                          </p>
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <span
+                            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
+                              cargado
+                                ? "bg-verde-inst-600 text-white"
+                                : "bg-slate-100 text-slate-500"
+                            }`}
+                          >
+                            {cargado ? <CheckCircle size={20} /> : <FileText size={20} />}
+                          </span>
+                          <div>
+                            <p className="text-xs font-bold text-navy-950">
+                              {doc.nombre}{" "}
+                              {doc.requerido && <span className="text-red-600 font-bold">*</span>}
+                            </p>
+                            <p className="text-[11px] text-grafito-600">
+                              {cargado
+                                ? `${cargado.name} (${Math.round(cargado.size / 1024)} KB)`
+                                : `Formatos permitidos: ${doc.esFoto ? "PDF, JPG o PNG" : "Solo PDF"}`}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <label className="cursor-pointer">
+                            <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-grafito-700 shadow-sm hover:bg-slate-50">
+                              <Paperclip size={13} />
+                              {cargado
+                                ? "Cambiar archivo"
+                                : doc.esFoto
+                                  ? "Adjuntar Foto"
+                                  : "Adjuntar PDF"}
+                            </span>
+                            <input
+                              accept={doc.formatos ?? "application/pdf"}
+                              className="hidden"
+                              onChange={(e) =>
+                                handleFileChange(doc.clave, e.target.files?.[0] ?? null, doc.esFoto)
+                              }
+                              type="file"
+                            />
+                          </label>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        <label className="cursor-pointer">
-                          <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-grafito-700 shadow-sm hover:bg-slate-50">
-                            <Paperclip size={13} />
-                            {cargado ? "Cambiar archivo" : "Adjuntar PDF"}
-                          </span>
-                          <input
-                            accept="application/pdf"
-                            className="hidden"
-                            onChange={(e) =>
-                              handleFileChange(doc.clave, e.target.files?.[0] ?? null)
-                            }
-                            type="file"
-                          />
-                        </label>
-                      </div>
+                      {/* Guías, anotaciones y enlaces de ayuda */}
+                      {(doc.guiaTexto || doc.guiaCorreo || doc.guiaEnlaces || doc.guiaManual) && (
+                        <div className="rounded-lg bg-blue-50/70 p-3 text-xs text-blue-950 border border-blue-100 space-y-1.5">
+                          {doc.guiaTexto && (
+                            <div className="flex items-start gap-1.5 font-medium leading-relaxed">
+                              <Info size={14} className="mt-0.5 shrink-0 text-blue-700" />
+                              <span>{doc.guiaTexto}</span>
+                            </div>
+                          )}
+
+                          {doc.guiaEnlaces && (
+                            <div className="flex flex-wrap gap-2 pt-1 pl-5">
+                              {doc.guiaEnlaces.map((enl) => (
+                                <a
+                                  key={enl.url}
+                                  href={enl.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 rounded bg-white px-2.5 py-1 text-[11px] font-semibold text-navy-800 shadow-sm border border-blue-200 hover:bg-blue-50 hover:text-navy-950"
+                                >
+                                  <ExternalLink size={12} className="text-blue-600" />
+                                  {enl.texto}
+                                </a>
+                              ))}
+                            </div>
+                          )}
+
+                          {doc.guiaCorreo && (
+                            <div className="flex items-center gap-1.5 pl-5 text-[11px] font-semibold text-blue-900">
+                              <Mail size={13} className="text-blue-700" />
+                              <span>Solicitar a: </span>
+                              <a
+                                href={`mailto:${doc.guiaCorreo}`}
+                                className="underline hover:text-navy-950"
+                              >
+                                {doc.guiaCorreo}
+                              </a>
+                            </div>
+                          )}
+
+                          {doc.guiaManual && (
+                            <div className="pt-1.5 border-t border-blue-200/60 pl-5 space-y-1 text-[11px]">
+                              <p className="font-semibold text-blue-900">{doc.guiaManual.texto}</p>
+                              <a
+                                href={doc.guiaManual.enlace.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 font-bold text-navy-800 underline hover:text-navy-950"
+                              >
+                                <ExternalLink size={12} className="text-blue-600" />
+                                {doc.guiaManual.enlace.texto}
+                              </a>
+                              <p className="text-blue-800 italic">{doc.guiaManual.correoSoporte}</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })}

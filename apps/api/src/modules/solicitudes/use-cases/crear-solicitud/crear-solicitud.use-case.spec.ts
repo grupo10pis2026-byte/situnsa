@@ -50,4 +50,22 @@ describe("CrearSolicitudUseCase (validaciones de dominio)", () => {
       expect(r.error.message).toContain("no es un PDF válido");
     }
   });
+
+  it("rechaza fotos que no sean PDF, JPG o PNG válidos", async () => {
+    const archivos = [
+      {
+        tipo: "FOTO_ESTUDIANTE",
+        participanteOrden: 1,
+        filename: "foto_falsa.txt",
+        bytes: archivoInvalido,
+        mimeType: "image/jpeg",
+      },
+    ];
+    const r = await uc.execute(basePayload, archivos, {});
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.error.code).toBe("VALIDACION_FALLIDA");
+      expect(r.error.message).toContain("debe ser formato PDF, JPG o PNG");
+    }
+  });
 });

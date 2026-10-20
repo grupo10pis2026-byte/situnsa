@@ -15,7 +15,9 @@ import {
   XCircle,
 } from "lucide-react";
 import { useState } from "react";
+import { abrirArchivoProtegido } from "../api/expedientes.js";
 import {
+  documentoSolicitudUrl,
   useActualizarConformidadDocumento,
   useActualizarDatosMenores,
   useSolicitudDetalle,
@@ -332,6 +334,17 @@ export function SolicitudDetallePage() {
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        className="rounded p-1 text-slate-500 hover:text-navy-950 hover:bg-slate-100 transition-colors"
+                        onClick={() =>
+                          void abrirArchivoProtegido(documentoSolicitudUrl(sol.id, doc.id))
+                        }
+                        title="Ver documento adjunto"
+                        type="button"
+                      >
+                        <ExternalLink size={16} />
+                      </button>
+
                       <StatusBadge estado={doc.estadoConformidad} />
 
                       {!cerrada && (

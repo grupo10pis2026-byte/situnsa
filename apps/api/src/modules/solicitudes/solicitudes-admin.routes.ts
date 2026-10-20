@@ -6,6 +6,7 @@ import type { FastifyInstance } from "fastify";
 import { autorizar } from "../../infra/auth/autorizacion.js";
 import { respuestaError, respuestaErrorConConflicto } from "../../infra/http/errores.js";
 import { OPCIONES_TS_REST } from "../../infra/http/manejador-errores.js";
+import { requireAuth } from "../../middleware/require-auth.js";
 import {
   getSolicitudById,
   getTokenSubsanacionPorHash,
@@ -43,7 +44,13 @@ export function registerSolicitudesAdminRoutes(app: FastifyInstance): void {
     // Bandeja con filtros y KPIs
     // -----------------------------------------------------------------------
     listar: async ({ query, request }) => {
-      const a = await autorizar(request.actor, { permiso: ["solicitudes", "listar"] });
+      const a = await autorizar(request.actor, {
+        permiso: ["solicitudes", "listar"],
+        alternativas: [
+          ["inscripciones", "ver"],
+          ["expedientes", "ver"],
+        ],
+      });
       if (!a.ok) {
         if (a.status === 401) return { status: 401 as const, body: a.body };
         return { status: 403 as const, body: a.body };
@@ -56,7 +63,13 @@ export function registerSolicitudesAdminRoutes(app: FastifyInstance): void {
     // Código SET sugerido para el modal de aceptación
     // -----------------------------------------------------------------------
     sugerirCodigoSet: async ({ request }) => {
-      const a = await autorizar(request.actor, { permiso: ["solicitudes", "aceptar"] });
+      const a = await autorizar(request.actor, {
+        permiso: ["solicitudes", "aceptar"],
+        alternativas: [
+          ["inscripciones", "aprobar"],
+          ["expedientes", "crear"],
+        ],
+      });
       if (!a.ok) {
         if (a.status === 401) return { status: 401 as const, body: a.body };
         return { status: 403 as const, body: a.body };
@@ -69,7 +82,13 @@ export function registerSolicitudesAdminRoutes(app: FastifyInstance): void {
     // Detalle completo (transiciona NUEVA → EN_REVISION al abrir)
     // -----------------------------------------------------------------------
     obtenerPorId: async ({ params, request }) => {
-      const a = await autorizar(request.actor, { permiso: ["solicitudes", "ver"] });
+      const a = await autorizar(request.actor, {
+        permiso: ["solicitudes", "ver"],
+        alternativas: [
+          ["inscripciones", "ver"],
+          ["expedientes", "ver"],
+        ],
+      });
       if (!a.ok) {
         if (a.status === 401) return { status: 401 as const, body: a.body };
         return { status: 403 as const, body: a.body };
@@ -88,7 +107,13 @@ export function registerSolicitudesAdminRoutes(app: FastifyInstance): void {
     // Corrección de datos menores
     // -----------------------------------------------------------------------
     actualizarDatosMenores: async ({ params, body, request }) => {
-      const a = await autorizar(request.actor, { permiso: ["solicitudes", "editar"] });
+      const a = await autorizar(request.actor, {
+        permiso: ["solicitudes", "editar"],
+        alternativas: [
+          ["inscripciones", "editar"],
+          ["expedientes", "editar"],
+        ],
+      });
       if (!a.ok) {
         if (a.status === 401) return { status: 401 as const, body: a.body };
         return { status: 403 as const, body: a.body };
@@ -103,7 +128,14 @@ export function registerSolicitudesAdminRoutes(app: FastifyInstance): void {
     // Conformidad de documento (checklist)
     // -----------------------------------------------------------------------
     actualizarConformidadDocumento: async ({ params, body, request }) => {
-      const a = await autorizar(request.actor, { permiso: ["solicitudes", "editar"] });
+      const a = await autorizar(request.actor, {
+        permiso: ["solicitudes", "editar"],
+        alternativas: [
+          ["inscripciones", "editar"],
+          ["documentos", "ver"],
+          ["expedientes", "editar"],
+        ],
+      });
       if (!a.ok) {
         if (a.status === 401) return { status: 401 as const, body: a.body };
         return { status: 403 as const, body: a.body };
@@ -124,7 +156,13 @@ export function registerSolicitudesAdminRoutes(app: FastifyInstance): void {
     // Observar solicitud
     // -----------------------------------------------------------------------
     observar: async ({ params, body, request }) => {
-      const a = await autorizar(request.actor, { permiso: ["solicitudes", "observar"] });
+      const a = await autorizar(request.actor, {
+        permiso: ["solicitudes", "observar"],
+        alternativas: [
+          ["inscripciones", "aprobar"],
+          ["expedientes", "editar"],
+        ],
+      });
       if (!a.ok) {
         if (a.status === 401) return { status: 401 as const, body: a.body };
         return { status: 403 as const, body: a.body };
@@ -139,7 +177,13 @@ export function registerSolicitudesAdminRoutes(app: FastifyInstance): void {
     // Rechazar solicitud
     // -----------------------------------------------------------------------
     rechazar: async ({ params, body, request }) => {
-      const a = await autorizar(request.actor, { permiso: ["solicitudes", "rechazar"] });
+      const a = await autorizar(request.actor, {
+        permiso: ["solicitudes", "rechazar"],
+        alternativas: [
+          ["inscripciones", "aprobar"],
+          ["expedientes", "editar"],
+        ],
+      });
       if (!a.ok) {
         if (a.status === 401) return { status: 401 as const, body: a.body };
         return { status: 403 as const, body: a.body };
@@ -154,7 +198,13 @@ export function registerSolicitudesAdminRoutes(app: FastifyInstance): void {
     // Aceptar solicitud y generar expediente SET
     // -----------------------------------------------------------------------
     aceptar: async ({ params, body, request }) => {
-      const a = await autorizar(request.actor, { permiso: ["solicitudes", "aceptar"] });
+      const a = await autorizar(request.actor, {
+        permiso: ["solicitudes", "aceptar"],
+        alternativas: [
+          ["inscripciones", "aprobar"],
+          ["expedientes", "crear"],
+        ],
+      });
       if (!a.ok) {
         if (a.status === 401) return { status: 401 as const, body: a.body };
         return { status: 403 as const, body: a.body };
@@ -278,5 +328,12 @@ export function registerSolicitudesAdminRoutes(app: FastifyInstance): void {
     },
   });
 
-  app.register(s.plugin(router), OPCIONES_TS_REST);
+  void app.register(async (scoped) => {
+    scoped.addHook("preHandler", async (req, reply) => {
+      // Rutas públicas de subsanación no requieren token de sesión
+      if (req.url.startsWith("/api/v1/public/")) return;
+      await requireAuth(req, reply);
+    });
+    await scoped.register(s.plugin(router), OPCIONES_TS_REST);
+  });
 }

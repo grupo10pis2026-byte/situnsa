@@ -1,14 +1,21 @@
 import type { CrearSolicitudPayload } from "@pis/contracts";
 import { CrearSolicitudPayloadSchema } from "@pis/contracts";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
-import { errorEnvelope, estadoHttp } from "../../infra/http/errores.js";
+import { autorizar } from "../../infra/auth/autorizacion.js";
+import { entregarArchivo } from "../../infra/http/entrega-archivo.js";
+import { errorEnvelope, estadoHttp, PATRON_UUID } from "../../infra/http/errores.js";
+import { LocalStorageService } from "../../infra/storage/local-storage.service.js";
+import { requireAuth } from "../../middleware/require-auth.js";
+import { getDocumentoSolicitudById } from "./solicitudes.repository.js";
 import { CrearSolicitudUseCase } from "./use-cases/crear-solicitud/crear-solicitud.use-case.js";
 
 const crearUC = new CrearSolicitudUseCase();
+const storage = new LocalStorageService();
 
 /**
- * Rutas públicas del módulo de solicitudes (sin autenticación).
- * - POST /api/v1/public/solicitudes   → multipart (archivos + JSON de datos)
+ * Rutas nativas Fastify del módulo de solicitudes (multipart y streaming protegido).
+ * - POST /api/v1/public/solicitudes                          → multipart público
+ * - GET  /api/v1/solicitudes/:id/documentos/:docId/descargar → streaming protegido
  */
 export function registerSolicitudesPublicasRoutes(app: FastifyInstance): void {
   /**
@@ -34,10 +41,10 @@ export function registerSolicitudesPublicasRoutes(app: FastifyInstance): void {
       for await (const part of parts) {
         if (part.type === "file") {
           const bytes = new Uint8Array(await part.toBuffer());
-          // El nombre del campo lleva el tipo: "archivo_TIPO_PARTICIPANTE"
-          const segmentos = part.fieldname.split("_");
-          const tipo = segmentos[1] ?? part.fieldname;
-          const orden = segmentos[2] ? Number(segmentos[2]) : null;
+          // El nombre del campo lleva el formato: "archivo_TIPO_PARTICIPANTE"
+          const match = part.fieldname.match(/^archivo_(.+)_(\d+)$/);
+          const tipo = (match?.[1] ?? part.fieldname.replace(/^archivo_/, "")) || "DOCUMENTO";
+          const orden = match?.[2] ? Number(match[2]) : null;
           archivosTemp.push({
             tipo,
             participanteOrden: Number.isInteger(orden) ? orden : null,
@@ -86,6 +93,42 @@ export function registerSolicitudesPublicasRoutes(app: FastifyInstance): void {
       }
 
       await reply.status(201).send({ ok: true, id: r.value.id, codigo: r.value.codigo });
+    },
+  );
+
+  /**
+   * GET /api/v1/solicitudes/:id/documentos/:documentoId/descargar
+   * Descarga o visualización protegida de archivo PDF individual.
+   */
+  app.get<{ Params: { id: string; documentoId: string } }>(
+    "/api/v1/solicitudes/:id/documentos/:documentoId/descargar",
+    { preHandler: async (req, reply) => requireAuth(req, reply) },
+    async (req, reply) => {
+      const { id, documentoId } = req.params;
+      if (!PATRON_UUID.test(id) || !PATRON_UUID.test(documentoId)) {
+        await reply.status(404).send(errorEnvelope("NO_ENCONTRADO", "Documento no encontrado"));
+        return;
+      }
+      const a = await autorizar(req.actor, {
+        permiso: ["solicitudes", "ver"],
+        alternativas: [
+          ["inscripciones", "ver"],
+          ["expedientes", "ver"],
+        ],
+      });
+      if (!a.ok) {
+        await reply.status(a.status).send(a.body);
+        return;
+      }
+      const doc = await getDocumentoSolicitudById(id, documentoId);
+      if (!doc) {
+        await reply.status(404).send(errorEnvelope("NO_ENCONTRADO", "Documento no encontrado"));
+        return;
+      }
+      await entregarArchivo(reply, storage, doc.ruta, {
+        nombre: doc.nombreOriginal,
+        inline: true,
+      });
     },
   );
 }
