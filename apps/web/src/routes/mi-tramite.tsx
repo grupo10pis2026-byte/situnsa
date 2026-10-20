@@ -1,7 +1,9 @@
+import { esDocumentoTesista } from "@pis/domain/dist/expediente/checklist-catalogo.js";
 import {
   CheckCircle2,
   Clock,
   FileBadge,
+  FileText,
   Flag,
   Gauge,
   Info,
@@ -128,6 +130,8 @@ export function MiTramitePage() {
 
   // Filtrado de documentos pertenecientes a la etapa seleccionada
   const docsEtapa = d.checklist.filter((c) => etapaDeDocumento(c) === etapaSeleccionada);
+  const docsTesista = docsEtapa.filter((c) => esDocumentoTesista(c.tipo));
+  const docsInstitucionales = docsEtapa.filter((c) => !esDocumentoTesista(c.tipo));
 
   // Subetapas de la etapa seleccionada
   const subetapasDeEstaEtapa = porEtapa.get(etapaSeleccionada) ?? [];
@@ -392,51 +396,91 @@ export function MiTramitePage() {
         {/* ============================================================== */}
         {/* DOCUMENTACIÓN DE LA ETAPA SELECCIONADA                          */}
         {/* ============================================================== */}
-        <div className="p-4 md:p-5">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <h4 className="text-sm font-bold text-navy-950">
-                Documentación requerida para la Etapa {etapaSeleccionada}
-              </h4>
-              <p className="text-xs text-grafito-600">
-                Carga, consulta y reemplazo de los documentos oficiales (PDF, máx. 50 MB).
-              </p>
+        <div className="p-4 md:p-5 space-y-6">
+          {/* 1. DOCUMENTOS A PRESENTAR POR EL ALUMNO */}
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/70 pb-2">
+              <div>
+                <h4 className="text-sm font-bold text-navy-950 flex items-center gap-1.5">
+                  <FileText size={16} className="text-navy-800" />
+                  Documentos a presentar por el alumno ({docsTesista.length})
+                </h4>
+                <p className="text-xs text-grafito-600">
+                  Archivos de tu autoría, solicitudes y declaraciones juradas que debes firmar y
+                  adjuntar en PDF.
+                </p>
+              </div>
             </div>
-            <span className="text-xs font-semibold text-slate-600">
-              {docsEtapa.length} documento{docsEtapa.length === 1 ? "" : "s"} en esta etapa
-            </span>
+
+            {docsTesista.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/50 p-5 text-center text-xs text-grafito-600">
+                <Info size={22} className="mx-auto text-slate-400 mb-1.5" />
+                <p className="font-semibold text-slate-700">
+                  No hay documentos personales pendientes de entrega en la Etapa {etapaSeleccionada}
+                </p>
+                <p className="text-[11px] text-slate-500 mt-0.5 max-w-md mx-auto">
+                  Esta etapa se procesa internamente por el asesor, jurados o la facultad. No
+                  requieres subir archivos personales aquí.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-3.5 md:grid-cols-2">
+                {docsTesista.map((c) => (
+                  <DocumentoCard
+                    key={c.tipo}
+                    documentoId={c.documentoId}
+                    estado={c.estado}
+                    expedienteId={d.id}
+                    faltantes={c.documentoId ? [] : ["Falta adjuntar el archivo"]}
+                    nombre={c.nombre}
+                    tipo={c.tipo}
+                    version={c.version}
+                    requeridoEn={c.requeridoEn}
+                    subetapaActiva={d.subetapaActiva?.clave ?? null}
+                    formato={generadoPorTipo.get(c.tipo) ?? null}
+                    etiquetaEtapa={`Etapa ${etapaSeleccionada}`}
+                    permitirSubir={true}
+                  />
+                ))}
+              </div>
+            )}
           </div>
 
-          {docsEtapa.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/50 p-6 text-center text-sm text-grafito-600">
-              <Info size={28} className="mx-auto text-slate-400 mb-2" />
-              <p className="font-semibold text-slate-800">
-                No hay documentos requeridos para la Etapa {etapaSeleccionada}
-              </p>
-              <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
-                Esta etapa corresponde a revisiones y trámites administrativos internos de la
-                facultad. No requiere entrega de archivos adicionales por parte del alumno.
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-3.5 md:grid-cols-2">
-              {docsEtapa.map((c) => (
-                <DocumentoCard
-                  key={c.tipo}
-                  documentoId={c.documentoId}
-                  estado={c.estado}
-                  expedienteId={d.id}
-                  faltantes={c.documentoId ? [] : ["Falta adjuntar el archivo"]}
-                  nombre={c.nombre}
-                  tipo={c.tipo}
-                  version={c.version}
-                  requeridoEn={c.requeridoEn}
-                  subetapaActiva={d.subetapaActiva?.clave ?? null}
-                  formato={generadoPorTipo.get(c.tipo) ?? null}
-                  etiquetaEtapa={`Etapa ${etapaSeleccionada}`}
-                  permitirSubir={true}
-                />
-              ))}
+          {/* 2. FORMATOS Y ACTAS EMITIDOS POR LA FACULTAD / JURADOS */}
+          {docsInstitucionales.length > 0 && (
+            <div className="border-t border-slate-200/80 pt-5 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/70 pb-2">
+                <div>
+                  <h4 className="text-sm font-bold text-navy-950 flex items-center gap-1.5">
+                    <FileBadge size={16} className="text-dorado-600" />
+                    Actas y resoluciones institucionales ({docsInstitucionales.length})
+                  </h4>
+                  <p className="text-xs text-grafito-600">
+                    Documentos autogenerados y actas emitidas por jurados, asesor o la Unidad.
+                    Disponibles para tu consulta y descarga (no los debes subir tú).
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3.5 md:grid-cols-2">
+                {docsInstitucionales.map((c) => (
+                  <DocumentoCard
+                    key={c.tipo}
+                    documentoId={c.documentoId}
+                    estado={c.estado}
+                    expedienteId={d.id}
+                    faltantes={[]}
+                    nombre={c.nombre}
+                    tipo={c.tipo}
+                    version={c.version}
+                    requeridoEn={c.requeridoEn}
+                    subetapaActiva={d.subetapaActiva?.clave ?? null}
+                    formato={generadoPorTipo.get(c.tipo) ?? null}
+                    etiquetaEtapa={`Etapa ${etapaSeleccionada}`}
+                    permitirSubir={false}
+                  />
+                ))}
+              </div>
             </div>
           )}
         </div>

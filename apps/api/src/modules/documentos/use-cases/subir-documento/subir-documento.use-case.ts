@@ -8,6 +8,7 @@ import {
   type ChecklistDef,
   cargaHabilitadaTesista,
   DomainError,
+  esDocumentoTesista,
   fail,
   ok,
   plantillaDe,
@@ -149,6 +150,14 @@ export class SubirDocumentoUseCase {
         .orderBy(desc(documentos.version));
       const ultimo = previos[0] ?? null;
       if (input.comoTesista) {
+        if (!esDocumentoTesista(input.tipo)) {
+          return fail(
+            new DomainError(
+              "PERMISO_DENEGADO",
+              "Los documentos y actas oficiales son emitidos por la institución y no pueden ser subidos por el alumno",
+            ),
+          );
+        }
         if (ultimo?.estado === "APROBADO") {
           return fail(
             new DomainError(

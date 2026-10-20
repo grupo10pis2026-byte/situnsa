@@ -5,7 +5,10 @@
 
 import type { AnalisisDocumentoDTO } from "@pis/contracts";
 import { tienePlantilla } from "@pis/domain/dist/documentos/plantillas.js";
-import { cargaHabilitadaTesista } from "@pis/domain/dist/expediente/checklist-catalogo.js";
+import {
+  cargaHabilitadaTesista,
+  esDocumentoTesista,
+} from "@pis/domain/dist/expediente/checklist-catalogo.js";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -149,12 +152,13 @@ export function DocumentoCard(p: Props) {
 
   const esPersonal = !!sesion && PERSONAL.includes(sesion.rol);
   const esTesista = sesion?.rol === "TESISTA";
-  // RN-06: el tesista solo carga lo de su subetapa activa (o lo observado),
-  // tiene la opción de volver a subir documentos pendientes/cargados no aprobados,
-  // y nunca reemplaza un documento aprobado. El servidor lo vuelve a validar.
+  const esDeTesista = esDocumentoTesista(p.tipo);
+  // RN-06: el tesista solo carga documentos de su autoría (no autogenerados/actas institucionales),
+  // y solo en su subetapa activa o si está observado, sin reemplazar documentos aprobados.
   const puedeCargar = esPersonal
     ? true
     : esTesista &&
+      esDeTesista &&
       p.estado !== "APROBADO" &&
       (p.permitirSubir ||
         p.version !== null ||
@@ -299,7 +303,7 @@ export function DocumentoCard(p: Props) {
           <StatusBadge estado={p.estado} />
         </div>
       </div>
-      {p.faltantes.length > 0 && (
+      {p.faltantes.length > 0 && (!esTesista || esDeTesista) && (
         <p className="mt-2.5 flex items-start gap-1.5 rounded-lg bg-aviso-100 px-2.5 py-2 text-xs text-aviso-800">
           <AlertTriangle size={14} className="mt-0.5 shrink-0" aria-hidden />
           <span>
@@ -421,7 +425,11 @@ export function DocumentoCard(p: Props) {
             <span className="text-xs text-grafito-600">
               {p.estado === "APROBADO"
                 ? "Documento aprobado"
-                : "Se carga en la subetapa correspondiente"}
+                : !esDeTesista
+                  ? p.documentoId || p.formato
+                    ? "Emitido oficialmente"
+                    : "Emisión a cargo de la facultad / jurado"
+                  : "Se carga en la subetapa correspondiente"}
             </span>
           )
         )}
