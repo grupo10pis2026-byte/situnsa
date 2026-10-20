@@ -3,6 +3,7 @@
  * La tarjeta enlaza carga/descarga/visto bueno y el panel de análisis del plan estructurado.
  */
 
+import type { AnalisisDocumentoDTO } from "@pis/contracts";
 import { tienePlantilla } from "@pis/domain/dist/documentos/plantillas.js";
 import { cargaHabilitadaTesista } from "@pis/domain/dist/expediente/checklist-catalogo.js";
 import {
@@ -20,7 +21,6 @@ import {
   documentoDescargaUrl,
   formatoDescargaUrl,
   useGenerarDocumentos,
-  useRevisionDocumento,
   useSubirDocumento,
 } from "../../api/expedientes.js";
 import { useVistoBueno } from "../../api/seguimiento.js";
@@ -117,55 +117,6 @@ const NOMBRES_LISTADO_OFICIAL: Record<string, string> = {
   INFORME_SECRETARIA: "Aprobación de Consejo y emisión diploma (Informe Secretaría)",
 };
 
-function RevisionBadge({
-  tipo,
-  cargando,
-  estado,
-  hallazgos,
-  onAbrir,
-}: {
-  tipo: string;
-  cargando: boolean;
-  estado: "PENDIENTE" | "EN_PROCESO" | "COMPLETADO" | "FALLIDO" | string | null;
-  hallazgos: Array<{ campo: string; mensaje: string }> | undefined;
-  onAbrir: () => void;
-}) {
-  if (cargando || estado === "PENDIENTE" || estado === "EN_PROCESO") {
-    return (
-      <span className="inline-flex items-center rounded-full border border-slate-300 bg-slate-200 px-2.5 py-0.5 text-[11px] font-semibold text-slate-600 animate-pulse cursor-default">
-        Analizando...
-      </span>
-    );
-  }
-
-  if (!estado) return null;
-
-  const tieneObs = hallazgos && hallazgos.length > 0;
-  const texto = tieneObs
-    ? `${hallazgos.length} observación${hallazgos.length > 1 ? "es" : ""} detectada${hallazgos.length > 1 ? "s" : ""}`
-    : tipo === "PLAN_ESTRUCTURADO"
-      ? "Carátula conforme"
-      : "Documento conforme";
-
-  const clase = tieneObs
-    ? "border-amber-300 bg-amber-100 text-amber-800 hover:bg-amber-200"
-    : "border-green-300 bg-verde-inst-100 text-verde-inst-700 hover:bg-verde-inst-200";
-
-  return (
-    <button
-      type="button"
-      onClick={onAbrir}
-      title="Clic para ver observaciones y fragmentos detectados"
-      className={cn(
-        "inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold cursor-pointer transition-colors",
-        clase,
-      )}
-    >
-      {texto}
-    </button>
-  );
-}
-
 /**
  * Tarjeta de /expedientes/$id y /mi-tramite: carga, descarga y visto bueno del documento.
  * PLAN_ESTRUCTURADO incorpora AnalisisDocumentalPanel cuando hay documentoId.
@@ -175,7 +126,7 @@ export function DocumentoCard(p: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const subir = useSubirDocumento(p.expedienteId);
   const vistoBueno = useVistoBueno(p.expedienteId);
-  const revision = useRevisionDocumento(p.documentoId ?? null);
+  const [analisisResultado, setAnalisisResultado] = useState<AnalisisDocumentoDTO | null>(null);
   const { sesion } = useSession();
   const avisar = useToast();
   const [error, setError] = useState<string | null>(null);
@@ -325,15 +276,6 @@ export function DocumentoCard(p: Props) {
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
           <StatusBadge estado={p.estado} />
-          {p.documentoId && !tieneFormatoGenerable && (
-            <RevisionBadge
-              tipo={p.tipo}
-              cargando={revision.isFetching}
-              estado={revision.data?.estado ?? null}
-              hallazgos={revision.data?.hallazgos}
-              onAbrir={() => setRevisionAbierta(true)}
-            />
-          )}
         </div>
       </div>
       {p.faltantes.length > 0 && (
@@ -482,20 +424,18 @@ export function DocumentoCard(p: Props) {
           abierto={revisionAbierta}
           onAbierto={setRevisionAbierta}
           titulo={
-            revision.data && revision.data.hallazgos.length > 0
-              ? "Alertas detectadas"
+            analisisResultado && analisisResultado.hallazgos.length > 0
+              ? "Alertas y observaciones detectadas"
               : "Revisión del documento"
           }
           descripcion={
-            revision.data && revision.data.hallazgos.length > 0
+            analisisResultado && analisisResultado.hallazgos.length > 0
               ? "Se encontraron inconsistencias en la carátula o el contenido del documento."
-              : "La revisión no detectó observaciones en la carátula."
+              : "La revisión no detectó observaciones en la carátula ni en los datos."
           }
           ancho="max-w-2xl"
         >
-          {revision.isPending ? (
-            <p className="text-sm text-grafito-600">Analizando el documento…</p>
-          ) : revision.data ? (
+          {analisisResultado ? (
             <div className="space-y-3.5">
               <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-700 bg-slate-50 p-2.5 rounded-lg border border-slate-200">
                 <div className="flex items-center gap-2">
@@ -510,28 +450,28 @@ export function DocumentoCard(p: Props) {
                   <span
                     className={cn(
                       "font-semibold px-2 py-0.5 rounded text-[11px]",
-                      revision.data.estado === "COMPLETADO"
+                      analisisResultado.estado === "COMPLETADO"
                         ? "bg-green-100 text-green-800"
                         : "bg-amber-100 text-amber-800",
                     )}
                   >
-                    {revision.data.estado === "COMPLETADO"
+                    {analisisResultado.estado === "COMPLETADO"
                       ? "Análisis completado"
-                      : "Análisis en proceso"}
+                      : "Análisis parcial"}
                   </span>
                   <span>·</span>
                   <span>
-                    Páginas: <strong>{revision.data.paginasAnalizadas || "1–6"}</strong>
+                    Páginas:{" "}
+                    <strong>{analisisResultado.paginasAnalizadas.join(", ") || "1–6"}</strong>
                   </span>
                 </div>
               </div>
 
-              {revision.data.hallazgos.length === 0 ? (
+              {analisisResultado.hallazgos.length === 0 ? (
                 <div className="rounded-xl border border-green-200 bg-verde-inst-100/50 p-4 text-center flex items-center justify-center gap-2">
                   <CheckCircle2 size={16} className="text-verde-inst-700 shrink-0" />
                   <p className="text-sm font-semibold text-verde-inst-700">
-                    La carátula, la presentación y el resumen cumplen con todas las especificaciones
-                    de la guía oficial.
+                    El documento cumple con todas las especificaciones y normativas evaluadas.
                   </p>
                 </div>
               ) : (
@@ -539,20 +479,20 @@ export function DocumentoCard(p: Props) {
                   <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-2.5 text-xs text-amber-900 flex items-start gap-2">
                     <AlertTriangle size={15} className="text-amber-700 shrink-0 mt-0.5" />
                     <span>
-                      Se detectaron {revision.data.hallazgos.length} observaciones en la carátula o
-                      estructura. Haga clic en cada observación para desplegar el fragmento
-                      detectado y la redacción esperada.
+                      Se detectaron {analisisResultado.hallazgos.length} observaciones en la
+                      carátula o estructura. Haga clic en cada observación para desplegar el
+                      fragmento detectado y la redacción esperada.
                     </span>
                   </div>
                   <ul className="space-y-2.5 max-h-[60vh] overflow-y-auto pr-1">
-                    {revision.data.hallazgos.map((hallazgo, index) => (
+                    {analisisResultado.hallazgos.map((hallazgo, index) => (
                       <ItemHallazgo
-                        key={`${hallazgo.campo}-${index}`}
-                        campo={hallazgo.campo}
+                        key={`${hallazgo.tipo}-${index}`}
+                        campo={hallazgo.tipo}
                         mensaje={hallazgo.mensaje}
                         severidad={hallazgo.severidad}
-                        esperado={hallazgo.esperado}
-                        encontrado={hallazgo.encontrado}
+                        esperado={hallazgo.esperado ?? hallazgo.sugerencia}
+                        encontrado={hallazgo.encontrado ?? hallazgo.evidencia}
                       />
                     ))}
                   </ul>
@@ -561,7 +501,8 @@ export function DocumentoCard(p: Props) {
             </div>
           ) : (
             <p className="text-sm text-grafito-600">
-              Todavía no hay revisión disponible para este documento.
+              Todavía no hay revisión disponible para este documento. Haga clic en «Verificar» o
+              «Volver a analizar».
             </p>
           )}
           <div className="mt-5 flex justify-end gap-2">
@@ -593,7 +534,10 @@ export function DocumentoCard(p: Props) {
           key={p.documentoId}
           documentoId={p.documentoId}
           tipo={p.tipo}
-          onVerDetalles={() => setRevisionAbierta(true)}
+          onVerDetalles={(res) => {
+            setAnalisisResultado(res);
+            setRevisionAbierta(true);
+          }}
         />
       )}
       {pendiente && (

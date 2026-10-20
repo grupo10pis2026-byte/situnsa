@@ -1,3 +1,4 @@
+import type { AnalisisDocumentoDTO } from "@pis/contracts";
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import { useAnalizarDocumento } from "../../api/analisis-documental.js";
 import { cn } from "../../utils/cn.js";
@@ -17,7 +18,7 @@ export function AnalisisDocumentalPanel({
 }: {
   documentoId: string;
   tipo?: string;
-  onVerDetalles?: () => void;
+  onVerDetalles?: (resultado: AnalisisDocumentoDTO) => void;
 }) {
   const analisis = useAnalizarDocumento(documentoId);
   const resultado = analisis.data?.documentoId === documentoId ? analisis.data : null;
@@ -168,7 +169,7 @@ export function AnalisisDocumentalPanel({
                   variante="contorno"
                   tamano="sm"
                   type="button"
-                  onClick={onVerDetalles}
+                  onClick={() => onVerDetalles(resultado)}
                   className={cn(
                     "w-full flex items-center justify-center gap-2 border font-medium text-xs py-2 shadow-xs transition-colors",
                     resultado.hallazgos.length > 0
