@@ -1,8 +1,10 @@
 import { CHECKLIST_COMPLETO, plantillaDe, renderizarPlantilla } from "@pis/domain";
 import { PDFDocument, StandardFonts } from "pdf-lib";
+import PizZip from "pizzip";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { tokenVigente } from "../modules/auth/use-cases/acceso/tokens-acceso.js";
 import { esResultadoFallido } from "./db/unit-of-work.js";
+import { obtenerPlantillaDocx, procesarDocxBuffer } from "./docx/render-docx.js";
 import { urlPortal } from "./mail/correo.service.js";
 import { escaparHtml, renderizarCorreo } from "./mail/plantilla-correo.js";
 import { anchoTexto, renderizarPdf } from "./pdf/render-documento.js";
@@ -129,5 +131,52 @@ describe("renderer PDF de formatos", () => {
       });
       expect(bytes.length).toBeGreaterThan(500);
     }
+  });
+});
+
+describe("motor OpenXML DOCX (render-docx)", () => {
+  it("omite el párrafo de Coasesor en carátula cuando no hay coasesor registrado", () => {
+    const plantilla = obtenerPlantillaDocx("CARATULA_PLAN", "E1", 1);
+    expect(plantilla).not.toBeNull();
+    if (!plantilla) return;
+    const res = procesarDocxBuffer(plantilla, {
+      TESIS: "Mi Tesis de Prueba",
+      ASESOR: "Dr. Juan Pérez",
+    });
+    const zip = new PizZip(res.buffer);
+    const xml = zip.file("word/document.xml")?.asText() ?? "";
+    expect(xml).not.toContain("Coasesor:");
+  });
+
+  it("conserva el párrafo de Coasesor en carátula cuando sí está registrado y en línea separada", () => {
+    const plantilla = obtenerPlantillaDocx("CARATULA_PLAN", "E1", 1);
+    expect(plantilla).not.toBeNull();
+    if (!plantilla) return;
+    const res = procesarDocxBuffer(plantilla, {
+      TESIS: "Mi Tesis de Prueba",
+      ASESOR: "Dr. Juan Pérez",
+      COASESOR: "Dr. Carlos Coasesor",
+    });
+    const zip = new PizZip(res.buffer);
+    const xml = zip.file("word/document.xml")?.asText() ?? "";
+    expect(xml).toContain("Coasesor:");
+    expect(xml).toContain("Dr. Carlos Coasesor");
+    // Verificar que Coasesor: y el nombre están en párrafos separados (de la misma forma que Asesor)
+    const separado = /Coasesor:\s*<\/w:t>.*?<\/w:p>\s*<w:p\b[^>]*>.*?Dr\. Carlos Coasesor/s.test(
+      xml,
+    );
+    expect(separado).toBe(true);
+  });
+
+  it("inserta salto de línea en carátula para 2 tesistas", () => {
+    const plantilla = obtenerPlantillaDocx("CARATULA_PLAN", "E1", 2);
+    expect(plantilla).not.toBeNull();
+    if (!plantilla) return;
+    const res = procesarDocxBuffer(plantilla, {
+      NOM_MIN: "María Pérez\nCarlos Gómez",
+    });
+    const zip = new PizZip(res.buffer);
+    const xml = zip.file("word/document.xml")?.asText() ?? "";
+    expect(xml).toContain('María Pérez</w:t><w:br/><w:t xml:space="preserve">Carlos Gómez');
   });
 });

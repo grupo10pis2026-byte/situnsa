@@ -57,6 +57,14 @@ interface Props {
     version: number;
     pendientes: string[];
   }) => void;
+  /** Callback para abrir modal de vista previa oficial */
+  onVistaPrevia?: (formato: {
+    id: string;
+    tipo: string;
+    nombre: string;
+    version: number;
+    pendientes: string[];
+  }) => void;
   /** Etapa actual del documento ("E1" | "E2" | "E6") */
   etapa?: "E1" | "E2" | "E6";
 }
@@ -372,25 +380,49 @@ export function DocumentoCard(p: Props) {
             {generando || generar.isPending ? "RELLENANDO…" : "RELLENAR"}
           </Button>
         )}
-        {p.formato && tieneFormatoGenerable && esPersonal && p.onModificar && (
-          <Button
-            tamano="sm"
-            variante="contorno"
-            onClick={() => {
-              if (!p.formato) return;
-              p.onModificar?.({
-                tipo: p.tipo,
-                nombre: p.nombre,
-                version: p.formato.version,
-                pendientes: p.formato.pendientes,
-              });
-            }}
-            title="Corregir datos de este formato y regenerar en Word/Google Drive"
-            type="button"
-          >
-            <Edit3 size={14} />
-            CORREGIR
-          </Button>
+        {p.formato && (
+          <>
+            {p.onVistaPrevia && (
+              <Button
+                tamano="sm"
+                variante="contorno"
+                onClick={() =>
+                  p.onVistaPrevia?.({
+                    id: p.formato!.id,
+                    tipo: p.tipo,
+                    nombre: p.nombre,
+                    version: p.formato!.version,
+                    pendientes: p.formato!.pendientes,
+                  })
+                }
+                title="Vista previa del formato en PDF con descarga A4"
+                type="button"
+              >
+                <Eye size={14} />
+                Vista Previa
+              </Button>
+            )}
+            {esPersonal && p.onModificar && (
+              <Button
+                tamano="sm"
+                variante="contorno"
+                onClick={() => {
+                  if (!p.formato) return;
+                  p.onModificar?.({
+                    tipo: p.tipo,
+                    nombre: p.nombre,
+                    version: p.formato.version,
+                    pendientes: p.formato.pendientes,
+                  });
+                }}
+                title="Corregir datos de este formato y regenerar en Word/Google Drive"
+                type="button"
+              >
+                <Edit3 size={14} />
+                CORREGIR
+              </Button>
+            )}
+          </>
         )}
         {puedeCargar ? (
           <button

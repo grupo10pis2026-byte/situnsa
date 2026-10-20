@@ -155,6 +155,22 @@ export const PLANTILLAS: readonly PlantillaDocumento[] = [
     ],
   },
   {
+    tipo: "ETIQUETAS",
+    nombre: "Formato maestro de etiquetas",
+    etapa: "E1",
+    estilo: "carta",
+    titulo: "FORMATO DE ETIQUETAS DEL EXPEDIENTE",
+    parrafos: [
+      "UNIVERSIDAD NACIONAL DE SAN AGUSTÍN DE AREQUIPA\nUNIDAD DE SEGUNDA ESPECIALIDAD",
+      "RESUMEN Y ETIQUETAS OFICIALES DEL EXPEDIENTE <<CODIGO>>",
+      "TESISTA: <<NOMBRES>> (DNI: <<DNI>>)",
+      "TÍTULO: «<<TESIS>>»",
+      "PROGRAMA: <<PROGRAMA>>",
+      "ASESOR: <<ASESOR>>",
+    ],
+    firmas: [],
+  },
+  {
     tipo: "ACTA_CONFORMIDAD",
     nombre: "Acta de conformidad de tesis",
     etapa: "E2",

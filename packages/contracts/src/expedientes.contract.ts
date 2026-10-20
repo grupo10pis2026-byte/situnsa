@@ -174,6 +174,9 @@ export const DocumentoGeneradoDTOSchema = z.object({
   version: z.number(),
   pendientes: z.array(z.string()),
   createdAt: z.string(),
+  documentoId: z.string().uuid().nullable().optional(),
+  documentoEstado: z.string().nullable().optional(),
+  documentoVersion: z.number().nullable().optional(),
 });
 
 /** Detalle completo: pestañas Datos/Documentos/Resumen + mensajes. */

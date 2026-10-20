@@ -325,6 +325,35 @@ export function formatoDescargaUrl(generadoId: string): string {
   return `${apiBaseUrl}/api/documentos-generados/${generadoId}/descargar`;
 }
 
+export function formatoPdfUrl(generadoId: string, descargar?: boolean): string {
+  return `${apiBaseUrl}/api/documentos-generados/${generadoId}/pdf${descargar ? "?descargar=1" : ""}`;
+}
+
+export interface UsuarioConcurrente {
+  id: string;
+  nombre: string;
+  rol: string;
+  activoHaceSegundos: number;
+}
+
+export async function reportarPresenciaExpediente(
+  expedienteId: string,
+  nombre?: string,
+): Promise<UsuarioConcurrente[]> {
+  try {
+    const res = await apiFetch(`${apiBaseUrl}/api/expedientes/${expedienteId}/presencia`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nombre }),
+    });
+    if (!res.ok) return [];
+    const data = (await res.json()) as { concurrentes?: UsuarioConcurrente[] };
+    return data.concurrentes ?? [];
+  } catch {
+    return [];
+  }
+}
+
 /**
  * Abre un PDF protegido en una pestaña nueva. Un `<a href>` no envía el
  * Bearer (vive solo en memoria) y la API respondía 401: se descarga con

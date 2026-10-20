@@ -22,6 +22,9 @@
       "correctness": {
         "noUnusedImports": "error"
       },
+      "complexity": {
+        "noImportantStyles": "off"
+      },
       "suspicious": {
         "noExplicitAny": "error"
       },
