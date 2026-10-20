@@ -34,7 +34,14 @@ interface Props {
   modoInicialObservar?: boolean;
 }
 
-const ROLES_ADMIN = ["ADMIN_FIPS", "SECRETARIA", "DECANO", "ASESOR"];
+const ROLES_ADMIN = [
+  "ADMIN_FIPS",
+  "SECRETARIA",
+  "DECANO",
+  "ASESOR",
+  "ADMIN_SISTEMA",
+  "RESP_TITULACION",
+];
 
 /** Calcula los días transcurridos desde una fecha ISO. */
 function calcularDiasTranscurridos(fechaIso: string): number {

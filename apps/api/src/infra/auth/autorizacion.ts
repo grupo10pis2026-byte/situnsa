@@ -33,7 +33,6 @@ export interface Perfil {
   permisos: Set<string>;
 }
 
-/** Roles activos + claves de permiso del usuario en una sola consulta. */
 export async function perfilDe(usuarioId: string): Promise<Perfil> {
   const rows = await db
     .select({ rol: roles.nombre, clave: permisos.clave })
@@ -47,6 +46,26 @@ export async function perfilDe(usuarioId: string): Promise<Perfil> {
   for (const r of rows) {
     nombres.add(r.rol);
     if (r.clave) claves.add(r.clave);
+  }
+  if (nombres.size === 0) {
+    const uRows = await db
+      .select({ rol: usuarios.rol })
+      .from(usuarios)
+      .where(eq(usuarios.id, usuarioId))
+      .limit(1);
+    const legacyRol = uRows[0]?.rol;
+    if (legacyRol) {
+      if (legacyRol === "ADMIN_FIPS") {
+        nombres.add("ADMIN_SISTEMA");
+        nombres.add("RESP_TITULACION");
+      } else if (legacyRol === "SECRETARIA") {
+        nombres.add("RESP_TITULACION");
+      } else if (legacyRol === "DECANO") {
+        nombres.add("AUTORIDAD");
+      } else {
+        nombres.add(legacyRol);
+      }
+    }
   }
   return { roles: [...nombres], permisos: claves };
 }
