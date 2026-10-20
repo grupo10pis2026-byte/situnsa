@@ -37,7 +37,7 @@ export function procesarDocxBuffer(
     "word/footer2.xml",
   ];
 
-  const tieneCoasesor = Boolean((datos["COASESOR"] ?? datos["CO ASESOR"] ?? "").trim());
+  const tieneCoasesor = Boolean((datos.COASESOR ?? datos["CO ASESOR"] ?? "").trim());
 
   for (const rutaXml of archivosXml) {
     const file = zip.file(rutaXml);

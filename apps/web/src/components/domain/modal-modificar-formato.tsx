@@ -307,18 +307,19 @@ export function ModalModificarFormato({
         }
         overridesFormateados[k] = formatted;
         if (k === "VEREDICTO") {
-          overridesFormateados["VERREDICTO"] = formatted;
+          overridesFormateados.VERREDICTO = formatted;
         }
         if (k === "NUMERO_ACTA") {
-          overridesFormateados["ACTA_NUMERO"] = formatted;
+          overridesFormateados.ACTA_NUMERO = formatted;
           overridesFormateados["NUMERO DE ACTA"] = formatted;
           overridesFormateados["N° DE ACTA"] = formatted;
         }
+
         if (k === "FECHA DE CONFORMIDAD" && formato.tipo === "ANEXO_08") {
-          overridesFormateados["FECHA"] = formatted;
+          overridesFormateados.FECHA = formatted;
         }
         if (k === "FECHA DE SIMILITUD") {
-          overridesFormateados["FECHA"] = formatted;
+          overridesFormateados.FECHA = formatted;
         }
       }
 

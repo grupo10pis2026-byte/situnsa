@@ -1,4 +1,4 @@
-import { db, documentos, expedientes } from "@pis/db";
+import { db, documentoObservaciones, documentos, expedientes, mensajes, usuarios } from "@pis/db";
 import { DomainError, fail, ok, type Result } from "@pis/domain";
 import { eq } from "drizzle-orm";
 import { DrizzleUnitOfWork } from "../../../../infra/db/unit-of-work.js";
@@ -46,6 +46,36 @@ export class VistoBuenoDocumentoUseCase {
       }
       const nuevo = input.aprobado ? "APROBADO" : "OBSERVADO";
       await tx.update(documentos).set({ estado: nuevo }).where(eq(documentos.id, documentoId));
+
+      if (!input.aprobado && (input.comentario ?? "").trim()) {
+        const usuarioRow = await tx
+          .select({ nombres: usuarios.nombres, apellidos: usuarios.apellidos, rol: usuarios.rol })
+          .from(usuarios)
+          .where(eq(usuarios.id, actor.id))
+          .limit(1);
+        const autorNombre = usuarioRow[0]
+          ? `${usuarioRow[0].nombres} ${usuarioRow[0].apellidos}`
+          : "Administración";
+        const autorRol = usuarioRow[0]?.rol ?? "ADMIN_FIPS";
+
+        await tx.insert(documentoObservaciones).values({
+          expedienteId: doc.expedienteId,
+          tipoDocumento: doc.tipo,
+          documentoId: doc.id,
+          texto: (input.comentario ?? "").trim(),
+          autorId: actor.id || null,
+          autorNombre,
+          autorRol,
+          estado: "PENDIENTE",
+        });
+
+        await tx.insert(mensajes).values({
+          expedienteId: doc.expedienteId,
+          autorId: actor.id || null,
+          texto: `[Observación en ${doc.tipo}]: ${(input.comentario ?? "").trim()}`,
+        });
+      }
+
       const expRows = await tx
         .select({ estado: expedientes.estado })
         .from(expedientes)
@@ -70,6 +100,7 @@ export class VistoBuenoDocumentoUseCase {
         tipo: doc.tipo,
       });
     });
+
     if (!r.ok) return r;
     if (r.value.estado === "OBSERVADO") {
       await enqueueCorreo({

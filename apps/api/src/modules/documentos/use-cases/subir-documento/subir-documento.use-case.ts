@@ -149,19 +149,6 @@ export class SubirDocumentoUseCase {
         .orderBy(desc(documentos.version));
       const ultimo = previos[0] ?? null;
       if (input.comoTesista) {
-        const activa = await subetapaActivaDe(tx, input.expedienteId);
-        const habilitado = cargaHabilitadaTesista(
-          { tipo: def.tipo, requeridoEn: def.requeridoEn, estado: ultimo?.estado ?? "PENDIENTE" },
-          activa?.clave ?? null,
-        );
-        if (!habilitado) {
-          return fail(
-            new DomainError(
-              "PERMISO_DENEGADO",
-              "Este documento no corresponde a la subetapa en curso de tu trámite (RN-06)",
-            ),
-          );
-        }
         if (ultimo?.estado === "APROBADO") {
           return fail(
             new DomainError(
@@ -170,7 +157,24 @@ export class SubirDocumentoUseCase {
             ),
           );
         }
+        const activa = await subetapaActivaDe(tx, input.expedienteId);
+        const habilitado =
+          ultimo !== null ||
+          cargaHabilitadaTesista(
+            { tipo: def.tipo, requeridoEn: def.requeridoEn, estado: "PENDIENTE" },
+            activa?.clave ?? null,
+          );
+
+        if (!habilitado) {
+          return fail(
+            new DomainError(
+              "PERMISO_DENEGADO",
+              "Este documento no corresponde a la subetapa en curso de tu trámite (RN-06)",
+            ),
+          );
+        }
       }
+
       // Limpiar archivo(s) anterior(es) en disco para no acumular basura
       if (previos.length > 0) {
         for (const p of previos) {

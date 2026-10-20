@@ -12,6 +12,7 @@ import {
   Edit3,
   Eye,
   FileText,
+  MessageSquare,
   Stamp,
   UploadCloud,
   WandSparkles,
@@ -21,6 +22,7 @@ import {
   documentoDescargaUrl,
   formatoDescargaUrl,
   useGenerarDocumentos,
+  useObservacionesDocumento,
   useSubirDocumento,
 } from "../../api/expedientes.js";
 import { useVistoBueno } from "../../api/seguimiento.js";
@@ -34,6 +36,7 @@ import { StatusBadge } from "../ui/status-badge.js";
 import { useToast } from "../ui/toast.js";
 import { AnalisisDocumentalPanel } from "./analisis-documental-panel.js";
 import { ItemHallazgo } from "./item-hallazgo.js";
+import { ModalObservacionesDocumento } from "./modal-observaciones-documento.js";
 import { ModalVisorDocumento } from "./modal-visor-documento.js";
 
 interface Props {
@@ -67,6 +70,10 @@ interface Props {
   }) => void;
   /** Etapa actual del documento ("E1" | "E2" | "E6") */
   etapa?: "E1" | "E2" | "E6";
+  /** Etiqueta visible de la etapa (ej. "Etapa 1 · Verificación") */
+  etiquetaEtapa?: string;
+  /** Permite al tesista subir o reemplazar directamente en su sección de etapa */
+  permitirSubir?: boolean;
 }
 
 const PERSONAL = ["ADMIN_FIPS", "SECRETARIA", "DECANO"];
@@ -134,18 +141,27 @@ export function DocumentoCard(p: Props) {
   const [pendiente, setPendiente] = useState<File | null>(null);
   const [revisionAbierta, setRevisionAbierta] = useState(false);
   const [visorAbierto, setVisorAbierto] = useState(false);
+  const [observacionesAbiertas, setObservacionesAbiertas] = useState(false);
+  const [modoObservarDirecto, setModoObservarDirecto] = useState(false);
+
+  const { data: observaciones = [] } = useObservacionesDocumento(p.expedienteId, p.tipo);
+  const observacionesPendientes = observaciones.filter((o) => o.estado === "PENDIENTE").length;
+
   const esPersonal = !!sesion && PERSONAL.includes(sesion.rol);
   const esTesista = sesion?.rol === "TESISTA";
-  // RN-06: el tesista solo carga lo de su subetapa activa (o lo observado) y
-  // nunca reemplaza un documento aprobado. El servidor lo vuelve a validar.
+  // RN-06: el tesista solo carga lo de su subetapa activa (o lo observado),
+  // tiene la opción de volver a subir documentos pendientes/cargados no aprobados,
+  // y nunca reemplaza un documento aprobado. El servidor lo vuelve a validar.
   const puedeCargar = esPersonal
     ? true
     : esTesista &&
       p.estado !== "APROBADO" &&
-      cargaHabilitadaTesista(
-        { tipo: p.tipo, requeridoEn: p.requeridoEn ?? null, estado: p.estado },
-        p.subetapaActiva ?? null,
-      );
+      (p.permitirSubir ||
+        p.version !== null ||
+        cargaHabilitadaTesista(
+          { tipo: p.tipo, requeridoEn: p.requeridoEn ?? null, estado: p.estado },
+          p.subetapaActiva ?? null,
+        ));
   // V°B°: asesor asignado o personal; solo sobre documento cargado u observado.
   const puedeVisar =
     !!p.documentoId &&
@@ -275,6 +291,11 @@ export function DocumentoCard(p: Props) {
           </div>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
+          {p.etiquetaEtapa && (
+            <span className="inline-flex items-center gap-1 rounded-full border border-navy-200 bg-navy-50 px-2.5 py-0.5 text-[11px] font-bold text-navy-800">
+              {p.etiquetaEtapa}
+            </span>
+          )}
           <StatusBadge estado={p.estado} />
         </div>
       </div>
@@ -309,6 +330,24 @@ export function DocumentoCard(p: Props) {
             VER
           </span>
         )}
+        <Button
+          tamano="sm"
+          variante={observacionesPendientes > 0 ? "peligro" : "contorno"}
+          onClick={() => {
+            setModoObservarDirecto(false);
+            setObservacionesAbiertas(true);
+          }}
+          type="button"
+          title="Ver historial de observaciones y correcciones de este documento"
+        >
+          <MessageSquare size={14} />
+          OBSERVACIONES
+          {observacionesPendientes > 0 && (
+            <span className="ml-1 rounded-full bg-white text-red-700 px-1.5 py-0.2 text-[10px] font-black shadow-xs">
+              {observacionesPendientes}
+            </span>
+          )}
+        </Button>
         {tieneFormatoGenerable && esPersonal && (
           <Button
             tamano="sm"
@@ -328,15 +367,16 @@ export function DocumentoCard(p: Props) {
               <Button
                 tamano="sm"
                 variante="contorno"
-                onClick={() =>
+                onClick={() => {
+                  if (!p.formato) return;
                   p.onVistaPrevia?.({
-                    id: p.formato!.id,
+                    id: p.formato.id,
                     tipo: p.tipo,
                     nombre: p.nombre,
-                    version: p.formato!.version,
-                    pendientes: p.formato!.pendientes,
-                  })
-                }
+                    version: p.formato.version,
+                    pendientes: p.formato.pendientes,
+                  });
+                }}
                 title="Vista previa del formato en PDF con descarga A4"
                 type="button"
               >
@@ -374,7 +414,7 @@ export function DocumentoCard(p: Props) {
             type="button"
           >
             <UploadCloud size={14} />
-            {subir.isPending ? "SUBIENDO…" : p.version === null ? "ADJUNTAR" : "REEMPLAZAR"}
+            {subir.isPending ? "SUBIENDO…" : p.version === null ? "ADJUNTAR" : "VOLVER A SUBIR"}
           </button>
         ) : (
           esTesista && (
@@ -401,7 +441,10 @@ export function DocumentoCard(p: Props) {
               tamano="sm"
               variante="contorno"
               disabled={vistoBueno.isPending}
-              onClick={() => void visar(false)}
+              onClick={() => {
+                setModoObservarDirecto(true);
+                setObservacionesAbiertas(true);
+              }}
               type="button"
             >
               Observar
@@ -419,6 +462,7 @@ export function DocumentoCard(p: Props) {
           }}
         />
       </div>
+
       {p.documentoId && (
         <Dialogo
           abierto={revisionAbierta}
@@ -567,6 +611,15 @@ export function DocumentoCard(p: Props) {
           estado={p.estado}
         />
       )}
+      <ModalObservacionesDocumento
+        abierto={observacionesAbiertas}
+        onCerrar={() => setObservacionesAbiertas(false)}
+        expedienteId={p.expedienteId}
+        tipoDocumento={p.tipo}
+        nombreDocumento={p.nombre}
+        documentoId={p.documentoId}
+        modoInicialObservar={modoObservarDirecto}
+      />
     </Card>
   );
 }

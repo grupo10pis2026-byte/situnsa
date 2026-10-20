@@ -94,6 +94,28 @@ export const DocumentoRevisionDTOSchema = z.object({
 });
 export type DocumentoRevisionDTO = z.infer<typeof DocumentoRevisionDTOSchema>;
 
+export const ObservacionDocumentoDTOSchema = z.object({
+  id: z.string().uuid(),
+  expedienteId: z.string().uuid(),
+  tipoDocumento: z.string(),
+  documentoId: z.string().uuid().nullable(),
+  texto: z.string(),
+  autorId: z.string().uuid().nullable(),
+  autorNombre: z.string().nullable(),
+  autorRol: z.string().nullable(),
+  estado: z.enum(["PENDIENTE", "RESUELTO"]),
+  resueltoAt: z.string().nullable(),
+  resueltoPorId: z.string().uuid().nullable(),
+  resueltoPorNombre: z.string().nullable(),
+  createdAt: z.string(),
+});
+export type ObservacionDocumentoDTO = z.infer<typeof ObservacionDocumentoDTOSchema>;
+
+export const CrearObservacionDocumentoSchema = z.object({
+  texto: z.string().min(1, "La observación no puede estar vacía").max(2000),
+  documentoId: z.string().uuid().optional(),
+});
+
 const c = initContract();
 
 export const documentosContract = c.router({
@@ -188,5 +210,55 @@ export const documentosContract = c.router({
       404: ErrorEnvelopeSchema,
     },
     summary: "Informe de revisión automática de documento",
+  },
+  listarObservaciones: {
+    method: "GET",
+    path: "/api/expedientes/:expedienteId/documentos/:tipo/observaciones",
+    pathParams: z.object({
+      expedienteId: z.string().uuid(),
+      tipo: z.string(),
+    }),
+    responses: {
+      200: z.array(ObservacionDocumentoDTOSchema),
+      401: ErrorEnvelopeSchema,
+      403: ErrorEnvelopeSchema,
+      404: ErrorEnvelopeSchema,
+    },
+    summary: "Historial de observaciones de un tipo de documento en el expediente",
+  },
+  crearObservacion: {
+    method: "POST",
+    path: "/api/expedientes/:expedienteId/documentos/:tipo/observaciones",
+    pathParams: z.object({
+      expedienteId: z.string().uuid(),
+      tipo: z.string(),
+    }),
+    body: CrearObservacionDocumentoSchema,
+    responses: {
+      201: ObservacionDocumentoDTOSchema,
+      400: ErrorEnvelopeSchema,
+      401: ErrorEnvelopeSchema,
+      403: ErrorEnvelopeSchema,
+      404: ErrorEnvelopeSchema,
+    },
+    summary: "Registra una observación para un tipo de documento (marca OBSERVADO)",
+  },
+  resolverObservacion: {
+    method: "PATCH",
+    path: "/api/expedientes/:expedienteId/documentos/:tipo/observaciones/:observacionId/resolver",
+    pathParams: z.object({
+      expedienteId: z.string().uuid(),
+      tipo: z.string(),
+      observacionId: z.string().uuid(),
+    }),
+    body: z.object({}).optional(),
+    responses: {
+      200: ObservacionDocumentoDTOSchema,
+      400: ErrorEnvelopeSchema,
+      401: ErrorEnvelopeSchema,
+      403: ErrorEnvelopeSchema,
+      404: ErrorEnvelopeSchema,
+    },
+    summary: "Tesista o revisor marca una observación como resuelta",
   },
 });

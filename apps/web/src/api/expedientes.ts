@@ -6,6 +6,7 @@ import {
   ExpedienteDetalleDTOSchema,
   type InscribirPlanInput,
   InscribirPlanSchema,
+  type ObservacionDocumentoDTO,
 } from "@pis/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiBaseUrl } from "./client.js";
@@ -417,4 +418,70 @@ export async function obtenerBlobArchivoProtegido(
   const blob = await res.blob();
   const blobUrl = URL.createObjectURL(blob);
   return { blobUrl, blob };
+}
+
+export const observacionesDocumentoKey = (expedienteId: string, tipo: string) =>
+  ["expedientes", expedienteId, "documentos", tipo, "observaciones"] as const;
+
+/** Historial de observaciones para un tipo de documento específico. */
+export function useObservacionesDocumento(expedienteId: string, tipo: string, habilitado = true) {
+  return useQuery({
+    queryKey: observacionesDocumentoKey(expedienteId, tipo),
+    queryFn: async (): Promise<ObservacionDocumentoDTO[]> => {
+      const res = await apiFetch(
+        `${apiBaseUrl}/api/expedientes/${expedienteId}/documentos/${tipo}/observaciones`,
+      );
+      if (!res.ok) throw await errorDeRespuesta(res, "No se pudo obtener las observaciones");
+      return (await res.json()) as ObservacionDocumentoDTO[];
+    },
+    enabled: Boolean(expedienteId && tipo && habilitado),
+  });
+}
+
+/** Registra una nueva observación administrativa para el documento. */
+export function useCrearObservacionDocumento(expedienteId: string, tipo: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      texto: string;
+      documentoId?: string;
+    }): Promise<ObservacionDocumentoDTO> => {
+      const res = await apiFetch(
+        `${apiBaseUrl}/api/expedientes/${expedienteId}/documentos/${tipo}/observaciones`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(input),
+        },
+      );
+      if (!res.ok) throw await errorDeRespuesta(res, "No se pudo registrar la observación");
+      return (await res.json()) as ObservacionDocumentoDTO;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: observacionesDocumentoKey(expedienteId, tipo) });
+      qc.invalidateQueries({ queryKey: expedienteKey(expedienteId) });
+      qc.invalidateQueries({ queryKey: expedientesKey });
+    },
+  });
+}
+
+/** Marca una observación como resuelta por el tesista o revisor. */
+export function useResolverObservacionDocumento(expedienteId: string, tipo: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (observacionId: string): Promise<ObservacionDocumentoDTO> => {
+      const res = await apiFetch(
+        `${apiBaseUrl}/api/expedientes/${expedienteId}/documentos/${tipo}/observaciones/${observacionId}/resolver`,
+        {
+          method: "PATCH",
+        },
+      );
+      if (!res.ok) throw await errorDeRespuesta(res, "No se pudo marcar como resuelta");
+      return (await res.json()) as ObservacionDocumentoDTO;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: observacionesDocumentoKey(expedienteId, tipo) });
+      qc.invalidateQueries({ queryKey: expedienteKey(expedienteId) });
+    },
+  });
 }

@@ -620,7 +620,9 @@ function ExtraFormatoCard({
           <Button
             tamano="sm"
             variante="contorno"
-            onClick={() => void abrirAdjunto(g.documentoId!)}
+            onClick={() => {
+              if (g.documentoId) void abrirAdjunto(g.documentoId);
+            }}
             title="Ver PDF escaneado/firmado adjunto"
             type="button"
             className="text-sky-700 border-sky-300 hover:bg-sky-50"
@@ -761,6 +763,13 @@ function DocumentosTab({
               subetapaActiva={d.subetapaActiva?.clave ?? null}
               formato={generadoPorTipo.get(c.tipo) ?? null}
               etapa={etapa}
+              etiquetaEtapa={
+                etapa === "E1"
+                  ? "Etapa 1 · Verificación"
+                  : etapa === "E2"
+                    ? "Etapa 2 · Borrador"
+                    : "Etapa 6 · Aprobaciones"
+              }
               onModificar={setFormatoAModificar}
               onVistaPrevia={setFormatoAVer}
             />
