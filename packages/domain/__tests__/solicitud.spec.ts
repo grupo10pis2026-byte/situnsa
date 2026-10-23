@@ -57,6 +57,19 @@ describe("Validación de participantes en Solicitud", () => {
     }
   });
 
+  it("rechaza correo no institucional en participante", () => {
+    const res = validarParticipantesSolicitud({
+      nombres: "Juan Carlos",
+      apellidos: "Pérez Quispe",
+      dni: "71234567",
+      email: "jperez@gmail.com",
+    });
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error.message).toContain("institucional (@unsa.edu.pe)");
+    }
+  });
+
   it("rechaza dos participantes con el mismo DNI", () => {
     const p1 = {
       nombres: "Juan Carlos",
@@ -68,7 +81,7 @@ describe("Validación de participantes en Solicitud", () => {
       nombres: "Maria Elena",
       apellidos: "Torres Flores",
       dni: "71234567",
-      email: "mtorres@gmail.com",
+      email: "mtorres@unsa.edu.pe",
     };
     const res = validarParticipantesSolicitud(p1, p2);
     expect(res.ok).toBe(false);
@@ -82,13 +95,13 @@ describe("Validación de participantes en Solicitud", () => {
       nombres: "Juan Carlos",
       apellidos: "Pérez Quispe",
       dni: "71234567",
-      email: "compartido@gmail.com",
+      email: "compartido@unsa.edu.pe",
     };
     const p2 = {
       nombres: "Maria Elena",
       apellidos: "Torres Flores",
       dni: "87654321",
-      email: "COMPARTIDO@gmail.com",
+      email: "COMPARTIDO@unsa.edu.pe",
     };
     const res = validarParticipantesSolicitud(p1, p2);
     expect(res.ok).toBe(false);

@@ -35,6 +35,7 @@ interface DatosParticipante {
   telefono: string;
   nacionalidad: string;
   ciudad: string;
+  distrito: string;
   direccion: string;
 }
 
@@ -47,6 +48,7 @@ const participanteInicial: DatosParticipante = {
   telefono: "",
   nacionalidad: "Peruana",
   ciudad: "Arequipa",
+  distrito: "",
   direccion: "",
 };
 
@@ -95,82 +97,112 @@ export function MesaDePartesPage() {
 
   const docsRequeridos: RequisitoDoc[] =
     via === "REGULAR"
-      ? [
-          { clave: "FUT", nombre: "Solicitud de Inscripción / FUT", requerido: true },
-          {
-            clave: "PLAN_TESIS",
-            nombre: "El Plan de Tesis o Plan de Trabajo Académico",
-            requerido: true,
-            guiaTexto: "Se adjunta esquema. Utilizar el formato actualizado:",
-            guiaEnlaces: [
-              {
-                texto: "Descargar Formato Plan de Tesis (Google Docs)",
-                url: "https://docs.google.com/document/d/1rHSCqSIEXVKPxxQYG0jAPfF9hhZVCxbJ/edit?usp=drive_web&ouid=106454452671119045265&rtpof=true",
-              },
-              {
-                texto: "Descargar Plan de Trabajo Académico (Google Docs)",
-                url: "https://docs.google.com/document/d/1e3RGNju998E4rWh2pgwahXNyI269a0Ri/edit?rtpof=true&tab=t.0",
-              },
-            ],
-          },
-          {
-            clave: "CONSTANCIA_NO_ADEUDO",
-            nombre: "Constancia de No Adeudo",
-            requerido: true,
-            guiaTexto:
-              "En caso de no contar con dicha información, deberá solicitarla al correo institucional de administración:",
-            guiaCorreo: "fips_usesp_administracion@unsa.edu.pe",
-          },
-          {
-            clave: "PAGO_TRAMITE",
-            nombre: "Recibo de Pago por Derechos de Trámite",
-            requerido: true,
-            guiaTexto:
-              "Adjuntar el abono correspondiente, generando su ticket con el correo institucional, indicando como concepto: PENSIÓN, a través del sistema UNSAPay:",
-            guiaEnlaces: [
-              {
-                texto: "Acceder a UNSAPay (ouis.unsa.edu.pe/unsapay/login)",
-                url: "https://ouis.unsa.edu.pe/unsapay/login",
-              },
-            ],
-            guiaManual: {
-              texto:
-                "Para conocer el paso a paso sobre cómo generar tu código de ticket, ingresa al manual:",
-              enlace: {
-                texto: "Manual de Procedimientos: Pagos UNSAPay",
-                url: "https://fips.unsa.edu.pe/usefc/pagos-unsapay/",
-              },
-              correoSoporte:
-                "En caso de no poder ingresar a su correo institucional, deberá solicitar el soporte correspondiente escribiendo al correo: soportecorreo@unsa.edu.pe",
+      ? modalidad === "TESIS"
+        ? [
+            {
+              clave: "ANEXO_17",
+              nombre: "Anexo 17: Solicitud de Declaración de Aptitud para Titulación / FUT",
+              requerido: true,
+              guiaTexto:
+                "Completar y adjuntar el formato oficial Anexo 17 debidamente firmado por el/los tesista(s).",
             },
-          },
-          {
-            clave: "FOTO_ESTUDIANTE",
-            nombre:
-              cantidadTesistas === 2
-                ? "Fotografía del Tesista Titular (Fondo blanco)"
-                : "Fotografía del Estudiante (Fondo blanco)",
-            requerido: true,
-            esFoto: true,
-            formatos: ".pdf,.jpg,.jpeg,.png",
-            guiaTexto:
-              "Obligatorio: Adjuntar fotografía formal reciente con fondo blanco (formato PDF, JPG o PNG).",
-          },
-          ...(cantidadTesistas === 2
-            ? [
+            {
+              clave: "ANEXO_18",
+              nombre: "Anexo 18: Declaración Jurada de Autenticidad",
+              requerido: true,
+              guiaTexto:
+                "Declaración jurada de no tener antecedentes y autenticidad del plan de tesis.",
+            },
+            {
+              clave: "PLAN_TESIS",
+              nombre: "El Plan de Tesis",
+              requerido: true,
+              guiaTexto: "Se adjunta esquema. Utilizar el formato oficial actualizado:",
+              guiaEnlaces: [
                 {
-                  clave: "FOTO_ESTUDIANTE_2",
-                  nombre: "Fotografía del Segundo Tesista (Fondo blanco)",
-                  requerido: true,
-                  esFoto: true,
-                  formatos: ".pdf,.jpg,.jpeg,.png",
-                  guiaTexto:
-                    "Obligatorio: Adjuntar fotografía formal reciente con fondo blanco del segundo participante (formato PDF, JPG o PNG).",
+                  texto: "Descargar Formato Plan de Tesis (Google Docs)",
+                  url: "https://docs.google.com/document/d/1rHSCqSIEXVKPxxQYG0jAPfF9hhZVCxbJ/edit?usp=drive_web&ouid=106454452671119045265&rtpof=true",
                 },
-              ]
-            : []),
-          { clave: "IDIOMA", nombre: "Certificado de Idioma Extranjero", requerido: false },
-        ]
+              ],
+            },
+            {
+              clave: "PAGO_TRAMITE",
+              nombre: "Recibo de Pago por Derechos de Trámite (S/. 6.00)",
+              requerido: true,
+              guiaTexto:
+                "Adjuntar el abono correspondiente por trámite documentario (S/. 6.00), generando su ticket con el correo institucional a través del sistema UNSAPay:",
+              guiaEnlaces: [
+                {
+                  texto: "Acceder a UNSAPay (ouis.unsa.edu.pe/unsapay/login)",
+                  url: "https://ouis.unsa.edu.pe/unsapay/login",
+                },
+              ],
+              guiaManual: {
+                texto:
+                  "Para conocer el paso a paso sobre cómo generar tu código de ticket, ingresa al manual:",
+                enlace: {
+                  texto: "Manual de Procedimientos: Pagos UNSAPay",
+                  url: "https://fips.unsa.edu.pe/usefc/pagos-unsapay/",
+                },
+                correoSoporte:
+                  "En caso de no poder ingresar a su correo institucional, deberá solicitar el soporte correspondiente escribiendo al correo: soportecorreo@unsa.edu.pe",
+              },
+            },
+          ]
+        : [
+            {
+              clave: "ANEXO_17",
+              nombre: "Anexo 17: Solicitud de Declaración de Aptitud para Titulación / FUT",
+              requerido: true,
+              guiaTexto:
+                "Completar y adjuntar el formato oficial Anexo 17 debidamente firmado por el/los tesista(s).",
+            },
+            {
+              clave: "ANEXO_18",
+              nombre: "Anexo 18: Declaración Jurada de Autenticidad",
+              requerido: true,
+              guiaTexto:
+                "Declaración jurada de no tener antecedentes y autenticidad del trabajo académico.",
+            },
+            {
+              clave: "PLAN_TRABAJO_ACADEMICO",
+              nombre: "Plan de Trabajo Académico",
+              requerido: true,
+              guiaTexto: "Descargar y completar el esquema oficial de Plan de Trabajo Académico:",
+              guiaEnlaces: [
+                {
+                  texto: "Descargar Plan de Trabajo Académico (Google Docs)",
+                  url: "https://docs.google.com/document/d/1e3RGNju998E4rWh2pgwahXNyI269a0Ri/edit?rtpof=true&tab=t.0",
+                },
+              ],
+            },
+            {
+              clave: "CONSTANCIA_TRABAJO",
+              nombre: "Constancia de Trabajo / Ejercicio Profesional",
+              requerido: true,
+              guiaTexto:
+                "Constancia oficial que acredite el ejercicio profesional en la especialidad.",
+            },
+            {
+              clave: "CERTIFICADO_SUNARP",
+              nombre: "Certificado Positivo de Propiedad o Registro SUNARP",
+              requerido: true,
+              guiaTexto: "Certificado registral oficial emitido por la SUNARP.",
+            },
+            {
+              clave: "PAGO_TRAMITE",
+              nombre: "Recibo de Pago por Derechos de Trámite (S/. 6.00)",
+              requerido: true,
+              guiaTexto:
+                "Adjuntar el abono correspondiente por trámite documentario (S/. 6.00), generando su ticket con el correo institucional a través del sistema UNSAPay:",
+              guiaEnlaces: [
+                {
+                  texto: "Acceder a UNSAPay (ouis.unsa.edu.pe/unsapay/login)",
+                  url: "https://ouis.unsa.edu.pe/unsapay/login",
+                },
+              ],
+            },
+          ]
       : [
           { clave: "SOLICITUD_TALLER", nombre: "Ficha de Inscripción al Taller", requerido: true },
           {
@@ -304,8 +336,18 @@ export function MesaDePartesPage() {
       setErrorGlobal("El CUI del postulante titular debe tener exactamente 8 dígitos numéricos");
       return false;
     }
-    if (!p1.email.trim() || !p1.email.includes("@")) {
-      setErrorGlobal("Ingrese un correo electrónico válido para el postulante titular");
+    if (!p1.email.trim() || !p1.email.trim().toLowerCase().endsWith("@unsa.edu.pe")) {
+      setErrorGlobal(
+        "El postulante titular debe registrar obligatoriamente su correo institucional (@unsa.edu.pe)",
+      );
+      return false;
+    }
+    if (!p1.telefono.trim()) {
+      setErrorGlobal("Ingrese un teléfono o celular de contacto para el postulante titular");
+      return false;
+    }
+    if (!p1.direccion.trim() || !p1.ciudad.trim()) {
+      setErrorGlobal("Complete la dirección y ciudad del postulante titular");
       return false;
     }
 
@@ -322,12 +364,26 @@ export function MesaDePartesPage() {
         setErrorGlobal("El CUI del segundo tesista debe tener exactamente 8 dígitos numéricos");
         return false;
       }
+      if (!p2.email.trim() || !p2.email.trim().toLowerCase().endsWith("@unsa.edu.pe")) {
+        setErrorGlobal(
+          "El segundo tesista debe registrar obligatoriamente su correo institucional (@unsa.edu.pe)",
+        );
+        return false;
+      }
+      if (!p2.telefono.trim()) {
+        setErrorGlobal("Ingrese un teléfono o celular de contacto para el segundo tesista");
+        return false;
+      }
+      if (!p2.direccion.trim() || !p2.ciudad.trim()) {
+        setErrorGlobal("Complete la dirección y ciudad del segundo tesista");
+        return false;
+      }
       if (p1.dni.trim() === p2.dni.trim()) {
         setErrorGlobal("El primer y segundo tesista no pueden tener el mismo DNI");
         return false;
       }
       if (p1.email.trim().toLowerCase() === p2.email.trim().toLowerCase()) {
-        setErrorGlobal("Cada tesista debe registrar un correo electrónico distinto");
+        setErrorGlobal("Cada tesista debe registrar un correo institucional distinto");
         return false;
       }
     }
@@ -371,6 +427,7 @@ export function MesaDePartesPage() {
           telefono: p1.telefono.trim() || undefined,
           nacionalidad: p1.nacionalidad.trim() || "Peruana",
           ciudad: p1.ciudad.trim() || undefined,
+          distrito: p1.distrito.trim() || undefined,
           direccion: p1.direccion.trim() || undefined,
         },
         participante2:
@@ -384,6 +441,7 @@ export function MesaDePartesPage() {
                 telefono: p2.telefono.trim() || undefined,
                 nacionalidad: p2.nacionalidad.trim() || "Peruana",
                 ciudad: p2.ciudad.trim() || undefined,
+                distrito: p2.distrito.trim() || undefined,
                 direccion: p2.direccion.trim() || undefined,
               }
             : undefined,
@@ -570,15 +628,26 @@ export function MesaDePartesPage() {
                 </Field>
               </div>
 
-              <Field etiqueta="Programa de Segunda Especialidad">
-                <Select value={programa} onChange={(v) => setPrograma(v)}>
-                  {PROGRAMAS_OFICIALES.map((p) => (
-                    <option key={p.codigo} value={p.nombre}>
-                      {p.nombre}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Field etiqueta="Facultad">
+                  <input
+                    className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs text-grafito-800 shadow-sm focus:outline-none"
+                    disabled
+                    readOnly
+                    value="Facultad de Ingeniería de Producción y Servicios (FIPS)"
+                  />
+                </Field>
+
+                <Field etiqueta="Programa de Segunda Especialidad">
+                  <Select value={programa} onChange={(v) => setPrograma(v)}>
+                    {PROGRAMAS_OFICIALES.map((p) => (
+                      <option key={p.codigo} value={p.nombre}>
+                        {p.nombre}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              </div>
 
               <Field
                 ayuda="Título tentativo del plan registrado en mesa de partes."
@@ -651,13 +720,28 @@ export function MesaDePartesPage() {
             <div className="space-y-6">
               <div>
                 <h2 className="text-base font-bold text-navy-950">
-                  Paso 2: Datos de Postulante(s)
+                  Paso 2: Datos de Postulante(s) (Anexo 17)
                 </h2>
                 <p className="text-xs text-grafito-600">
                   {cantidadTesistas === 1
                     ? "Ingrese los datos personales y de contacto del postulante titular."
                     : "Ingrese los datos del postulante titular y co-tesista."}
                 </p>
+              </div>
+
+              {/* Alerta Visual de Correo Institucional UNSA */}
+              <div className="flex items-start gap-2.5 rounded-xl border border-blue-200 bg-blue-50/80 p-3.5 text-xs text-blue-900">
+                <Info size={16} className="mt-0.5 shrink-0 text-blue-700" />
+                <div>
+                  <p className="font-semibold text-blue-950">Uso obligatorio de Correo Institucional</p>
+                  <p className="mt-0.5 text-blue-800">
+                    Caso de NO contar con correo institucional, solicitar a{" "}
+                    <a className="font-bold underline text-blue-950" href="mailto:soportecorreo@unsa.edu.pe">
+                      soportecorreo@unsa.edu.pe
+                    </a>{" "}
+                    antes de iniciar el trámite.
+                  </p>
+                </div>
               </div>
 
               {/* Tesista 1 */}
@@ -711,6 +795,17 @@ export function MesaDePartesPage() {
                       }
                     />
                   </Field>
+                  <Field etiqueta="Nacionalidad">
+                    <input
+                      className="h-9 w-full rounded-lg border border-slate-300 px-3 text-xs text-grafito-900 shadow-card focus:border-navy-800 focus:outline-none"
+                      placeholder="Peruana"
+                      value={p1.nacionalidad}
+                      onChange={(e) => setP1({ ...p1, nacionalidad: e.target.value })}
+                    />
+                  </Field>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Field etiqueta="Teléfono / Celular">
                     <input
                       className="h-9 w-full rounded-lg border border-slate-300 px-3 text-xs text-grafito-900 shadow-card focus:border-navy-800 focus:outline-none"
@@ -719,36 +814,44 @@ export function MesaDePartesPage() {
                       onChange={(e) => setP1({ ...p1, telefono: e.target.value })}
                     />
                   </Field>
-                </div>
 
-                <Field
-                  ayuda="A este correo se remitirán observaciones y credenciales de acceso."
-                  etiqueta="Correo Electrónico"
-                >
-                  <input
-                    className="h-9 w-full rounded-lg border border-slate-300 px-3 text-xs text-grafito-900 shadow-card focus:border-navy-800 focus:outline-none"
-                    placeholder="postulante@unsa.edu.pe"
-                    type="email"
-                    value={p1.email}
-                    onChange={(e) => setP1({ ...p1, email: e.target.value })}
-                  />
-                </Field>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <Field etiqueta="Ciudad">
+                  <Field
+                    ayuda="Obligatorio correo institucional (@unsa.edu.pe)"
+                    etiqueta="Correo Electrónico Institucional"
+                  >
                     <input
                       className="h-9 w-full rounded-lg border border-slate-300 px-3 text-xs text-grafito-900 shadow-card focus:border-navy-800 focus:outline-none"
-                      placeholder="Arequipa"
-                      value={p1.ciudad}
-                      onChange={(e) => setP1({ ...p1, ciudad: e.target.value })}
+                      placeholder="postulante@unsa.edu.pe"
+                      type="email"
+                      value={p1.email}
+                      onChange={(e) => setP1({ ...p1, email: e.target.value })}
                     />
                   </Field>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <Field etiqueta="Dirección Domiciliaria">
                     <input
                       className="h-9 w-full rounded-lg border border-slate-300 px-3 text-xs text-grafito-900 shadow-card focus:border-navy-800 focus:outline-none"
                       placeholder="Av. Independencia s/n"
                       value={p1.direccion}
                       onChange={(e) => setP1({ ...p1, direccion: e.target.value })}
+                    />
+                  </Field>
+                  <Field etiqueta="Distrito">
+                    <input
+                      className="h-9 w-full rounded-lg border border-slate-300 px-3 text-xs text-grafito-900 shadow-card focus:border-navy-800 focus:outline-none"
+                      placeholder="Arequipa"
+                      value={p1.distrito}
+                      onChange={(e) => setP1({ ...p1, distrito: e.target.value })}
+                    />
+                  </Field>
+                  <Field etiqueta="Ciudad">
+                    <input
+                      className="h-9 w-full rounded-lg border border-slate-300 px-3 text-xs text-grafito-900 shadow-card focus:border-navy-800 focus:outline-none"
+                      placeholder="Arequipa"
+                      value={p1.ciudad}
+                      onChange={(e) => setP1({ ...p1, ciudad: e.target.value })}
                     />
                   </Field>
                 </div>
@@ -806,6 +909,17 @@ export function MesaDePartesPage() {
                         }
                       />
                     </Field>
+                    <Field etiqueta="Nacionalidad">
+                      <input
+                        className="h-9 w-full rounded-lg border border-slate-300 px-3 text-xs text-grafito-900 shadow-card focus:border-navy-800 focus:outline-none"
+                        placeholder="Peruana"
+                        value={p2.nacionalidad}
+                        onChange={(e) => setP2({ ...p2, nacionalidad: e.target.value })}
+                      />
+                    </Field>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <Field etiqueta="Teléfono / Celular">
                       <input
                         className="h-9 w-full rounded-lg border border-slate-300 px-3 text-xs text-grafito-900 shadow-card focus:border-navy-800 focus:outline-none"
@@ -814,17 +928,47 @@ export function MesaDePartesPage() {
                         onChange={(e) => setP2({ ...p2, telefono: e.target.value })}
                       />
                     </Field>
+
+                    <Field
+                      ayuda="Obligatorio correo institucional distinto (@unsa.edu.pe)"
+                      etiqueta="Correo Electrónico Institucional"
+                    >
+                      <input
+                        className="h-9 w-full rounded-lg border border-slate-300 px-3 text-xs text-grafito-900 shadow-card focus:border-navy-800 focus:outline-none"
+                        placeholder="co-tesista@unsa.edu.pe"
+                        type="email"
+                        value={p2.email}
+                        onChange={(e) => setP2({ ...p2, email: e.target.value })}
+                      />
+                    </Field>
                   </div>
 
-                  <Field etiqueta="Correo Electrónico Distinto">
-                    <input
-                      className="h-9 w-full rounded-lg border border-slate-300 px-3 text-xs text-grafito-900 shadow-card focus:border-navy-800 focus:outline-none"
-                      placeholder="co-tesista@unsa.edu.pe"
-                      type="email"
-                      value={p2.email}
-                      onChange={(e) => setP2({ ...p2, email: e.target.value })}
-                    />
-                  </Field>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <Field etiqueta="Dirección Domiciliaria">
+                      <input
+                        className="h-9 w-full rounded-lg border border-slate-300 px-3 text-xs text-grafito-900 shadow-card focus:border-navy-800 focus:outline-none"
+                        placeholder="Calle Los Rosales 456"
+                        value={p2.direccion}
+                        onChange={(e) => setP2({ ...p2, direccion: e.target.value })}
+                      />
+                    </Field>
+                    <Field etiqueta="Distrito">
+                      <input
+                        className="h-9 w-full rounded-lg border border-slate-300 px-3 text-xs text-grafito-900 shadow-card focus:border-navy-800 focus:outline-none"
+                        placeholder="Yanahuara"
+                        value={p2.distrito}
+                        onChange={(e) => setP2({ ...p2, distrito: e.target.value })}
+                      />
+                    </Field>
+                    <Field etiqueta="Ciudad">
+                      <input
+                        className="h-9 w-full rounded-lg border border-slate-300 px-3 text-xs text-grafito-900 shadow-card focus:border-navy-800 focus:outline-none"
+                        placeholder="Arequipa"
+                        value={p2.ciudad}
+                        onChange={(e) => setP2({ ...p2, ciudad: e.target.value })}
+                      />
+                    </Field>
+                  </div>
                 </div>
               )}
 

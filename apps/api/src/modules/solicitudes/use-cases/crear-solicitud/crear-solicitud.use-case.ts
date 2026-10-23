@@ -110,6 +110,60 @@ export class CrearSolicitudUseCase {
       }
     }
 
+    // Validar correo institucional obligatorio (@unsa.edu.pe)
+    if (!input.participante1.email.trim().toLowerCase().endsWith("@unsa.edu.pe")) {
+      return fail(
+        new DomainError(
+          "VALIDACION_FALLIDA",
+          "El correo del Tesista 01 debe ser institucional (@unsa.edu.pe)",
+        ),
+      );
+    }
+    if (
+      input.participante2 &&
+      !input.participante2.email.trim().toLowerCase().endsWith("@unsa.edu.pe")
+    ) {
+      return fail(
+        new DomainError(
+          "VALIDACION_FALLIDA",
+          "El correo del Tesista 02 debe ser institucional (@unsa.edu.pe)",
+        ),
+      );
+    }
+
+    // Validar documentos mínimos obligatorios según modalidad (Vía Regular)
+    const tiposPresentes = new Set(
+      archivos.map((a) => {
+        const t = a.tipo.toUpperCase();
+        if (t === "FUT" || t === "EXPEDIENTE_17") return "ANEXO_17";
+        return t;
+      }),
+    );
+
+    let docsExigidos: string[] = [];
+    if (input.modalidad === "TESIS") {
+      docsExigidos = ["ANEXO_17", "ANEXO_18", "PLAN_TESIS", "PAGO_TRAMITE"];
+    } else if (input.modalidad === "TRABAJO_ACADEMICO") {
+      docsExigidos = [
+        "ANEXO_17",
+        "ANEXO_18",
+        "PLAN_TRABAJO_ACADEMICO",
+        "CONSTANCIA_TRABAJO",
+        "CERTIFICADO_SUNARP",
+        "PAGO_TRAMITE",
+      ];
+    }
+
+    const faltantes = docsExigidos.filter((tipo) => !tiposPresentes.has(tipo));
+    if (faltantes.length > 0) {
+      return fail(
+        new DomainError(
+          "VALIDACION_FALLIDA",
+          `Faltan documentos obligatorios para la modalidad ${input.modalidad}: ${faltantes.join(", ")}`,
+        ),
+      );
+    }
+
     const anio = new Date().getFullYear();
     const baseDir = resolve(process.env.DOCS_VOLUME_PATH ?? "./var/data/titulacion-docs");
 
@@ -232,9 +286,12 @@ export class CrearSolicitudUseCase {
       return ok({ id: solRow.id, codigo });
     });
 
-    // Post-commit: correo de confirmación al tesista
+    // Post-commit: correo de confirmación a los tesistas
     if (r.ok) {
-      const emailTesista = input.participante1.email.trim().toLowerCase();
+      const destinatarios = [input.participante1.email.trim().toLowerCase()];
+      if (input.participante2?.email) {
+        destinatarios.push(input.participante2.email.trim().toLowerCase());
+      }
       await enqueueCorreo({
         asunto: `Solicitud ${r.value.codigo} recibida`,
         titulo: "Recibimos tu solicitud de titulación",
@@ -242,7 +299,7 @@ export class CrearSolicitudUseCase {
           `Tu solicitud ha sido registrada con el código <strong>${r.value.codigo}</strong>. ` +
           "El área de titulación revisará tus documentos y te notificará al correo con el resultado. " +
           "Si hay observaciones, recibirás un enlace para subsanarlas.",
-        para: [emailTesista],
+        para: destinatarios,
       });
     }
 

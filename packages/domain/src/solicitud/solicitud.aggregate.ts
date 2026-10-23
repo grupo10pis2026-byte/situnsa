@@ -78,6 +78,14 @@ export function validarParticipantesSolicitud(
   if (!p1.email.trim() || !p1.email.includes("@")) {
     return fail(new DomainError("VALIDACION_FALLIDA", "Correo del Tesista 01 es inválido"));
   }
+  if (!p1.email.trim().toLowerCase().endsWith("@unsa.edu.pe")) {
+    return fail(
+      new DomainError(
+        "VALIDACION_FALLIDA",
+        "El correo del Tesista 01 debe ser institucional (@unsa.edu.pe)",
+      ),
+    );
+  }
 
   if (p2) {
     if (!dniRegex.test(p2.dni.trim())) {
@@ -98,6 +106,14 @@ export function validarParticipantesSolicitud(
     }
     if (!p2.email.trim() || !p2.email.includes("@")) {
       return fail(new DomainError("VALIDACION_FALLIDA", "Correo del Tesista 02 es inválido"));
+    }
+    if (!p2.email.trim().toLowerCase().endsWith("@unsa.edu.pe")) {
+      return fail(
+        new DomainError(
+          "VALIDACION_FALLIDA",
+          "El correo del Tesista 02 debe ser institucional (@unsa.edu.pe)",
+        ),
+      );
     }
     if (p1.dni.trim() === p2.dni.trim()) {
       return fail(

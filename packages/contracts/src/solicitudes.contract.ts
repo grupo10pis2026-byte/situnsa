@@ -32,7 +32,12 @@ export const ParticipanteSolicitudInputSchema = z.object({
       message: "El CUI debe tener exactamente 8 dígitos numéricos",
     })
     .optional(),
-  email: z.string().trim().email("Correo electrónico inválido").max(255),
+  email: z
+    .string()
+    .trim()
+    .email("Correo electrónico inválido")
+    .regex(/@unsa\.edu\.pe$/i, "Debe usar su correo institucional UNSA")
+    .max(255),
   telefono: z.string().trim().max(20).optional(),
   nacionalidad: z.string().trim().max(64).optional().default("Peruana"),
   ciudad: z.string().trim().max(64).optional(),

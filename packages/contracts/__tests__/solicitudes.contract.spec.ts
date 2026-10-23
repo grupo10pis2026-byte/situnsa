@@ -88,13 +88,32 @@ describe("Contratos y Validación Zod de Solicitudes", () => {
         nombres: "María Elena",
         apellidos: "Torres Flores",
         dni: "79876543",
-        email: "mtorres@gmail.com",
+        email: "mtorres@unsa.edu.pe",
       },
       declaracionJurada: true,
     };
 
     const parsed = CrearSolicitudPayloadSchema.safeParse(valid);
     expect(parsed.success).toBe(true);
+  });
+
+  it("rechaza correo no institucional en participante1", () => {
+    const invalidEmail = {
+      via: "REGULAR",
+      modalidad: "TESIS",
+      programa: "Segunda Especialidad en Ingeniería de Sistemas",
+      titulo: "Diseño e implementación de arquitectura serverless para expedientes",
+      cantidadTesistas: 1,
+      declaracionJurada: true,
+      participante1: {
+        nombres: "Juan Carlos",
+        apellidos: "Pérez Quispe",
+        dni: "71234567",
+        email: "jperez@gmail.com",
+      },
+    };
+    const parsed = CrearSolicitudPayloadSchema.safeParse(invalidEmail);
+    expect(parsed.success).toBe(false);
   });
 
   it("rechaza solicitud si cantidadTesistas es 2 pero no se envía participante2", () => {
