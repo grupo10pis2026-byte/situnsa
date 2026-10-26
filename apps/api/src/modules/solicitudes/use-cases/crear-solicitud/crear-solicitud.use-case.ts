@@ -9,17 +9,42 @@ import { DrizzleUnitOfWork } from "../../../../infra/db/unit-of-work.js";
 import { enqueueCorreo } from "../../../../infra/jobs/colas.js";
 import { appendHistorialSolicitud, siguienteCodigoSol } from "../../solicitudes.repository.js";
 
-/** Magic bytes de PDF: primeros 4 bytes deben ser `%PDF` */
-const PDF_MAGIC = Buffer.from([0x25, 0x44, 0x46, 0x2d]); // %PDF-
+/** Magic bytes de PDF: primeros 5 bytes deben ser `%PDF-` */
+const PDF_MAGIC = Buffer.from([0x25, 0x50, 0x44, 0x46, 0x2d]); // %PDF-
 
 function validarMagicBytesPdf(bytes: Uint8Array): boolean {
-  if (bytes.length < 4) return false;
+  if (bytes.length < 5) return false;
   return (
     bytes[0] === PDF_MAGIC[0] &&
     bytes[1] === PDF_MAGIC[1] &&
     bytes[2] === PDF_MAGIC[2] &&
-    bytes[3] === PDF_MAGIC[3]
+    bytes[3] === PDF_MAGIC[3] &&
+    bytes[4] === PDF_MAGIC[4]
   );
+}
+
+function validarMagicBytesFoto(bytes: Uint8Array): boolean {
+  if (validarMagicBytesPdf(bytes)) return true;
+  // JPEG: 0xFF, 0xD8, 0xFF
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    return true;
+  }
+  // PNG: 0x89, 0x50, 0x4E, 0x47
+  if (
+    bytes.length >= 4 &&
+    bytes[0] === 0x89 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x4e &&
+    bytes[3] === 0x47
+  ) {
+    return true;
+  }
+  return false;
+}
+
+function esTipoFoto(tipo: string): boolean {
+  const t = tipo.toUpperCase();
+  return t === "FOTO" || t.startsWith("FOTO_") || t.includes("FOTO");
 }
 
 function sha256Hex(bytes: Uint8Array): string {
@@ -64,9 +89,18 @@ export class CrearSolicitudUseCase {
       );
     }
 
-    // Validar Magic Bytes de todos los PDFs
+    // Validar Magic Bytes de los archivos (PDFs o imágenes para fotos)
     for (const archivo of archivos) {
-      if (!validarMagicBytesPdf(archivo.bytes)) {
+      if (esTipoFoto(archivo.tipo)) {
+        if (!validarMagicBytesFoto(archivo.bytes)) {
+          return fail(
+            new DomainError(
+              "VALIDACION_FALLIDA",
+              `El archivo de fotografía "${archivo.filename}" debe ser formato PDF, JPG o PNG válido`,
+            ),
+          );
+        }
+      } else if (!validarMagicBytesPdf(archivo.bytes)) {
         return fail(
           new DomainError(
             "VALIDACION_FALLIDA",
@@ -74,6 +108,60 @@ export class CrearSolicitudUseCase {
           ),
         );
       }
+    }
+
+    // Validar correo institucional obligatorio (@unsa.edu.pe)
+    if (!input.participante1.email.trim().toLowerCase().endsWith("@unsa.edu.pe")) {
+      return fail(
+        new DomainError(
+          "VALIDACION_FALLIDA",
+          "El correo del Tesista 01 debe ser institucional (@unsa.edu.pe)",
+        ),
+      );
+    }
+    if (
+      input.participante2 &&
+      !input.participante2.email.trim().toLowerCase().endsWith("@unsa.edu.pe")
+    ) {
+      return fail(
+        new DomainError(
+          "VALIDACION_FALLIDA",
+          "El correo del Tesista 02 debe ser institucional (@unsa.edu.pe)",
+        ),
+      );
+    }
+
+    // Validar documentos mínimos obligatorios según modalidad (Vía Regular)
+    const tiposPresentes = new Set(
+      archivos.map((a) => {
+        const t = a.tipo.toUpperCase();
+        if (t === "FUT" || t === "EXPEDIENTE_17") return "ANEXO_17";
+        return t;
+      }),
+    );
+
+    let docsExigidos: string[] = [];
+    if (input.modalidad === "TESIS") {
+      docsExigidos = ["ANEXO_17", "ANEXO_18", "PLAN_TESIS", "PAGO_TRAMITE"];
+    } else if (input.modalidad === "TRABAJO_ACADEMICO") {
+      docsExigidos = [
+        "ANEXO_17",
+        "ANEXO_18",
+        "PLAN_TRABAJO_ACADEMICO",
+        "CONSTANCIA_TRABAJO",
+        "CERTIFICADO_SUNARP",
+        "PAGO_TRAMITE",
+      ];
+    }
+
+    const faltantes = docsExigidos.filter((tipo) => !tiposPresentes.has(tipo));
+    if (faltantes.length > 0) {
+      return fail(
+        new DomainError(
+          "VALIDACION_FALLIDA",
+          `Faltan documentos obligatorios para la modalidad ${input.modalidad}: ${faltantes.join(", ")}`,
+        ),
+      );
     }
 
     const anio = new Date().getFullYear();
@@ -198,9 +286,12 @@ export class CrearSolicitudUseCase {
       return ok({ id: solRow.id, codigo });
     });
 
-    // Post-commit: correo de confirmación al tesista
+    // Post-commit: correo de confirmación a los tesistas
     if (r.ok) {
-      const emailTesista = input.participante1.email.trim().toLowerCase();
+      const destinatarios = [input.participante1.email.trim().toLowerCase()];
+      if (input.participante2?.email) {
+        destinatarios.push(input.participante2.email.trim().toLowerCase());
+      }
       await enqueueCorreo({
         asunto: `Solicitud ${r.value.codigo} recibida`,
         titulo: "Recibimos tu solicitud de titulación",
@@ -208,7 +299,7 @@ export class CrearSolicitudUseCase {
           `Tu solicitud ha sido registrada con el código <strong>${r.value.codigo}</strong>. ` +
           "El área de titulación revisará tus documentos y te notificará al correo con el resultado. " +
           "Si hay observaciones, recibirás un enlace para subsanarlas.",
-        para: [emailTesista],
+        para: destinatarios,
       });
     }
 

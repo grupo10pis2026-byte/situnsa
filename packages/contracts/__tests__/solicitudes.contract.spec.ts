@@ -33,6 +33,44 @@ describe("Contratos y Validación Zod de Solicitudes", () => {
     expect(parsed.success).toBe(true);
   });
 
+  it("valida CUI de 8 dígitos y rechaza CUI con longitud inválida", () => {
+    const base = {
+      via: "REGULAR",
+      modalidad: "TESIS",
+      programa: "Segunda Especialidad en Ingeniería de Sistemas",
+      titulo: "Diseño e implementación de arquitectura serverless para expedientes",
+      cantidadTesistas: 1,
+      declaracionJurada: true,
+      participante1: {
+        nombres: "Juan Carlos",
+        apellidos: "Pérez Quispe",
+        dni: "71234567",
+        email: "jperez@unsa.edu.pe",
+        cui: "20180456",
+      },
+    };
+
+    expect(CrearSolicitudPayloadSchema.safeParse(base).success).toBe(true);
+
+    const invalidCui = {
+      ...base,
+      participante1: {
+        ...base.participante1,
+        cui: "2018", // menos de 8
+      },
+    };
+    expect(CrearSolicitudPayloadSchema.safeParse(invalidCui).success).toBe(false);
+
+    const invalidCuiLetras = {
+      ...base,
+      participante1: {
+        ...base.participante1,
+        cui: "2018ABCD", // letras
+      },
+    };
+    expect(CrearSolicitudPayloadSchema.safeParse(invalidCuiLetras).success).toBe(false);
+  });
+
   it("valida exitosamente un payload de 2 participantes con DNIs y correos distintos", () => {
     const valid = {
       via: "TALLER",
@@ -50,13 +88,32 @@ describe("Contratos y Validación Zod de Solicitudes", () => {
         nombres: "María Elena",
         apellidos: "Torres Flores",
         dni: "79876543",
-        email: "mtorres@gmail.com",
+        email: "mtorres@unsa.edu.pe",
       },
       declaracionJurada: true,
     };
 
     const parsed = CrearSolicitudPayloadSchema.safeParse(valid);
     expect(parsed.success).toBe(true);
+  });
+
+  it("rechaza correo no institucional en participante1", () => {
+    const invalidEmail = {
+      via: "REGULAR",
+      modalidad: "TESIS",
+      programa: "Segunda Especialidad en Ingeniería de Sistemas",
+      titulo: "Diseño e implementación de arquitectura serverless para expedientes",
+      cantidadTesistas: 1,
+      declaracionJurada: true,
+      participante1: {
+        nombres: "Juan Carlos",
+        apellidos: "Pérez Quispe",
+        dni: "71234567",
+        email: "jperez@gmail.com",
+      },
+    };
+    const parsed = CrearSolicitudPayloadSchema.safeParse(invalidEmail);
+    expect(parsed.success).toBe(false);
   });
 
   it("rechaza solicitud si cantidadTesistas es 2 pero no se envía participante2", () => {

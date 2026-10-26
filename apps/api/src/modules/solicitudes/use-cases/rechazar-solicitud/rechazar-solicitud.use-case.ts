@@ -1,5 +1,5 @@
 import type { RechazarSolicitudInput } from "@pis/contracts";
-import { db, solicitudes } from "@pis/db";
+import { db, solicitudes, solicitudParticipantes } from "@pis/db";
 import { assertTransitionSolicitud, DomainError, fail, ok, type Result } from "@pis/domain";
 import { eq } from "drizzle-orm";
 import { DrizzleUnitOfWork } from "../../../../infra/db/unit-of-work.js";
@@ -23,6 +23,15 @@ export class RechazarSolicitudUseCase {
       const gate = assertTransitionSolicitud(sol.estado, "RECHAZADA");
       if (!gate.ok) return gate;
 
+      // Obtener correos de los participantes para notificación
+      const parts = await tx
+        .select()
+        .from(solicitudParticipantes)
+        .where(eq(solicitudParticipantes.solicitudId, id));
+      const correos = parts.map((p: typeof solicitudParticipantes.$inferSelect) =>
+        p.email.trim().toLowerCase(),
+      );
+
       await tx
         .update(solicitudes)
         .set({
@@ -42,7 +51,7 @@ export class RechazarSolicitudUseCase {
         metadata: { fundamentoReglamentario: input.fundamentoReglamentario },
       });
 
-      return ok({ codigo: sol.codigo });
+      return ok({ codigo: sol.codigo, correos });
     });
 
     if (!r.ok) return fail(r.error);
@@ -53,6 +62,7 @@ export class RechazarSolicitudUseCase {
       texto:
         `Tu solicitud <strong>${r.value.codigo}</strong> no fue admitida. ` +
         `Fundamento: ${input.fundamentoReglamentario}`,
+      para: r.value.correos,
     });
 
     return ok({ ok: true as const, mensaje: "Solicitud rechazada correctamente." });

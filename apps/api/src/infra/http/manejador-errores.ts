@@ -20,6 +20,7 @@ const MENSAJES_UNICIDAD: Readonly<Record<string, string>> = {
   usuarios_email_unique: "El correo electrónico ya está registrado para otra persona",
   usuarios_dni_unique: "El DNI ya está registrado",
   expedientes_codigo_unique: "Conflicto al generar el código del expediente; vuelva a intentarlo",
+  solicitudes_codigo_unique: "Conflicto al generar el código de la solicitud; vuelva a intentarlo",
   jurados_dni_unique: "El jurado ya está registrado",
   catalogo_docs_requeridos_tipo_unique: "Ya existe un documento con ese tipo",
 };

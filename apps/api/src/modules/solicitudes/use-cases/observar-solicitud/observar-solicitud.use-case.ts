@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import type { ObservarSolicitudInput } from "@pis/contracts";
-import { db, solicitudes, tokensSubsanacion } from "@pis/db";
+import { db, solicitudes, solicitudParticipantes, tokensSubsanacion } from "@pis/db";
 import {
   assertTransitionSolicitud,
   calcularLimiteSubsanacion,
@@ -31,6 +31,15 @@ export class ObservarSolicitudUseCase {
 
       const gate = assertTransitionSolicitud(sol.estado, "OBSERVADA");
       if (!gate.ok) return gate;
+
+      // Participantes para notificación por correo
+      const parts = await tx
+        .select()
+        .from(solicitudParticipantes)
+        .where(eq(solicitudParticipantes.solicitudId, id));
+      const correos = parts.map((p: typeof solicitudParticipantes.$inferSelect) =>
+        p.email.trim().toLowerCase(),
+      );
 
       // Calcular fecha límite de subsanación (días hábiles)
       const diasHabiles = input.diasHabilesSubsanacion ?? 10;
@@ -72,7 +81,7 @@ export class ObservarSolicitudUseCase {
         metadata: { motivosPredefinidos: input.motivosPredefinidos, diasHabiles },
       });
 
-      return ok({ token: tokenPlano, sol });
+      return ok({ token: tokenPlano, sol, correos });
     });
 
     if (!r.ok) return fail(r.error);
@@ -87,6 +96,7 @@ export class ObservarSolicitudUseCase {
         "Para subsanarla, accede al siguiente enlace (válido hasta la fecha límite):",
       enlace: enlaceSubsanacion,
       textoEnlace: "Subsanar solicitud",
+      para: r.value.correos,
     });
 
     return ok({

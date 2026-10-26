@@ -263,3 +263,7 @@ export function useSubsanarConToken(token: string) {
     },
   });
 }
+
+export function documentoSolicitudUrl(solicitudId: string, documentoId: string): string {
+  return `${apiBaseUrl}/api/v1/solicitudes/${solicitudId}/documentos/${documentoId}/descargar`;
+}

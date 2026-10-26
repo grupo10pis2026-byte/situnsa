@@ -15,7 +15,9 @@ import {
   XCircle,
 } from "lucide-react";
 import { useState } from "react";
+import { abrirArchivoProtegido } from "../api/expedientes.js";
 import {
+  documentoSolicitudUrl,
   useActualizarConformidadDocumento,
   useActualizarDatosMenores,
   useSolicitudDetalle,
@@ -117,6 +119,8 @@ export function SolicitudDetallePage() {
   const p1 = sol.participantes.find((p) => p.orden === 1);
   const p2 = sol.participantes.find((p) => p.orden === 2);
   const cerrada = sol.estado === "ACEPTADA" || sol.estado === "RECHAZADA";
+  const checklistAprobado =
+    sol.documentos.length > 0 && sol.documentos.every((d) => d.estadoConformidad === "CONFORME");
 
   return (
     <AppShell activo="/solicitudes">
@@ -158,7 +162,17 @@ export function SolicitudDetallePage() {
                 <Button onClick={() => setModalRechazar(true)} tamano="sm" variante="peligro">
                   <FileX size={14} /> Rechazar
                 </Button>
-                <Button onClick={() => setModalAceptar(true)} tamano="sm" variante="exito">
+                <Button
+                  disabled={!checklistAprobado}
+                  onClick={() => setModalAceptar(true)}
+                  tamano="sm"
+                  title={
+                    !checklistAprobado
+                      ? "Todos los documentos deben estar en estado CONFORME para aceptar la solicitud (ninguno PENDIENTE u OBSERVADO)"
+                      : undefined
+                  }
+                  variante="exito"
+                >
                   <Sparkles size={14} /> Aceptar y Crear SET
                 </Button>
               </>
@@ -332,6 +346,17 @@ export function SolicitudDetallePage() {
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        className="rounded p-1 text-slate-500 hover:text-navy-950 hover:bg-slate-100 transition-colors"
+                        onClick={() =>
+                          void abrirArchivoProtegido(documentoSolicitudUrl(sol.id, doc.id))
+                        }
+                        title="Ver documento adjunto"
+                        type="button"
+                      >
+                        <ExternalLink size={16} />
+                      </button>
+
                       <StatusBadge estado={doc.estadoConformidad} />
 
                       {!cerrada && (

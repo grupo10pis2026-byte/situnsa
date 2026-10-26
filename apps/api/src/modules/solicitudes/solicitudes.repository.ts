@@ -346,10 +346,11 @@ export async function getTokenSubsanacionPorHash(hash: string, tx: DbExecutor = 
 
 export async function siguienteCodigoSol(anio: number, tx: DbExecutor = db): Promise<string> {
   const prefix = `SOL-${anio}-`;
+  const offset = prefix.length + 1;
   const resultado = await tx.execute<{ max: number | null }>(
-    sql`SELECT MAX(CAST(SUBSTRING(${solicitudes.codigo} FROM ${prefix.length + 1}) AS INTEGER)) as max
+    sql`SELECT MAX(CAST(SUBSTRING(${solicitudes.codigo}, ${sql.raw(String(offset))}) AS INTEGER)) as max
         FROM ${solicitudes}
-        WHERE ${solicitudes.codigo} ~ ${`^SOL-${anio}-[0-9]+$`}`,
+        WHERE ${solicitudes.codigo} LIKE ${`${prefix}%`}`,
   );
   const siguiente = Number(resultado.rows[0]?.max ?? 0) + 1;
   return `${prefix}${String(siguiente).padStart(4, "0")}`;
@@ -395,4 +396,31 @@ export async function appendHistorialSolicitud(
     detalle: data.detalle ?? null,
     metadata: data.metadata ?? {},
   });
+}
+
+/* -------------------------------------------------------------------------- */
+/* OBTENER DOCUMENTO DE SOLICITUD POR ID (para descarga / visor)              */
+/* -------------------------------------------------------------------------- */
+
+export async function getDocumentoSolicitudById(
+  solicitudId: string,
+  documentoId: string,
+  tx: DbExecutor = db,
+): Promise<{ id: string; ruta: string; nombreOriginal: string; mimeType: string } | null> {
+  const [doc] = await tx
+    .select({
+      id: solicitudDocumentos.id,
+      ruta: solicitudDocumentos.ruta,
+      nombreOriginal: solicitudDocumentos.nombreOriginal,
+      mimeType: solicitudDocumentos.mimeType,
+    })
+    .from(solicitudDocumentos)
+    .where(
+      and(
+        eq(solicitudDocumentos.id, documentoId),
+        eq(solicitudDocumentos.solicitudId, solicitudId),
+      ),
+    )
+    .limit(1);
+  return doc ?? null;
 }

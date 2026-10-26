@@ -25,8 +25,19 @@ export const ParticipanteSolicitudInputSchema = z.object({
     .string()
     .trim()
     .regex(/^\d{8}$/, "DNI debe tener exactamente 8 dígitos"),
-  cui: z.string().trim().max(16).optional(),
-  email: z.string().trim().email("Correo electrónico inválido").max(255),
+  cui: z
+    .string()
+    .trim()
+    .refine((val) => val === "" || /^\d{8}$/.test(val), {
+      message: "El CUI debe tener exactamente 8 dígitos numéricos",
+    })
+    .optional(),
+  email: z
+    .string()
+    .trim()
+    .email("Correo electrónico inválido")
+    .regex(/@unsa\.edu\.pe$/i, "Debe usar su correo institucional UNSA")
+    .max(255),
   telefono: z.string().trim().max(20).optional(),
   nacionalidad: z.string().trim().max(64).optional().default("Peruana"),
   ciudad: z.string().trim().max(64).optional(),
@@ -137,7 +148,13 @@ export const ActualizarDatosMenoresSchema = z.object({
         id: z.string().uuid(),
         nombres: z.string().trim().min(2).optional(),
         apellidos: z.string().trim().min(2).optional(),
-        cui: z.string().trim().optional(),
+        cui: z
+          .string()
+          .trim()
+          .refine((val) => val === "" || /^\d{8}$/.test(val), {
+            message: "El CUI debe tener exactamente 8 dígitos numéricos",
+          })
+          .optional(),
         email: z.string().trim().email().optional(),
         telefono: z.string().trim().optional(),
         ciudad: z.string().trim().optional(),
