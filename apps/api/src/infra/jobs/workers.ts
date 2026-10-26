@@ -312,5 +312,5 @@ export async function procesarRevisionDocumento(payload: RevisionDocumentoPayloa
       })
       .where(eq(documentoRevisiones.documentoId, documentoId));
   }
-  }
 }
+
