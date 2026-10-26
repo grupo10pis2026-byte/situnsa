@@ -188,7 +188,6 @@ export async function revisarPlazos(ahora: Date = new Date()): Promise<number> {
     return 0;
   }
 }
-
 /**
  * Worker para la revisión automática de documentos (Tarea 3).
  * Extrae texto, evalúa reglas sintácticas y actualiza la tabla documento_revisiones.
@@ -312,5 +311,6 @@ export async function procesarRevisionDocumento(payload: RevisionDocumentoPayloa
         updatedAt: new Date(),
       })
       .where(eq(documentoRevisiones.documentoId, documentoId));
+  }
   }
 }

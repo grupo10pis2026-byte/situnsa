@@ -38,10 +38,10 @@ export interface RecordatorioPayload {
   tipo: "revision-manual";
   notadoEn: string;
 }
-
 export interface RevisionDocumentoPayload {
   documentoId: string;
   expedienteId: string;
+  rutaPdf?: string;
 }
 
 /**
@@ -55,7 +55,6 @@ export async function enqueueCorreo(payload: CorreoPayload): Promise<void> {
     console.error("[colas] no se pudo encolar correo", err);
   }
 }
-
 /**
  * Encola la revisión automática de un documento (Tarea 3).
  * pg-boss reintenta hasta 3 veces con 60 segundos de espera si hay fallos transitorios.
