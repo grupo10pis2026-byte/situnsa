@@ -47,15 +47,10 @@ export function registerAnalisisDocumental(app: FastifyInstance): void {
       });
       if (!permiso.ok) return reply.status(permiso.status).send(permiso.body);
       const entrada = AnalisisDocumentoRequestSchema.safeParse(req.body);
-      if (!entrada.success || doc.tipo !== "PLAN_ESTRUCTURADO")
+      if (!entrada.success)
         return reply
           .status(400)
-          .send(
-            errorEnvelope(
-              "VALIDACION_FALLIDA",
-              "El análisis solo está habilitado para el plan estructurado y requiere opciones válidas.",
-            ),
-          );
+          .send(errorEnvelope("VALIDACION_FALLIDA", "El análisis requiere opciones válidas."));
       // Opt-in local: producción exige cola y supervisor de contenedores aislados.
       if (process.env.ANALISIS_DOCUMENTAL_ENABLED !== "1")
         return reply

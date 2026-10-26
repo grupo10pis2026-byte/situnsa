@@ -8,6 +8,7 @@ import {
   type ChecklistDef,
   cargaHabilitadaTesista,
   DomainError,
+  esDocumentoTesista,
   fail,
   ok,
   plantillaDe,
@@ -116,7 +117,9 @@ export class SubirDocumentoUseCase {
           ? {
               tipo: plantilla.tipo,
               nombre: plantilla.nombre,
-              etapa: (plantilla.etapa === "E2" || plantilla.etapa === "E6" ? plantilla.etapa : "E1") as "E1" | "E2",
+              etapa: (plantilla.etapa === "E2" || plantilla.etapa === "E6"
+                ? plantilla.etapa
+                : "E1") as "E1" | "E2",
               obligatorio: false,
               requeridoEn: null,
             }
@@ -147,16 +150,11 @@ export class SubirDocumentoUseCase {
         .orderBy(desc(documentos.version));
       const ultimo = previos[0] ?? null;
       if (input.comoTesista) {
-        const activa = await subetapaActivaDe(tx, input.expedienteId);
-        const habilitado = cargaHabilitadaTesista(
-          { tipo: def.tipo, requeridoEn: def.requeridoEn, estado: ultimo?.estado ?? "PENDIENTE" },
-          activa?.clave ?? null,
-        );
-        if (!habilitado) {
+        if (!esDocumentoTesista(input.tipo)) {
           return fail(
             new DomainError(
               "PERMISO_DENEGADO",
-              "Este documento no corresponde a la subetapa en curso de tu trámite (RN-06)",
+              "Los documentos y actas oficiales son emitidos por la institución y no pueden ser subidos por el alumno",
             ),
           );
         }
@@ -168,7 +166,24 @@ export class SubirDocumentoUseCase {
             ),
           );
         }
+        const activa = await subetapaActivaDe(tx, input.expedienteId);
+        const habilitado =
+          ultimo !== null ||
+          cargaHabilitadaTesista(
+            { tipo: def.tipo, requeridoEn: def.requeridoEn, estado: "PENDIENTE" },
+            activa?.clave ?? null,
+          );
+
+        if (!habilitado) {
+          return fail(
+            new DomainError(
+              "PERMISO_DENEGADO",
+              "Este documento no corresponde a la subetapa en curso de tu trámite (RN-06)",
+            ),
+          );
+        }
       }
+
       // Limpiar archivo(s) anterior(es) en disco para no acumular basura
       if (previos.length > 0) {
         for (const p of previos) {

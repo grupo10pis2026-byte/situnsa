@@ -3,7 +3,11 @@
  * Combina infra/pdf con @pis/domain y retorna el DTO compartido, sin escribir hallazgos en DB.
  */
 import { type AnalisisDocumentoDTO, AnalisisDocumentoResponseSchema } from "@pis/contracts";
-import { analizarCaratulaResumen, type DatosAnalisisDocumento } from "@pis/domain";
+import {
+  analizarCaratulaResumen,
+  analizarDocumentoSubido,
+  type DatosAnalisisDocumento,
+} from "@pis/domain";
 import {
   extraerPrimerasPaginas,
   type TextoPdf,
@@ -15,6 +19,7 @@ export interface DocumentoAnalizable {
   ruta: string;
   version: number;
   sha256: string;
+  tipo?: string;
 }
 
 /** Orquesta extracción, dominio y revisión opcional para POST /api/documentos/:id/analisis. */
@@ -40,21 +45,32 @@ export class AnalizarDocumentoUseCase {
     base: string,
     editorial: boolean,
   ): Promise<AnalisisDocumentoDTO> {
+    const esPlan = documento.tipo === "PLAN_ESTRUCTURADO";
     let texto: TextoPdf;
     try {
       texto = await this.extraer(documento.ruta, base, documento.sha256);
     } catch {
+      const fallback = esPlan
+        ? analizarCaratulaResumen([], datos, 0)
+        : analizarDocumentoSubido(documento.tipo ?? "DOCUMENTO", [], datos, 0);
       return AnalisisDocumentoResponseSchema.parse({
         documentoId: documento.id,
         version: documento.version,
         sha256: documento.sha256,
         paginasAnalizadas: [],
         tituloRegistrado: datos.titulo,
-        ...analizarCaratulaResumen([], datos, 0),
+        ...fallback,
         editorial: editorial ? "NO_DISPONIBLE" : "NO_SOLICITADA",
       });
     }
-    const resultado = analizarCaratulaResumen(texto.paginas, datos, texto.totalPaginas);
+    const resultado = esPlan
+      ? analizarCaratulaResumen(texto.paginas, datos, texto.totalPaginas)
+      : analizarDocumentoSubido(
+          documento.tipo ?? "DOCUMENTO",
+          texto.paginas,
+          datos,
+          texto.totalPaginas,
+        );
     let revision: AnalisisDocumentoDTO["editorial"] = "NO_SOLICITADA";
     if (editorial) {
       revision = "NO_DISPONIBLE";

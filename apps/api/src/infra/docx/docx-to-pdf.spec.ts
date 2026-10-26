@@ -38,9 +38,7 @@ describe("docx-to-pdf via Gotenberg", () => {
 
     try {
       const docx = Buffer.from("mock docx");
-      await expect(convertirDocxAPdf(docx, "prueba.docx")).rejects.toThrow(
-        "Gotenberg (500)",
-      );
+      await expect(convertirDocxAPdf(docx, "prueba.docx")).rejects.toThrow("Gotenberg (500)");
     } finally {
       globalThis.fetch = originalFetch;
     }

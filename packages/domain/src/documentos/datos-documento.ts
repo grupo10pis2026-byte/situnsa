@@ -10,7 +10,7 @@ import {
   modalidadAEtiqueta,
   normalizarAdministrativo,
 } from "../expediente/modalidades.js";
-import { fechaLarga, formatoAutoridad } from "./etiquetas.js";
+import { fechaLarga } from "./etiquetas.js";
 
 export interface PersonaDocumento {
   readonly nombres: string;
@@ -356,6 +356,7 @@ export function construirDatosDocumento(
     (sust?.actaVeredicto ? (VEREDICTO[sust.actaVeredicto] ?? sust.actaVeredicto) : null) ||
     (texto(a.veredicto) ? (VEREDICTO[texto(a.veredicto)] ?? texto(a.veredicto)) : "");
   const numeroActa = texto(a.numeroActa) || texto(a.actaNumero) || "001";
+
   const datos: Record<string, string> = {
     CODIGO: exp.codigo,
     TESIS: tituloFormal,

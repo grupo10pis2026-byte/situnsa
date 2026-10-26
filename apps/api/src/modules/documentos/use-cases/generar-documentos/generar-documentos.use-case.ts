@@ -96,9 +96,7 @@ export function urlDeDetalle(detalle: string | null): string | null {
 }
 
 /** Mapea overrides del modal in-situ a columnas de base de datos de expedientes y usuarios. */
-export function extraerCambiosExpedienteYUsuarios(
-  overrides: Record<string, string>,
-): {
+export function extraerCambiosExpedienteYUsuarios(overrides: Record<string, string>): {
   expediente: Record<string, unknown>;
   participante1: Record<string, unknown>;
   participante2: Record<string, unknown>;
@@ -123,9 +121,12 @@ export function extraerCambiosExpedienteYUsuarios(
     if (k === "PRESIDENTE") exp.presidente = formatoAutoridad(v);
     if (k === "SECRETARIO") exp.secretario = formatoAutoridad(v);
     if (k === "INTEGRANTE") exp.integrante = formatoAutoridad(v);
-    if (k === "PRESIDENTE_ETAPA_02" || k === "PRESIDENTE_E2") exp.presidenteE2 = formatoAutoridad(v);
-    if (k === "SECRETARIO_ETAPA_02" || k === "SECRETARIO_E2") exp.secretarioE2 = formatoAutoridad(v);
-    if (k === "SUPLENTE_ETAPA_02" || k === "SUPLENTE_E2" || k === "SUPLENTE") exp.suplenteE2 = formatoAutoridad(v);
+    if (k === "PRESIDENTE_ETAPA_02" || k === "PRESIDENTE_E2")
+      exp.presidenteE2 = formatoAutoridad(v);
+    if (k === "SECRETARIO_ETAPA_02" || k === "SECRETARIO_E2")
+      exp.secretarioE2 = formatoAutoridad(v);
+    if (k === "SUPLENTE_ETAPA_02" || k === "SUPLENTE_E2" || k === "SUPLENTE")
+      exp.suplenteE2 = formatoAutoridad(v);
     if (k === "DECANAL" || k === "RESOLUCION_DECANAL") exp.decanal = v;
 
     // Expediente - Sustentación y Fechas
@@ -147,20 +148,28 @@ export function extraerCambiosExpedienteYUsuarios(
     }
 
     // Participante 1
-    if (k === "DIRECCION" || k === "DIRECCIÓN" || k === "DIRECCION_1" || k === "DIRECCION_01") p1.direccion = v;
-    if (k === "TELEFONO" || k === "TELÉFONO" || k === "TELEFONO_1" || k === "TELEFONO_01") p1.telefono = v;
+    if (k === "DIRECCION" || k === "DIRECCIÓN" || k === "DIRECCION_1" || k === "DIRECCION_01")
+      p1.direccion = v;
+    if (k === "TELEFONO" || k === "TELÉFONO" || k === "TELEFONO_1" || k === "TELEFONO_01")
+      p1.telefono = v;
     if (k === "CIUDAD" || k === "CIUDAD_1" || k === "CIUDAD_01") p1.ciudad = v;
-    if (k === "NACIONALIDAD" || k === "NACIONALIDAD_1" || k === "NACIONALIDAD_01") p1.nacionalidad = v;
+    if (k === "NACIONALIDAD" || k === "NACIONALIDAD_1" || k === "NACIONALIDAD_01")
+      p1.nacionalidad = v;
     if (k === "CUI" || k === "CUI_1" || k === "CUI_01") p1.cui = v;
-    if (k === "CORREO" || k === "CORREO_1" || k === "CORREO_01" || k === "EMAIL") p1.email = v.toLowerCase();
+    if (k === "CORREO" || k === "CORREO_1" || k === "CORREO_01" || k === "EMAIL")
+      p1.email = v.toLowerCase();
 
     // Participante 2
-    if (k === "DIRECCION02" || k === "DIRECCION_2" || k === "DIRECCION_02" || k === "DIRECCIÓN02") p2.direccion = v;
-    if (k === "TELEFONO02" || k === "TELEFONO_2" || k === "TELEFONO_02" || k === "TELÉFONO02") p2.telefono = v;
+    if (k === "DIRECCION02" || k === "DIRECCION_2" || k === "DIRECCION_02" || k === "DIRECCIÓN02")
+      p2.direccion = v;
+    if (k === "TELEFONO02" || k === "TELEFONO_2" || k === "TELEFONO_02" || k === "TELÉFONO02")
+      p2.telefono = v;
     if (k === "CIUDAD02" || k === "CIUDAD_2" || k === "CIUDAD_02") p2.ciudad = v;
-    if (k === "NACIONALIDAD02" || k === "NACIONALIDAD_2" || k === "NACIONALIDAD_02") p2.nacionalidad = v;
+    if (k === "NACIONALIDAD02" || k === "NACIONALIDAD_2" || k === "NACIONALIDAD_02")
+      p2.nacionalidad = v;
     if (k === "CUI02" || k === "CUI_2" || k === "CUI_02") p2.cui = v;
-    if (k === "CORREO02" || k === "CORREO_2" || k === "CORREO_02" || k === "EMAIL02") p2.email = v.toLowerCase();
+    if (k === "CORREO02" || k === "CORREO_2" || k === "CORREO_02" || k === "EMAIL02")
+      p2.email = v.toLowerCase();
   }
 
   return { expediente: exp, participante1: p1, participante2: p2 };

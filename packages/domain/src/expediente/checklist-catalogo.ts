@@ -138,14 +138,50 @@ export const CHECKLIST_E2: readonly ChecklistDef[] = [
 export const CHECKLIST_COMPLETO: readonly ChecklistDef[] = [...CHECKLIST_E1, ...CHECKLIST_E2];
 
 /**
+ * Tipos de documentos cuya elaboración y carga corresponde al ALUMNO / TESISTA.
+ * El tesista NO sube actas, autorizaciones ni documentos oficiales emitidos por jurados/Unidad.
+ */
+export const DOCUMENTOS_CARGA_TESISTA = new Set([
+  // Etapa 01
+  "SOLICITUD_INSCRIPCION",
+  "ACEPTACION_ASESORIA",
+  "PLAN_ESTRUCTURADO",
+  "DJ_CONFIDENCIALIDAD",
+  "ANEXO_18",
+  "ANEXO_33",
+
+  // Etapa 02
+  "ANEXO_27",
+  "ANEXO_01_DJ",
+  "ANEXO_01_DJ_P1",
+  "ANEXO_01_DJ_P2",
+  "ANEXO_02_DJ",
+  "ANEXO_02_DJ_P1",
+  "ANEXO_02_DJ_P2",
+  "ANEXO_32_VERACIDAD",
+]);
+
+/** Comprueba si el documento debe ser entregado por el tesista */
+export function esDocumentoTesista(tipo: string): boolean {
+  return DOCUMENTOS_CARGA_TESISTA.has(tipo);
+}
+
+/** Comprueba si el documento es emitido institucionalmente por la facultad / jurados / asesor */
+export function esDocumentoInstitucional(tipo: string): boolean {
+  return !DOCUMENTOS_CARGA_TESISTA.has(tipo);
+}
+
+/**
  * RN-06: documentos que el tesista puede cargar en este momento — los
  * requeridos en la subetapa activa, los OBSERVADOS (subsanación) y, durante
  * el levantamiento de observaciones del plan (E1.5), la nueva versión del plan.
+ * Los documentos autogenerados o institucionales NUNCA pueden ser cargados por el tesista.
  */
 export function cargaHabilitadaTesista(
   doc: { tipo: string; requeridoEn: string | null; estado: string },
   subetapaActiva: string | null,
 ): boolean {
+  if (!esDocumentoTesista(doc.tipo)) return false;
   if (doc.estado === "OBSERVADO") return true;
   if (!subetapaActiva) return false;
   if (doc.requeridoEn === subetapaActiva) return true;

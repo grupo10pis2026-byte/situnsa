@@ -202,3 +202,89 @@ describe("motor puro de carátula y resumen", () => {
     expect(similitudTituloDocumento("", "otro")).toBe(0);
   });
 });
+
+describe("motor de revisión de documentos subidos y boletas", () => {
+  it("detecta tipos de boletas y comprobantes", async () => {
+    const { esTipoBoleta } = await import("../src/documentos/analisis-caratula-resumen.js");
+    expect(esTipoBoleta("BOLETA_PAGO")).toBe(true);
+    expect(esTipoBoleta("RECIBO")).toBe(true);
+    expect(esTipoBoleta("COMPROBANTE_CUOTA")).toBe(true);
+    expect(esTipoBoleta("PLAN_ESTRUCTURADO")).toBe(false);
+    expect(esTipoBoleta("ACEPTACION_ASESORIA")).toBe(false);
+  });
+
+  it("boleta válida: valida DNI y nombre insensible a mayúsculas/minúsculas", async () => {
+    const { analizarDocumentoSubido } = await import(
+      "../src/documentos/analisis-caratula-resumen.js"
+    );
+    const textoBoleta =
+      "BANCO DE LA NACIÓN\nOPERACIÓN: 482910\nCLIENTE: MARÍA NÚÑEZ GARCÍA\nDNI: 01234567\nMONTO: S/ 250.00";
+    const res = analizarDocumentoSubido("BOLETA", [{ numero: 1, texto: textoBoleta }], datos, 1);
+    expect(res.estado).toBe("COMPLETADO");
+    expect(res.hallazgos).toHaveLength(0);
+    expect(res.controles.find((c) => c.tipo === "BOLETA_DNI")?.estado).toBe("CONFORME");
+    expect(res.controles.find((c) => c.tipo === "BOLETA_NOMBRE")?.estado).toBe("CONFORME");
+  });
+
+  it("boleta con DNI diferente: emite advertencia con fragmento esperado vs encontrado", async () => {
+    const { analizarDocumentoSubido } = await import(
+      "../src/documentos/analisis-caratula-resumen.js"
+    );
+    const textoBoletaErronea =
+      "BANCO DE LA NACIÓN\nCLIENTE: maría núñez garcía\nDNI: 99887766\nMONTO: S/ 250.00";
+    const res = analizarDocumentoSubido(
+      "BOLETA",
+      [{ numero: 1, texto: textoBoletaErronea }],
+      datos,
+      1,
+    );
+    expect(res.hallazgos.some((h) => h.tipo === "BOLETA_DNI")).toBe(true);
+    const hallazgo = res.hallazgos.find((h) => h.tipo === "BOLETA_DNI");
+    expect(hallazgo?.esperado).toBe("01234567");
+    expect(hallazgo?.encontrado).toContain("99887766");
+  });
+
+  it("documento sin asesor: no exige asesor si el documento no lo contiene", async () => {
+    const { analizarDocumentoSubido } = await import(
+      "../src/documentos/analisis-caratula-resumen.js"
+    );
+    const textoDJ =
+      "DECLARACIÓN JURADA DE CONFIDENCIALIDAD\nYo, María Núñez García, identificada con DNI 01234567...";
+    const res = analizarDocumentoSubido(
+      "DJ_CONFIDENCIALIDAD",
+      [{ numero: 1, texto: textoDJ }],
+      datos,
+      1,
+    );
+    expect(res.hallazgos).toHaveLength(0);
+    expect(res.controles.some((c) => c.tipo === "ASESOR")).toBe(false);
+  });
+
+  it("documento que menciona asesor diferente: advierte discrepancia", async () => {
+    const { analizarDocumentoSubido } = await import(
+      "../src/documentos/analisis-caratula-resumen.js"
+    );
+    const textoCarta =
+      "CARTA DE ACEPTACIÓN\nYo, Dr. Pedro Quispe Mamani, acepto ser asesor del proyecto de la tesista María Núñez García...";
+    const res = analizarDocumentoSubido(
+      "ACEPTACION_ASESORIA",
+      [{ numero: 1, texto: textoCarta }],
+      datos,
+      1,
+    );
+    const hallazgoAsesor = res.hallazgos.find((h) => h.tipo === "ASESOR");
+    expect(hallazgoAsesor).toBeDefined();
+    expect(hallazgoAsesor?.esperado).toBe("José Pérez Torres");
+  });
+
+  it("documento escaneado sin texto extraíble: marca NO_EVALUABLE", async () => {
+    const { analizarDocumentoSubido } = await import(
+      "../src/documentos/analisis-caratula-resumen.js"
+    );
+    const res = analizarDocumentoSubido("ANEXO_33", [{ numero: 1, texto: "    " }], datos, 1);
+    expect(res.estado).toBe("NO_EVALUABLE");
+    expect(res.controles.find((c) => c.tipo === "DOCUMENTO_LEGIBILIDAD")?.estado).toBe(
+      "NO_EVALUABLE",
+    );
+  });
+});

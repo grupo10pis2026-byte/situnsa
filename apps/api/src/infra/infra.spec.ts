@@ -1,14 +1,14 @@
 import { CHECKLIST_COMPLETO, plantillaDe, renderizarPlantilla } from "@pis/domain";
 import { PDFDocument, StandardFonts } from "pdf-lib";
+import PizZip from "pizzip";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { tokenVigente } from "../modules/auth/use-cases/acceso/tokens-acceso.js";
 import { esResultadoFallido } from "./db/unit-of-work.js";
+import { obtenerPlantillaDocx, procesarDocxBuffer } from "./docx/render-docx.js";
 import { urlPortal } from "./mail/correo.service.js";
 import { escaparHtml, renderizarCorreo } from "./mail/plantilla-correo.js";
 import { anchoTexto, renderizarPdf } from "./pdf/render-documento.js";
 import { nombreSeguro } from "./storage/local-storage.service.js";
-import { obtenerPlantillaDocx, procesarDocxBuffer } from "./docx/render-docx.js";
-import PizZip from "pizzip";
 
 describe("UnitOfWork: detección de Result fallido (rollback)", () => {
   it("revierte solo los Result con ok=false", () => {
@@ -162,7 +162,9 @@ describe("motor OpenXML DOCX (render-docx)", () => {
     expect(xml).toContain("Coasesor:");
     expect(xml).toContain("Dr. Carlos Coasesor");
     // Verificar que Coasesor: y el nombre están en párrafos separados (de la misma forma que Asesor)
-    const separado = /Coasesor:\s*<\/w:t>.*?<\/w:p>\s*<w:p\b[^>]*>.*?Dr\. Carlos Coasesor/s.test(xml);
+    const separado = /Coasesor:\s*<\/w:t>.*?<\/w:p>\s*<w:p\b[^>]*>.*?Dr\. Carlos Coasesor/s.test(
+      xml,
+    );
     expect(separado).toBe(true);
   });
 
@@ -175,7 +177,6 @@ describe("motor OpenXML DOCX (render-docx)", () => {
     });
     const zip = new PizZip(res.buffer);
     const xml = zip.file("word/document.xml")?.asText() ?? "";
-    expect(xml).toContain("María Pérez</w:t><w:br/><w:t xml:space=\"preserve\">Carlos Gómez");
+    expect(xml).toContain('María Pérez</w:t><w:br/><w:t xml:space="preserve">Carlos Gómez');
   });
 });
-

@@ -68,7 +68,9 @@ body {
 
 .docx-wrapper > section.docx {
   background: #ffffff !important;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.12),
+    0 1px 3px rgba(0, 0, 0, 0.08) !important;
   margin-bottom: 24px !important;
   border-radius: 2px !important;
   box-sizing: border-box !important;
@@ -78,7 +80,8 @@ body {
   border-collapse: collapse !important;
 }
 
-.docx td, .docx th {
+.docx td,
+.docx th {
   border-color: #000000;
 }
 

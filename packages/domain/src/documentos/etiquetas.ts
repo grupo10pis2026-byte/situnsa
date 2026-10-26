@@ -246,4 +246,3 @@ export function formatoAutoridad(texto: string | null | undefined): string {
 
   return resultado.join(" ");
 }
-

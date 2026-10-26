@@ -1,19 +1,7 @@
 import { resolverNombreArchivoDescarga } from "@pis/domain/dist/documentos/plantillas.js";
 import { renderAsync } from "docx-preview";
-import {
-  AlertCircle,
-  Download,
-  Eye,
-  FileDown,
-  FileType,
-  Loader2,
-  Printer,
-  RefreshCw,
-  ToggleLeft,
-  ToggleRight,
-} from "lucide-react";
+import { AlertCircle, Download, Eye, FileDown, FileType, Loader2, RefreshCw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { apiBaseUrl } from "../../api/client.js";
 import {
   descargarArchivoProtegido,
   formatoDescargaUrl,
@@ -43,12 +31,7 @@ interface Props {
  *   con visor nativo integrado, zoom, paginado y descarga en PDF.
  * - Modo alternativo (Opción 2): Renderizado directo del .docx en el navegador (docx-preview).
  */
-export function ModalVistaPreviaFormato({
-  abierto,
-  onCerrar,
-  codigoExpediente,
-  formato,
-}: Props) {
+export function ModalVistaPreviaFormato({ abierto, onCerrar, codigoExpediente, formato }: Props) {
   const avisar = useToast();
   const docxContainerRef = useRef<HTMLDivElement>(null);
 
@@ -68,6 +51,7 @@ export function ModalVistaPreviaFormato({
   const [descargandoDocx, setDescargandoDocx] = useState(false);
 
   // Limpieza al cerrar o cambiar formato
+  // biome-ignore lint/correctness/useExhaustiveDependencies: control del ciclo de vida del modal
   useEffect(() => {
     if (!abierto || !formato) {
       if (pdfUrl) {
@@ -83,6 +67,7 @@ export function ModalVistaPreviaFormato({
       return;
     }
 
+    const idActual = formato.id;
     let activo = true;
 
     // Cargar PDF (Opción 1)
@@ -90,7 +75,7 @@ export function ModalVistaPreviaFormato({
       setCargandoPdf(true);
       setErrorPdf(null);
       try {
-        const url = formatoPdfUrl(formato!.id);
+        const url = formatoPdfUrl(idActual);
         const res = await apiFetch(url);
         if (!res.ok) {
           const detalle = await res.json().catch(() => null);
@@ -123,7 +108,7 @@ export function ModalVistaPreviaFormato({
       setCargandoDocx(true);
       setErrorDocx(null);
       try {
-        const url = formatoDescargaUrl(formato!.id);
+        const url = formatoDescargaUrl(idActual);
         const res = await apiFetch(url);
         if (!res.ok) {
           throw new Error(`Error ${res.status}: No se pudo descargar el archivo Word original`);
@@ -170,9 +155,7 @@ export function ModalVistaPreviaFormato({
     }).catch((err) => {
       if (!cancelado) {
         setErrorDocx(
-          err instanceof Error
-            ? err.message
-            : "No se pudo renderizar la vista previa de Word",
+          err instanceof Error ? err.message : "No se pudo renderizar la vista previa de Word",
         );
       }
     });
@@ -183,14 +166,15 @@ export function ModalVistaPreviaFormato({
   }, [modo, blobDocx]);
 
   if (!formato) return null;
+  const formatoActual = formato;
 
-  const nombrePdf = resolverNombreArchivoDescarga(codigoExpediente, formato.tipo, "pdf");
-  const nombreDocx = resolverNombreArchivoDescarga(codigoExpediente, formato.tipo, "docx");
+  const nombrePdf = resolverNombreArchivoDescarga(codigoExpediente, formatoActual.tipo, "pdf");
+  const nombreDocx = resolverNombreArchivoDescarga(codigoExpediente, formatoActual.tipo, "docx");
 
   async function handleDescargarPdf() {
     try {
       setDescargandoPdf(true);
-      await descargarArchivoProtegido(formatoPdfUrl(formato!.id, true), nombrePdf);
+      await descargarArchivoProtegido(formatoPdfUrl(formatoActual.id, true), nombrePdf);
       avisar("Descarga PDF iniciada", "ok");
     } catch (e) {
       avisar(e instanceof Error ? e.message : "No se pudo descargar el PDF", "error");
@@ -202,7 +186,7 @@ export function ModalVistaPreviaFormato({
   async function handleDescargarDocx() {
     try {
       setDescargandoDocx(true);
-      await descargarArchivoProtegido(formatoDescargaUrl(formato!.id), nombreDocx);
+      await descargarArchivoProtegido(formatoDescargaUrl(formatoActual.id), nombreDocx);
       avisar("Descarga Word iniciada", "ok");
     } catch (e) {
       avisar(e instanceof Error ? e.message : "No se pudo descargar el Word", "error");
@@ -212,12 +196,7 @@ export function ModalVistaPreviaFormato({
   }
 
   return (
-    <Dialogo
-      abierto={abierto}
-      onAbierto={(v) => !v && onCerrar()}
-      titulo=""
-      ancho="max-w-5xl"
-    >
+    <Dialogo abierto={abierto} onAbierto={(v) => !v && onCerrar()} titulo="" ancho="max-w-5xl">
       <div className="flex flex-col gap-3 -mt-2">
         {/* Cabecera del visor */}
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
@@ -226,9 +205,7 @@ export function ModalVistaPreviaFormato({
               <Eye size={18} />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-navy-950 sm:text-base">
-                {formato.nombre}
-              </h3>
+              <h3 className="text-sm font-bold text-navy-950 sm:text-base">{formato.nombre}</h3>
               <div className="flex items-center gap-2 mt-0.5">
                 <span className="rounded bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700">
                   Versión {formato.version}
@@ -332,11 +309,7 @@ export function ModalVistaPreviaFormato({
                 </h4>
                 <p className="text-xs text-slate-600 mb-4">{errorPdf}</p>
                 <div className="flex justify-center gap-2">
-                  <Button
-                    tamano="sm"
-                    variante="contorno"
-                    onClick={() => setModo("docx")}
-                  >
+                  <Button tamano="sm" variante="contorno" onClick={() => setModo("docx")}>
                     <FileType size={14} />
                     Ver con visor Word integrado
                   </Button>
@@ -390,11 +363,7 @@ export function ModalVistaPreviaFormato({
                   Error al cargar documento Word
                 </h4>
                 <p className="text-xs text-slate-600 mb-4">{errorDocx}</p>
-                <Button
-                  tamano="sm"
-                  variante="primario"
-                  onClick={() => setModo("pdf")}
-                >
+                <Button tamano="sm" variante="primario" onClick={() => setModo("pdf")}>
                   Regresar a vista PDF
                 </Button>
               </div>

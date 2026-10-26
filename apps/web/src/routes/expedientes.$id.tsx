@@ -1,28 +1,22 @@
 import type { ExpedienteDetalleDTO } from "@pis/contracts";
+import { resolverNombreArchivoDescarga } from "@pis/domain/dist/documentos/plantillas.js";
 import { Link, useNavigate, useParams } from "@tanstack/react-router";
 import {
   ArrowLeft,
-  Edit3,
-  Eye,
   FileDown,
-  FileText,
   KeyRound,
   Lock,
   MessageSquareWarning,
   Trash2,
   Undo2,
-  UploadCloud,
   Users,
   WandSparkles,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { destinoPorRol } from "../api/auth.js";
 import { ApiError } from "../api/errores.js";
-import { resolverNombreArchivoDescarga } from "@pis/domain/dist/documentos/plantillas.js";
 import {
-  abrirArchivoProtegido,
   descargarArchivoProtegido,
-  documentoDescargaUrl,
   formatoDescargaUrl,
   type GuardadoEstado,
   reportarPresenciaExpediente,
@@ -32,7 +26,6 @@ import {
   useExpedienteDetalle,
   useGenerarDocumentos,
   useLevantarObservacion,
-  useSubirDocumento,
 } from "../api/expedientes.js";
 import { esStaff } from "../api/guard.js";
 import { useObservar } from "../api/seguimiento.js";
@@ -210,7 +203,8 @@ export function ExpedienteDetallePage() {
             </p>
             <p className="text-xs sm:text-sm text-amber-900">
               <strong>{concurrentes.map((c) => `${c.nombre} (${c.rol})`).join(", ")}</strong>{" "}
-              también tiene abierto este expediente en este momento. Los cambios se sincronizan en tiempo real.
+              también tiene abierto este expediente en este momento. Los cambios se sincronizan en
+              tiempo real.
             </p>
           </div>
         </div>
@@ -465,7 +459,6 @@ function AccesoPortal({ detalle: d }: { detalle: ExpedienteDetalleDTO }) {
 }
 
 interface ExtraFormatoCardProps {
-  expedienteId: string;
   expedienteCodigo: string;
   formato: {
     id: string;
@@ -473,47 +466,11 @@ interface ExtraFormatoCardProps {
     nombre: string;
     version: number;
     pendientes: string[];
-    documentoId?: string | null | undefined;
-    documentoEstado?: string | null | undefined;
-    documentoVersion?: number | null | undefined;
   };
-  staff: boolean;
-  onVistaPrevia: (f: { id: string; tipo: string; nombre: string; version: number; pendientes: string[] }) => void;
-  onModificar: (f: { tipo: string; nombre: string; version: number; pendientes: string[] }) => void;
 }
 
-function ExtraFormatoCard({
-  expedienteId,
-  expedienteCodigo,
-  formato: g,
-  staff,
-  onVistaPrevia,
-  onModificar,
-}: ExtraFormatoCardProps) {
+function ExtraFormatoCard({ expedienteCodigo, formato: g }: ExtraFormatoCardProps) {
   const avisar = useToast();
-  const subir = useSubirDocumento(expedienteId);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      await subir.mutateAsync({ tipo: g.tipo, file });
-      avisar(`Documento adjuntado exitosamente para ${g.nombre}`, "ok");
-    } catch (err) {
-      avisar(err instanceof Error ? err.message : "Error al adjuntar documento", "error");
-    } finally {
-      if (inputRef.current) inputRef.current.value = "";
-    }
-  }
-
-  async function abrirAdjunto(documentoId: string) {
-    try {
-      await abrirArchivoProtegido(documentoDescargaUrl(documentoId));
-    } catch (err) {
-      avisar(err instanceof Error ? err.message : "No se pudo abrir el archivo adjunto", "error");
-    }
-  }
 
   return (
     <div className="flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-3 shadow-card hover:border-slate-300 transition-colors">
@@ -533,36 +490,13 @@ function ExtraFormatoCard({
               Completo
             </span>
           )}
-          {g.documentoId && (
-            <span className="rounded bg-sky-100 px-1.5 py-0.2 text-[10px] text-sky-800 font-semibold">
-              Adjunto v{g.documentoVersion ?? 1}
-            </span>
-          )}
         </div>
       </div>
-      <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-slate-100 pt-2">
+      <div className="mt-3 flex items-center border-t border-slate-100 pt-2">
         <Button
           tamano="sm"
           variante="contorno"
-          onClick={() =>
-            onVistaPrevia({
-              id: g.id,
-              tipo: g.tipo,
-              nombre: g.nombre,
-              version: g.version,
-              pendientes: g.pendientes,
-            })
-          }
-          title="Vista previa del formato en PDF con opciones de descarga"
-          type="button"
-        >
-          <Eye size={13} />
-          Vista Previa
-        </Button>
-        <Button
-          tamano="sm"
-          variante="contorno"
-          className="flex-1"
+          className="w-full justify-center"
           onClick={() =>
             void descargarArchivoProtegido(
               formatoDescargaUrl(g.id),
@@ -571,59 +505,12 @@ function ExtraFormatoCard({
               avisar(e instanceof Error ? e.message : "No se pudo descargar", "error"),
             )
           }
-          title={
-            g.pendientes.length > 0 ? `Pendiente: ${g.pendientes.join(", ")}` : undefined
-          }
+          title={g.pendientes.length > 0 ? `Pendiente: ${g.pendientes.join(", ")}` : undefined}
           type="button"
         >
           <FileDown size={13} />
           Descargar
         </Button>
-        {staff && (
-          <>
-            <Button
-              tamano="sm"
-              variante="contorno"
-              onClick={() => onModificar(g)}
-              title="Corregir datos de este formato y regenerar en PostgreSQL"
-              type="button"
-            >
-              <Edit3 size={13} />
-              Corregir
-            </Button>
-            <Button
-              tamano="sm"
-              variante={g.documentoId ? "contorno" : "primario"}
-              disabled={subir.isPending}
-              onClick={() => inputRef.current?.click()}
-              title="Adjuntar documento escaneado/firmado en PDF"
-              type="button"
-            >
-              <UploadCloud size={13} />
-              {subir.isPending ? "Subiendo…" : g.documentoId ? "Reemplazar" : "Adjuntar"}
-            </Button>
-            <input
-              ref={inputRef}
-              type="file"
-              accept=".pdf,application/pdf"
-              className="hidden"
-              onChange={(e) => void handleFileChange(e)}
-            />
-          </>
-        )}
-        {g.documentoId && (
-          <Button
-            tamano="sm"
-            variante="contorno"
-            onClick={() => void abrirAdjunto(g.documentoId!)}
-            title="Ver PDF escaneado/firmado adjunto"
-            type="button"
-            className="text-sky-700 border-sky-300 hover:bg-sky-50"
-          >
-            <FileText size={13} />
-            Ver Adjunto
-          </Button>
-        )}
       </div>
     </div>
   );
@@ -725,15 +612,7 @@ function DocumentosTab({
             </h3>
             <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
               {extras.map((g) => (
-                <ExtraFormatoCard
-                  key={g.id}
-                  expedienteId={d.id}
-                  expedienteCodigo={d.codigo}
-                  formato={g}
-                  staff={staff}
-                  onVistaPrevia={setFormatoAVer}
-                  onModificar={setFormatoAModificar}
-                />
+                <ExtraFormatoCard key={g.id} expedienteCodigo={d.codigo} formato={g} />
               ))}
             </div>
           </div>
@@ -757,6 +636,13 @@ function DocumentosTab({
               subetapaActiva={d.subetapaActiva?.clave ?? null}
               formato={generadoPorTipo.get(c.tipo) ?? null}
               etapa={etapa}
+              etiquetaEtapa={
+                etapa === "E1"
+                  ? "Etapa 1 · Verificación"
+                  : etapa === "E2"
+                    ? "Etapa 2 · Borrador"
+                    : "Etapa 6 · Aprobaciones"
+              }
               onModificar={setFormatoAModificar}
               onVistaPrevia={setFormatoAVer}
             />

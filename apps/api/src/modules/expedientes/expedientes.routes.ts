@@ -4,7 +4,6 @@ import { initServer } from "@ts-rest/fastify";
 import { eq } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { autorizar, denegado, esPersonal, type Perfil } from "../../infra/auth/autorizacion.js";
-import { presenciaExpedienteManager } from "./servicios/presencia-expediente.service.js";
 import {
   errorEnvelope,
   respuestaError,
@@ -18,6 +17,7 @@ import {
   getDetalleById,
   listarExpedientes,
 } from "./expedientes.repository.js";
+import { presenciaExpedienteManager } from "./servicios/presencia-expediente.service.js";
 import { ActualizarDatosUseCase } from "./use-cases/actualizar-datos/actualizar-datos.use-case.js";
 import { AnularExpedienteUseCase } from "./use-cases/anular-expediente/anular-expediente.use-case.js";
 import { EnviarAccesoParticipantesUseCase } from "./use-cases/enviar-acceso/enviar-acceso.use-case.js";

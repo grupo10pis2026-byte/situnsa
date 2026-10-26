@@ -37,9 +37,7 @@ export function procesarDocxBuffer(
     "word/footer2.xml",
   ];
 
-  const tieneCoasesor = Boolean(
-    (datos["COASESOR"] ?? datos["CO ASESOR"] ?? "").trim(),
-  );
+  const tieneCoasesor = Boolean((datos.COASESOR ?? datos["CO ASESOR"] ?? "").trim());
 
   for (const rutaXml of archivosXml) {
     const file = zip.file(rutaXml);
@@ -60,10 +58,7 @@ export function procesarDocxBuffer(
         "",
       );
       // 3. Fallback defensivo: párrafo suelto de "Coasesor:"
-      xml = xml.replace(
-        /<w:p\b[^>]*>(?:(?!<w:p\b).)*?Coasesor:\s*<\/w:t>.*?<\/w:p>/gs,
-        "",
-      );
+      xml = xml.replace(/<w:p\b[^>]*>(?:(?!<w:p\b).)*?Coasesor:\s*<\/w:t>.*?<\/w:p>/gs, "");
     } else {
       // Si tiene coasesor y alguna plantilla viniera con "Coasesor: <<COASESOR>>" en un solo párrafo,
       // asegurar que el nombre quede en la siguiente línea, de la misma forma que Asesor.

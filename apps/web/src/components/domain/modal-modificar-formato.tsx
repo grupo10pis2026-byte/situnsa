@@ -10,15 +10,7 @@ import {
   fechaLatina,
   horaLimpia,
 } from "@pis/domain/dist/documentos/etiquetas.js";
-import {
-  AlertCircle,
-  CheckCircle2,
-  Edit3,
-  Plus,
-  RefreshCw,
-  RotateCcw,
-  Trash2,
-} from "lucide-react";
+import { AlertCircle, CheckCircle2, Edit3, Plus, RefreshCw, RotateCcw } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useExpedienteDetalle, useGenerarDocumentos } from "../../api/expedientes.js";
 import { cn } from "../../utils/cn.js";
@@ -43,10 +35,7 @@ interface Props {
 }
 
 /** Catálogo de campos oficiales y etiquetas relevantes por tipo de formato. */
-const CAMPOS_POR_TIPO: Record<
-  string,
-  { clave: string; label: string; placeholder?: string }[]
-> = {
+const CAMPOS_POR_TIPO: Record<string, { clave: string; label: string; placeholder?: string }[]> = {
   // Etapa 01
   SOLICITUD_INSCRIPCION: [
     { clave: "TESIS", label: "Título del Plan de Tesis" },
@@ -155,30 +144,14 @@ const CAMPOS_POR_TIPO: Record<
     { clave: "FECHA DE CONFORMIDAD", label: "Fecha de Conformidad" },
     { clave: "ASESOR", label: "Asesor" },
   ],
-  ANEXO_27: [
-    { clave: "FECHA DE SOLICITUD", label: "Fecha de Solicitud" },
-  ],
-  ANEXO_01_DJ: [
-    { clave: "FECHA", label: "Fecha de Declaración Jurada" },
-  ],
-  ANEXO_01_DJ_P1: [
-    { clave: "FECHA", label: "Fecha (Participante 01)" },
-  ],
-  ANEXO_01_DJ_P2: [
-    { clave: "FECHA", label: "Fecha (Participante 02)" },
-  ],
-  ANEXO_02_DJ: [
-    { clave: "FECHA", label: "Fecha de Declaración Jurada" },
-  ],
-  ANEXO_02_DJ_P1: [
-    { clave: "FECHA", label: "Fecha (Participante 01)" },
-  ],
-  ANEXO_02_DJ_P2: [
-    { clave: "FECHA", label: "Fecha (Participante 02)" },
-  ],
-  ANEXO_32_VERACIDAD: [
-    { clave: "FECHA_EMISION", label: "Fecha de Emisión" },
-  ],
+  ANEXO_27: [{ clave: "FECHA DE SOLICITUD", label: "Fecha de Solicitud" }],
+  ANEXO_01_DJ: [{ clave: "FECHA", label: "Fecha de Declaración Jurada" }],
+  ANEXO_01_DJ_P1: [{ clave: "FECHA", label: "Fecha (Participante 01)" }],
+  ANEXO_01_DJ_P2: [{ clave: "FECHA", label: "Fecha (Participante 02)" }],
+  ANEXO_02_DJ: [{ clave: "FECHA", label: "Fecha de Declaración Jurada" }],
+  ANEXO_02_DJ_P1: [{ clave: "FECHA", label: "Fecha (Participante 01)" }],
+  ANEXO_02_DJ_P2: [{ clave: "FECHA", label: "Fecha (Participante 02)" }],
+  ANEXO_32_VERACIDAD: [{ clave: "FECHA_EMISION", label: "Fecha de Emisión" }],
   AUTORIZACION_IMPRESION: [
     { clave: "FECHA DE IMPRESION", label: "Fecha de Impresión" },
     { clave: "FECHA DE CONFORMIDAD", label: "Fecha de Conformidad" },
@@ -289,7 +262,7 @@ export function ModalModificarFormato({
     }
 
     return resultado;
-  }, [formato?.tipo, formato?.pendientes, clavesPersonalizadas]);
+  }, [formato, clavesPersonalizadas]);
 
   if (!formato) return null;
 
@@ -334,28 +307,26 @@ export function ModalModificarFormato({
         }
         overridesFormateados[k] = formatted;
         if (k === "VEREDICTO") {
-          overridesFormateados["VERREDICTO"] = formatted;
+          overridesFormateados.VERREDICTO = formatted;
         }
         if (k === "NUMERO_ACTA") {
-          overridesFormateados["ACTA_NUMERO"] = formatted;
+          overridesFormateados.ACTA_NUMERO = formatted;
           overridesFormateados["NUMERO DE ACTA"] = formatted;
           overridesFormateados["N° DE ACTA"] = formatted;
         }
+
         if (k === "FECHA DE CONFORMIDAD" && formato.tipo === "ANEXO_08") {
-          overridesFormateados["FECHA"] = formatted;
+          overridesFormateados.FECHA = formatted;
         }
         if (k === "FECHA DE SIMILITUD") {
-          overridesFormateados["FECHA"] = formatted;
+          overridesFormateados.FECHA = formatted;
         }
       }
 
       await generar.mutateAsync({
         etapa,
         tipo: formato.tipo,
-        overrides:
-          Object.keys(overridesFormateados).length > 0
-            ? overridesFormateados
-            : undefined,
+        overrides: Object.keys(overridesFormateados).length > 0 ? overridesFormateados : undefined,
       });
 
       avisar(`${formato.nombre} actualizado a v${formato.version + 1} en el expediente`, "ok");
@@ -396,7 +367,8 @@ export function ModalModificarFormato({
                 Modificar Datos: {formato.nombre}
               </h3>
               <p className="text-xs text-slate-500">
-                Edite los campos directamente para regenerar una nueva versión (v{formato.version + 1}).
+                Edite los campos directamente para regenerar una nueva versión (v
+                {formato.version + 1}).
               </p>
             </div>
           </div>
@@ -420,7 +392,8 @@ export function ModalModificarFormato({
         {cantidadModificados > 0 && (
           <div className="flex items-center justify-between rounded-lg bg-sky-50 px-3 py-2 text-xs font-medium text-sky-900 border border-sky-200">
             <span>
-              ✏️ {cantidadModificados} campo(s) modificado(s) listos para aplicar y persistir en el expediente.
+              ✏️ {cantidadModificados} campo(s) modificado(s) listos para aplicar y persistir en el
+              expediente.
             </span>
             <button
               type="button"
@@ -436,7 +409,8 @@ export function ModalModificarFormato({
         <div className="max-h-[58vh] overflow-y-auto pr-1 space-y-3">
           {camposFormato.map((campo) => {
             const claveUpper = campo.clave.toUpperCase();
-            const esPendiente = formato.pendientes.includes(campo.clave) || formato.pendientes.includes(claveUpper);
+            const esPendiente =
+              formato.pendientes.includes(campo.clave) || formato.pendientes.includes(claveUpper);
             const tieneOverride = campo.clave in overrides;
             const valorActual = tieneOverride
               ? overrides[campo.clave]
@@ -470,9 +444,7 @@ export function ModalModificarFormato({
                     >
                       {campo.label}
                     </label>
-                    <span className="font-mono text-[10px] text-slate-400">
-                      ({campo.clave})
-                    </span>
+                    <span className="font-mono text-[10px] text-slate-400">({campo.clave})</span>
                   </div>
 
                   <div className="flex items-center gap-2">
@@ -520,7 +492,9 @@ export function ModalModificarFormato({
                       onChange={(e) => actualizarCampo(campo.clave, e.target.value)}
                     />
                     <span className="text-xs text-slate-500">
-                      {horaLimpia(valorActual) ? `${horaLimpia(valorActual)} hrs (formato 24h)` : "Seleccione hora"}
+                      {horaLimpia(valorActual)
+                        ? `${horaLimpia(valorActual)} hrs (formato 24h)`
+                        : "Seleccione hora"}
                     </span>
                   </div>
                 ) : esLargo ? (

@@ -42,7 +42,7 @@ export function modalidadAEtiqueta(canon: ModalidadCanon): EtiquetaModalidad {
   return A_ETIQUETA[canon];
 }
 
-/** RN-L07: administrativos en MAYÚSCULAS (los nombres y títulos llevan formato formal propio). */
+/** RN-L07: administrativos en MAYÚSCULAS (nombres de autoridades y personas van en Title Case formal). */
 const CAMPOS_MAYUSCULAS = new Set([
   "programa",
   "nroDecreto",

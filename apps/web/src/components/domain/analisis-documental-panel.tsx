@@ -1,3 +1,4 @@
+import type { AnalisisDocumentoDTO } from "@pis/contracts";
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import { useAnalizarDocumento } from "../../api/analisis-documental.js";
 import { cn } from "../../utils/cn.js";
@@ -12,24 +13,50 @@ import { Card } from "../ui/card.js";
  */
 export function AnalisisDocumentalPanel({
   documentoId,
+  tipo = "PLAN_ESTRUCTURADO",
   onVerDetalles,
 }: {
   documentoId: string;
-  onVerDetalles?: () => void;
+  tipo?: string;
+  onVerDetalles?: (resultado: AnalisisDocumentoDTO) => void;
 }) {
   const analisis = useAnalizarDocumento(documentoId);
   const resultado = analisis.data?.documentoId === documentoId ? analisis.data : null;
 
+  const esPlan = tipo === "PLAN_ESTRUCTURADO";
+  const esBoleta =
+    tipo.toUpperCase().includes("BOLETA") ||
+    tipo.toUpperCase().includes("RECIBO") ||
+    tipo.toUpperCase().includes("PAGO") ||
+    tipo.toUpperCase().includes("COMPROBANTE");
+
+  const tituloPanel = esPlan
+    ? "Revisión estructural: Carátula, Presentación y Resumen"
+    : esBoleta
+      ? "Verificación de Boleta / Comprobante de Pago"
+      : "Revisión documental automática";
+
+  const subtituloPanel = esPlan
+    ? "Verificación automática de páginas 1–6 según el formato oficial FIPS - UNSA (Tesis / Trabajo Académico)."
+    : esBoleta
+      ? "Validación automática de nombre del tesista (sin importar mayúsculas/minúsculas) y número de DNI según el sistema."
+      : "Verificación de coincidencia de tesistas, DNI y asesor (solo si el documento los contiene).";
+
+  const textoBotonAnalizar = analisis.isPending
+    ? "Analizando…"
+    : resultado
+      ? "Volver a analizar"
+      : esPlan
+        ? "Verificar estructura y carátula"
+        : esBoleta
+          ? "Verificar boleta de pago"
+          : "Verificar datos del documento";
+
   return (
     <Card className="mt-3 space-y-3.5 p-4 bg-slate-50/50 border-slate-200">
       <div>
-        <p className="font-bold text-slate-900 text-sm">
-          Revisión estructural: Carátula, Presentación y Resumen
-        </p>
-        <p className="text-xs text-grafito-600 mt-0.5">
-          Verificación automática de páginas 1–6 según el formato oficial FIPS - UNSA (Tesis /
-          Trabajo Académico).
-        </p>
+        <p className="font-bold text-slate-900 text-sm">{tituloPanel}</p>
+        <p className="text-xs text-grafito-600 mt-0.5">{subtituloPanel}</p>
       </div>
 
       <div>
@@ -40,11 +67,7 @@ export function AnalisisDocumentalPanel({
           disabled={analisis.isPending}
           onClick={() => analisis.mutate(false)}
         >
-          {analisis.isPending
-            ? "Analizando…"
-            : resultado
-              ? "Volver a analizar"
-              : "Verificar estructura y carátula"}
+          {textoBotonAnalizar}
         </Button>
       </div>
 
@@ -88,28 +111,55 @@ export function AnalisisDocumentalPanel({
             </div>
 
             <div className="rounded-lg bg-white p-3 border border-slate-200 space-y-1.5 text-xs">
-              <p>
-                <strong className="text-slate-700">Título registrado:</strong>{" "}
-                <span className="text-slate-900">{resultado.tituloRegistrado}</span>
-              </p>
-              <p>
-                <strong className="text-slate-700">Título detectado:</strong>{" "}
-                <span className="text-slate-900">
-                  {resultado.tituloDetectado ?? "No identificado en carátula"}
-                </span>
-              </p>
-              {resultado.similitudTitulo !== null && (
-                <p>
-                  <strong className="text-slate-700">Similitud textual:</strong>{" "}
-                  <span
-                    className={cn(
-                      "font-semibold",
-                      resultado.similitudTitulo === 100 ? "text-green-700" : "text-amber-700",
-                    )}
-                  >
-                    {resultado.similitudTitulo}%
-                  </span>
-                </p>
+              {esPlan ? (
+                <>
+                  <p>
+                    <strong className="text-slate-700">Título registrado:</strong>{" "}
+                    <span className="text-slate-900">{resultado.tituloRegistrado}</span>
+                  </p>
+                  <p>
+                    <strong className="text-slate-700">Título detectado:</strong>{" "}
+                    <span className="text-slate-900">
+                      {resultado.tituloDetectado ?? "No identificado en carátula"}
+                    </span>
+                  </p>
+                  {resultado.similitudTitulo !== null && (
+                    <p>
+                      <strong className="text-slate-700">Similitud textual:</strong>{" "}
+                      <span
+                        className={cn(
+                          "font-semibold",
+                          resultado.similitudTitulo === 100 ? "text-green-700" : "text-amber-700",
+                        )}
+                      >
+                        {resultado.similitudTitulo}%
+                      </span>
+                    </p>
+                  )}
+                </>
+              ) : (
+                <div className="space-y-1">
+                  {resultado.controles.map((c) => (
+                    <div key={c.tipo} className="flex items-center justify-between py-0.5">
+                      <span className="text-slate-700 font-medium">{c.tipo}:</span>
+                      <span
+                        className={cn(
+                          "px-2 py-0.5 rounded text-[11px] font-semibold",
+                          c.estado === "CONFORME"
+                            ? "bg-green-100 text-green-800"
+                            : c.estado === "ADVERTENCIA"
+                              ? "bg-amber-100 text-amber-800"
+                              : "bg-slate-100 text-slate-700",
+                        )}
+                      >
+                        {c.estado}
+                      </span>
+                    </div>
+                  ))}
+                  {resultado.controles.length === 0 && (
+                    <p className="text-slate-600">Verificación procesada correctamente.</p>
+                  )}
+                </div>
               )}
             </div>
 
@@ -119,7 +169,7 @@ export function AnalisisDocumentalPanel({
                   variante="contorno"
                   tamano="sm"
                   type="button"
-                  onClick={onVerDetalles}
+                  onClick={() => onVerDetalles(resultado)}
                   className={cn(
                     "w-full flex items-center justify-center gap-2 border font-medium text-xs py-2 shadow-xs transition-colors",
                     resultado.hallazgos.length > 0
