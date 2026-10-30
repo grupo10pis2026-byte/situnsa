@@ -128,10 +128,28 @@ export function MiTramitePage() {
       ? [...d.mensajes].reverse().find((m) => /Observaci|Similitud/i.test(m.texto))
       : undefined;
 
-  // Filtrado de documentos pertenecientes a la etapa seleccionada
+  // Filtrado de documentos pertenecientes a la etapa seleccionada (solo los que sube el alumno)
   const docsEtapa = d.checklist.filter((c) => etapaDeDocumento(c) === etapaSeleccionada);
   const docsTesista = docsEtapa.filter((c) => esDocumentoTesista(c.tipo));
-  const docsInstitucionales = docsEtapa.filter((c) => !esDocumentoTesista(c.tipo));
+
+  // Observaciones correspondientes a la etapa seleccionada (para etapas sin carga documental)
+  const observacionesDeEstaEtapa = d.mensajes.filter((m) => {
+    const txt = m.texto.toLowerCase();
+    const coincideEtapa =
+      (etapaSeleccionada === 1 && (txt.includes("plan") || txt.includes("inscripci") || txt.includes("e1"))) ||
+      (etapaSeleccionada === 2 && (txt.includes("borrador") || txt.includes("anexo") || txt.includes("e2"))) ||
+      (etapaSeleccionada === 3 && (txt.includes("jurado") || txt.includes("dictamen") || txt.includes("e3"))) ||
+      (etapaSeleccionada === 4 && (txt.includes("sustenta") || txt.includes("fecha") || txt.includes("e4"))) ||
+      (etapaSeleccionada === 5 && (txt.includes("similitud") || txt.includes("turnitin") || txt.includes("repositorio") || txt.includes("e5"))) ||
+      (etapaSeleccionada === 6 && (txt.includes("secretar") || txt.includes("consejo") || txt.includes("comisi") || txt.includes("e6"))) ||
+      (etapaSeleccionada === 7 && (txt.includes("título") || txt.includes("titulo") || txt.includes("sunedu") || txt.includes("colaci") || txt.includes("e7")));
+    return (
+      coincideEtapa ||
+      (d.estado === "OBSERVADO" &&
+        d.avance.etapaActual === etapaSeleccionada &&
+        /Observaci|Similitud|Rechaz/i.test(m.texto))
+    );
+  });
 
   // Subetapas de la etapa seleccionada
   const subetapasDeEstaEtapa = porEtapa.get(etapaSeleccionada) ?? [];
@@ -394,36 +412,25 @@ export function MiTramitePage() {
         </div>
 
         {/* ============================================================== */}
-        {/* DOCUMENTACIÓN DE LA ETAPA SELECCIONADA                          */}
+        {/* DOCUMENTACIÓN / OBSERVACIONES DE LA ETAPA SELECCIONADA         */}
         {/* ============================================================== */}
         <div className="p-4 md:p-5 space-y-6">
-          {/* 1. DOCUMENTOS A PRESENTAR POR EL ALUMNO */}
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/70 pb-2">
-              <div>
-                <h4 className="text-sm font-bold text-navy-950 flex items-center gap-1.5">
-                  <FileText size={16} className="text-navy-800" />
-                  Documentos a presentar por el alumno ({docsTesista.length})
-                </h4>
-                <p className="text-xs text-grafito-600">
-                  Archivos de tu autoría, solicitudes y declaraciones juradas que debes firmar y
-                  adjuntar en PDF.
-                </p>
+          {docsTesista.length > 0 ? (
+            /* 1. DOCUMENTOS A PRESENTAR POR EL ALUMNO (con observaciones en cada tarjeta) */
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/70 pb-2">
+                <div>
+                  <h4 className="text-sm font-bold text-navy-950 flex items-center gap-1.5">
+                    <FileText size={16} className="text-navy-800" />
+                    Documentos a presentar por el alumno ({docsTesista.length})
+                  </h4>
+                  <p className="text-xs text-grafito-600">
+                    Archivos de tu autoría, solicitudes y declaraciones juradas que debes firmar y
+                    adjuntar en PDF. En caso de recibir observaciones a un documento, se mostrarán directamente en su tarjeta.
+                  </p>
+                </div>
               </div>
-            </div>
 
-            {docsTesista.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/50 p-5 text-center text-xs text-grafito-600">
-                <Info size={22} className="mx-auto text-slate-400 mb-1.5" />
-                <p className="font-semibold text-slate-700">
-                  No hay documentos personales pendientes de entrega en la Etapa {etapaSeleccionada}
-                </p>
-                <p className="text-[11px] text-slate-500 mt-0.5 max-w-md mx-auto">
-                  Esta etapa se procesa internamente por el asesor, jurados o la facultad. No
-                  requieres subir archivos personales aquí.
-                </p>
-              </div>
-            ) : (
               <div className="grid grid-cols-1 gap-3.5 md:grid-cols-2">
                 {docsTesista.map((c) => (
                   <DocumentoCard
@@ -443,44 +450,71 @@ export function MiTramitePage() {
                   />
                 ))}
               </div>
-            )}
-          </div>
-
-          {/* 2. FORMATOS Y ACTAS EMITIDOS POR LA FACULTAD / JURADOS */}
-          {docsInstitucionales.length > 0 && (
-            <div className="border-t border-slate-200/80 pt-5 space-y-3">
+            </div>
+          ) : (
+            /* 2. ETAPA SIN CARGA DOCUMENTAL: APARTADO EXCLUSIVO DE OBSERVACIONES Y ESTADO */
+            <div className="space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/70 pb-2">
                 <div>
                   <h4 className="text-sm font-bold text-navy-950 flex items-center gap-1.5">
-                    <FileBadge size={16} className="text-dorado-600" />
-                    Actas y resoluciones institucionales ({docsInstitucionales.length})
+                    <MessageSquare size={16} className="text-navy-800" />
+                    Observaciones y estado de revisión de la Etapa {etapaSeleccionada}
                   </h4>
                   <p className="text-xs text-grafito-600">
-                    Documentos autogenerados y actas emitidas por jurados, asesor o la Unidad.
-                    Disponibles para tu consulta y descarga (no los debes subir tú).
+                    En esta etapa no se requiere que subas documentación personal. El trámite se procesa internamente por el jurado o la facultad.
                   </p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-3.5 md:grid-cols-2">
-                {docsInstitucionales.map((c) => (
-                  <DocumentoCard
-                    key={c.tipo}
-                    documentoId={c.documentoId}
-                    estado={c.estado}
-                    expedienteId={d.id}
-                    faltantes={[]}
-                    nombre={c.nombre}
-                    tipo={c.tipo}
-                    version={c.version}
-                    requeridoEn={c.requeridoEn}
-                    subetapaActiva={d.subetapaActiva?.clave ?? null}
-                    formato={generadoPorTipo.get(c.tipo) ?? null}
-                    etiquetaEtapa={`Etapa ${etapaSeleccionada}`}
-                    permitirSubir={false}
-                  />
-                ))}
-              </div>
+              {/* Si hay observaciones vigentes para esta etapa */}
+              {observacionesDeEstaEtapa.length > 0 ? (
+                <div className="space-y-3">
+                  {observacionesDeEstaEtapa.map((obs) => (
+                    <div
+                      key={obs.id}
+                      className="rounded-xl border border-amber-300 bg-amber-50/80 p-4 text-sm text-amber-950 shadow-xs space-y-2"
+                    >
+                      <div className="flex items-start gap-2.5">
+                        <MessageSquareWarning size={20} className="text-amber-700 shrink-0 mt-0.5" />
+                        <div className="flex-1 space-y-1">
+                          <p className="font-bold text-amber-950">Observación emitida por el área / jurado</p>
+                          <p className="rounded-lg bg-white/90 p-3 text-xs text-slate-800 border border-amber-200 leading-relaxed font-medium">
+                            {obs.texto}
+                          </p>
+                          <p className="text-[11px] text-amber-800 pt-0.5">
+                            Fecha de notificación:{" "}
+                            {new Date(obs.createdAt).toLocaleString("es-PE", {
+                              dateStyle: "medium",
+                              timeStyle: "short",
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/60 p-6 text-center text-xs text-grafito-600 space-y-1.5">
+                  <CheckCircle2 size={24} className="mx-auto text-emerald-600 mb-1" />
+                  <p className="font-semibold text-slate-800 text-sm">
+                    Sin observaciones en la Etapa {etapaSeleccionada}
+                  </p>
+                  <p className="text-[12px] text-slate-500 max-w-md mx-auto">
+                    {etapaSeleccionada === d.avance.etapaActual
+                      ? "Esta etapa se encuentra en curso bajo revisión de los jurados o del área correspondiente. Si se registra alguna observación, se notificará en este apartado."
+                      : etapaSeleccionada < d.avance.etapaActual
+                        ? "Esta etapa fue completada satisfactoriamente sin observaciones pendientes."
+                        : "Esta etapa aún no ha iniciado. Podrás consultar su estado cuando tu expediente avance a ella."}
+                  </p>
+                </div>
+              )}
+
+              {/* En Etapa 4, si está apto para sustentar, mostrar el selector de fechas */}
+              {etapaSeleccionada === 4 && d.estado === "APTO_SUSTENTACION" && (
+                <div className="pt-2">
+                  <PropuestaFechasCard expedienteId={d.id} />
+                </div>
+              )}
             </div>
           )}
         </div>
