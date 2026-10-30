@@ -16,10 +16,11 @@ import {
   Eye,
   FileDown,
   FileText,
+  Info,
   MessageSquare,
+  PenTool,
   Stamp,
   UploadCloud,
-  WandSparkles,
 } from "lucide-react";
 import { useRef, useState } from "react";
 import {
@@ -33,7 +34,7 @@ import {
 import { useVistoBueno } from "../../api/seguimiento.js";
 import { useSession } from "../../api/session.js";
 import { cn } from "../../utils/cn.js";
-import { Button, botonClases } from "../ui/button.js";
+import { Button } from "../ui/button.js";
 import { Card } from "../ui/card.js";
 import { ConfirmDialog } from "../ui/confirm-dialog.js";
 import { Dialogo } from "../ui/dialog.js";
@@ -87,7 +88,7 @@ const PERSONAL = ["ADMIN_FIPS", "SECRETARIA", "DECANO"];
  * Nombres oficiales según el listado normativo y de la facultad (para guiar al usuario
  * y al personal en el subtítulo plomo de cada tarjeta).
  */
-const NOMBRES_LISTADO_OFICIAL: Record<string, string> = {
+export const NOMBRES_LISTADO_OFICIAL: Record<string, string> = {
   // Etapa 01
   SOLICITUD_INSCRIPCION: "Anexo 17 — Solicitud de inscripción del plan",
   ANEXO_17: "Anexo 17 — Solicitud de inscripción",
@@ -98,6 +99,7 @@ const NOMBRES_LISTADO_OFICIAL: Record<string, string> = {
   ANEXO_33: "Nombramiento de jurado evaluador",
   CARATULA_PLAN: "Carátula oficial de plan de tesis",
   DECRETO_APROBACION: "Decreto de aprobación del plan",
+  ETIQUETAS: "Etiquetas institucionales de plan y empastado",
   OFICIO_CIRCULAR_TERNA: "Oficio circular — Designación de terna evaluadora",
   OFICIO_CIRCULAR: "Oficio circular — Designación de terna evaluadora",
   OBSERVACIONES_PLAN: "Formato de observaciones de plan de tesis",
@@ -129,15 +131,69 @@ const NOMBRES_LISTADO_OFICIAL: Record<string, string> = {
   INFORME_SECRETARIA: "Aprobación de Consejo y emisión diploma (Informe Secretaría)",
 };
 
+/** Extrae y unifica los campos pendientes de la plantilla y del documento */
+export function obtenerCamposPendientesUnificados(
+  formatoPendientes?: string[],
+  faltantes: string[] = [],
+): string[] {
+  return Array.from(
+    new Set([
+      ...(formatoPendientes ?? []),
+      ...faltantes
+        .filter(
+          (f) =>
+            f.startsWith("Campo pendiente: ") || f.startsWith("Campo pendiente en el formato: "),
+        )
+        .map((f) => f.replace(/^Campo pendiente( en el formato)?: /, "").trim()),
+      ...faltantes.filter(
+        (f) =>
+          !f.startsWith("Campo pendiente: ") &&
+          !f.startsWith("Campo pendiente en el formato: ") &&
+          f !== "Falta adjuntar el archivo",
+      ),
+    ]),
+  ).filter(Boolean);
+}
+
+/** Determina si un tipo documental requiere firma física o digital del interesado o jurado */
+export function requiereFirma(tipo: string): boolean {
+  const TIPOS_CON_FIRMA = new Set([
+    "SOLICITUD_INSCRIPCION",
+    "ANEXO_17",
+    "ACEPTACION_ASESORIA",
+    "DJ_CONFIDENCIALIDAD",
+    "ANEXO_18",
+    "ANEXO_33",
+    "ANEXO_27",
+    "ANEXO_01_DJ",
+    "ANEXO_01_DJ_P1",
+    "ANEXO_01_DJ_P2",
+    "ANEXO_02_DJ",
+    "ANEXO_02_DJ_P1",
+    "ANEXO_02_DJ_P2",
+    "ANEXO_32_VERACIDAD",
+    "ACTA_CONFORMIDAD",
+    "ACTA_DICTAMEN",
+    "ACTA_SUSTENTACION",
+    "ANEXO_08",
+    "AUTORIZACION_IMPRESION",
+    "AUTORIZACION_PUBLICACION",
+    "RESOLUCION_DECANAL",
+  ]);
+  return TIPOS_CON_FIRMA.has(tipo);
+}
+
 /**
  * Tarjeta de /expedientes/$id y /mi-tramite: carga, descarga y visto bueno del documento.
  * PLAN_ESTRUCTURADO incorpora AnalisisDocumentalPanel cuando hay documentoId.
  * La API vuelve a comprobar autorización y reglas que la vista usa para habilitar acciones.
  */
 export function DocumentoCard(p: Props) {
+  const camposPendientes = obtenerCamposPendientesUnificados(p.formato?.pendientes, p.faltantes);
   const inputRef = useRef<HTMLInputElement>(null);
   const subir = useSubirDocumento(p.expedienteId);
   const vistoBueno = useVistoBueno(p.expedienteId);
+  const generar = useGenerarDocumentos(p.expedienteId);
   const [analisisResultado, setAnalisisResultado] = useState<AnalisisDocumentoDTO | null>(null);
   const { sesion } = useSession();
   const avisar = useToast();
@@ -148,6 +204,7 @@ export function DocumentoCard(p: Props) {
   const [visorAbierto, setVisorAbierto] = useState(false);
   const [observacionesAbiertas, setObservacionesAbiertas] = useState(false);
   const [modoObservarDirecto, setModoObservarDirecto] = useState(false);
+  const [descargando, setDescargando] = useState(false);
 
   const { data: observaciones = [] } = useObservacionesDocumento(p.expedienteId, p.tipo);
   const observacionesPendientes = observaciones.filter((o) => o.estado === "PENDIENTE").length;
@@ -175,37 +232,40 @@ export function DocumentoCard(p: Props) {
     !!sesion &&
     ["ASESOR", ...PERSONAL].includes(sesion.rol);
 
-  const generar = useGenerarDocumentos(p.expedienteId);
-  const [generando, setGenerando] = useState(false);
   const tieneFormatoGenerable = tienePlantilla(p.tipo);
+  const puedeDescargar = !!p.formato || !!p.documentoId || tieneFormatoGenerable;
 
-  async function onGenerarIndividual(): Promise<void> {
-    setGenerando(true);
-    const etapaCalc =
-      p.etapa ??
-      (p.tipo.startsWith("E1") ||
-      p.tipo === "SOLICITUD_INSCRIPCION" ||
-      p.tipo === "ACEPTACION_ASESORIA" ||
-      p.tipo === "DJ_CONFIDENCIALIDAD" ||
-      p.tipo === "ANEXO_17" ||
-      p.tipo === "ANEXO_18" ||
-      p.tipo === "CARATULA_PLAN"
-        ? "E1"
-        : "E2");
+  async function onDescargar(): Promise<void> {
+    setDescargando(true);
     try {
-      const r = await generar.mutateAsync({
-        etapa: etapaCalc,
-        tipo: p.tipo,
-      });
-      const gen = r.generados[0];
-      const faltan = gen?.pendientes.length ?? 0;
-      avisar(
-        `${p.nombre}: plantilla rellenada${faltan > 0 ? ` (${faltan} campos pendientes)` : ""}`,
-      );
+      if (p.formato) {
+        await descargarArchivoProtegido(formatoDescargaUrl(p.formato.id), `${p.nombre}.docx`);
+        avisar("Documento Word (.docx) descargado con éxito");
+        return;
+      }
+      if (tieneFormatoGenerable) {
+        const etapaCalc = p.etapa ?? (p.tipo.startsWith("E1") ? "E1" : "E2");
+        const r = await generar.mutateAsync({
+          etapa: etapaCalc,
+          tipo: p.tipo,
+        });
+        const gen = r.generados.find((g) => g.tipo === p.tipo) ?? r.generados[0];
+        if (gen) {
+          await descargarArchivoProtegido(formatoDescargaUrl(gen.id), `${p.nombre}.docx`);
+          avisar("Plantilla oficial generada y descargada para firma");
+          return;
+        }
+      }
+      if (p.documentoId) {
+        await descargarArchivoProtegido(documentoDescargaUrl(p.documentoId), p.nombre);
+        avisar("Archivo descargado");
+        return;
+      }
+      avisar("No hay plantilla o archivo disponible para descarga", "aviso");
     } catch (e) {
-      avisar(e instanceof Error ? e.message : "No se pudo rellenar la plantilla", "error");
+      avisar(e instanceof Error ? e.message : "Error al descargar el documento", "error");
     } finally {
-      setGenerando(false);
+      setDescargando(false);
     }
   }
 
@@ -249,14 +309,6 @@ export function DocumentoCard(p: Props) {
     void ejecutar(file);
   }
 
-  async function descargarFormato(url: string, nombreSugerido: string): Promise<void> {
-    try {
-      await descargarArchivoProtegido(url, nombreSugerido);
-    } catch (e) {
-      avisar(e instanceof Error ? e.message : "No se pudo descargar el documento", "error");
-    }
-  }
-
   return (
     <Card
       className={cn(
@@ -288,6 +340,23 @@ export function DocumentoCard(p: Props) {
                   v{p.formato.version}
                 </span>
               )}
+              {camposPendientes.length > 0 ? (
+                <span className="inline-flex items-center gap-1 rounded-md bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-800 border border-amber-200">
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-600" />
+                  {camposPendientes.length} pendiente{camposPendientes.length > 1 ? "s" : ""}
+                </span>
+              ) : p.formato || p.documentoId ? (
+                <span className="inline-flex items-center gap-1 rounded-md bg-emerald-100 px-2 py-0.5 text-[11px] font-bold text-emerald-800 border border-emerald-200">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
+                  Completo
+                </span>
+              ) : null}
+              {requiereFirma(p.tipo) && (
+                <span className="inline-flex items-center gap-1 rounded-md bg-purple-50 px-2 py-0.5 text-[11px] font-bold text-purple-700 border border-purple-200">
+                  <PenTool size={11} />
+                  Requiere firma
+                </span>
+              )}
             </div>
             <p className="text-xs text-grafito-600">
               {NOMBRES_LISTADO_OFICIAL[p.tipo] ? (
@@ -313,13 +382,31 @@ export function DocumentoCard(p: Props) {
           <StatusBadge estado={p.estado} />
         </div>
       </div>
-      {p.faltantes.length > 0 && (!esTesista || esDeTesista) && (
-        <p className="mt-2.5 flex items-start gap-1.5 rounded-lg bg-aviso-100 px-2.5 py-2 text-xs text-aviso-800">
-          <AlertTriangle size={14} className="mt-0.5 shrink-0" aria-hidden />
-          <span>
-            <strong>Campos pendientes:</strong> {p.faltantes.join("; ")}
-          </span>
+      {camposPendientes.length > 0 && (
+        <div className="mt-2.5 flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 shadow-xs">
+          <AlertTriangle size={15} className="mt-0.5 shrink-0 text-amber-600" aria-hidden />
+          <div className="min-w-0">
+            <span className="font-bold text-amber-950">Campos pendientes por completar:</span>{" "}
+            <span className="text-amber-900">{camposPendientes.join(", ")}</span>
+          </div>
+        </div>
+      )}
+      {p.faltantes.includes("Falta adjuntar el archivo") && !p.documentoId && !p.formato && (
+        <p className="mt-2 flex items-center gap-1.5 rounded-lg bg-slate-100 px-2.5 py-1.5 text-xs text-slate-700">
+          <Info size={14} className="shrink-0 text-slate-500" aria-hidden />
+          <span>Falta adjuntar el archivo requerido</span>
         </p>
+      )}
+      {requiereFirma(p.tipo) && !p.documentoId && (
+        <div className="mt-2.5 flex items-center justify-between gap-2 rounded-lg bg-indigo-50/70 border border-indigo-200/80 px-2.5 py-1.5 text-xs text-indigo-950">
+          <div className="flex items-center gap-1.5">
+            <PenTool size={13} className="text-indigo-600 shrink-0" />
+            <span>
+              <strong>Paso requerido:</strong> Descargue el formato en Word, firme el documento y
+              súbalo mediante <strong>ADJUNTAR</strong>.
+            </span>
+          </div>
+        </div>
       )}
       {error && (
         <p className="mt-2 text-xs font-medium text-red-700" role="alert">
@@ -327,23 +414,119 @@ export function DocumentoCard(p: Props) {
         </p>
       )}
       <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-200/70 pt-3">
-        {p.documentoId ? (
+        {p.formato && p.onVistaPrevia ? (
+          <Button
+            tamano="sm"
+            variante="oscuro"
+            onClick={() => {
+              if (!p.formato) return;
+              p.onVistaPrevia?.({
+                id: p.formato.id,
+                tipo: p.tipo,
+                nombre: p.nombre,
+                version: p.formato.version,
+                pendientes: p.formato.pendientes,
+              });
+            }}
+            title="Ver documento oficial y acceder a descargas (PDF / Word)"
+            type="button"
+          >
+            <Eye size={14} />
+            VER
+          </Button>
+        ) : p.documentoId ? (
           <Button tamano="sm" variante="oscuro" onClick={() => setVisorAbierto(true)} type="button">
             <Eye size={14} />
             VER
           </Button>
         ) : (
-          <span
-            className={cn(
-              botonClases({ variante: "contorno", tamano: "sm" }),
-              "pointer-events-none opacity-50",
-            )}
-            aria-disabled
+          <Button
+            tamano="sm"
+            variante="oscuro"
+            disabled
+            title="Documento aún no disponible para visualización"
+            type="button"
           >
             <Eye size={14} />
             VER
-          </span>
+          </Button>
         )}
+
+        {puedeDescargar ? (
+          <Button
+            tamano="sm"
+            variante="contorno"
+            disabled={descargando || generar.isPending}
+            onClick={() => void onDescargar()}
+            title={
+              p.formato
+                ? "Descargar formato Word (.docx) prellenado para firmar"
+                : tieneFormatoGenerable
+                  ? "Generar y descargar plantilla oficial Word (.docx) para firmar"
+                  : "Descargar archivo cargado"
+            }
+            type="button"
+          >
+            <FileDown size={14} />
+            {descargando || generar.isPending ? "DESCARGANDO…" : "DESCARGAR"}
+          </Button>
+        ) : (
+          <Button
+            tamano="sm"
+            variante="contorno"
+            disabled
+            title="Este documento no cuenta con plantilla autogenerable para descarga previa"
+            type="button"
+          >
+            <FileDown size={14} />
+            DESCARGAR
+          </Button>
+        )}
+
+        {esPersonal && p.onModificar ? (
+          tieneFormatoGenerable || p.formato ? (
+            <Button
+              tamano="sm"
+              variante="contorno"
+              onClick={() => {
+                p.onModificar?.({
+                  tipo: p.tipo,
+                  nombre: p.nombre,
+                  version: p.formato?.version ?? 1,
+                  pendientes: p.formato?.pendientes ?? [],
+                });
+              }}
+              title="Editar y corregir datos de este formato"
+              type="button"
+            >
+              <Edit3 size={14} />
+              EDITAR
+            </Button>
+          ) : (
+            <Button
+              tamano="sm"
+              variante="contorno"
+              disabled
+              title="Este documento no cuenta con plantilla de variables autogenerable"
+              type="button"
+            >
+              <Edit3 size={14} />
+              EDITAR
+            </Button>
+          )
+        ) : (
+          <Button
+            tamano="sm"
+            variante="contorno"
+            disabled
+            title="Edición de variables reservada para personal administrativo"
+            type="button"
+          >
+            <Edit3 size={14} />
+            EDITAR
+          </Button>
+        )}
+
         <Button
           tamano="sm"
           variante={observacionesPendientes > 0 ? "peligro" : "contorno"}
@@ -362,105 +545,34 @@ export function DocumentoCard(p: Props) {
             </span>
           )}
         </Button>
-        {tieneFormatoGenerable && esPersonal && (
+
+        {puedeCargar ? (
           <Button
             tamano="sm"
             variante="contorno"
-            disabled={generando || generar.isPending}
-            onClick={() => void onGenerarIndividual()}
-            title="Autorrellenar esta plantilla con los datos del expediente"
-            type="button"
-          >
-            <WandSparkles size={14} />
-            {generando || generar.isPending ? "RELLENANDO…" : "RELLENAR"}
-          </Button>
-        )}
-        {p.formato && (
-          <>
-            {p.onVistaPrevia && (
-              <Button
-                tamano="sm"
-                variante="contorno"
-                onClick={() => {
-                  if (!p.formato) return;
-                  p.onVistaPrevia?.({
-                    id: p.formato.id,
-                    tipo: p.tipo,
-                    nombre: p.nombre,
-                    version: p.formato.version,
-                    pendientes: p.formato.pendientes,
-                  });
-                }}
-                title="Vista previa del formato en PDF con descarga A4"
-                type="button"
-              >
-                <Eye size={14} />
-                Vista Previa
-              </Button>
-            )}
-            <Button
-              tamano="sm"
-              variante="contorno"
-              onClick={() =>
-                void descargarFormato(
-                  formatoDescargaUrl(p.formato?.id ?? ""),
-                  `${p.nombre}.docx`,
-                )
-              }
-              title={
-                p.formato.pendientes.length > 0
-                  ? `Descargar Word editable (.docx) — Faltan: ${p.formato.pendientes.join(", ")}`
-                  : "Descargar documento Word (.docx) con todos los datos"
-              }
-              type="button"
-            >
-              <FileDown size={14} />
-              Descargar
-            </Button>
-            {esPersonal && p.onModificar && (
-              <Button
-                tamano="sm"
-                variante="contorno"
-                onClick={() => {
-                  if (!p.formato) return;
-                  p.onModificar?.({
-                    tipo: p.tipo,
-                    nombre: p.nombre,
-                    version: p.formato.version,
-                    pendientes: p.formato.pendientes,
-                  });
-                }}
-                title="Corregir datos de este formato y regenerar en PostgreSQL"
-                type="button"
-              >
-                <Edit3 size={14} />
-                CORREGIR
-              </Button>
-            )}
-          </>
-        )}
-        {puedeCargar ? (
-          <button
-            className={cn(botonClases({ variante: "contorno", tamano: "sm" }))}
             disabled={subir.isPending}
             onClick={() => inputRef.current?.click()}
             type="button"
+            title="Cargar o reemplazar archivo en la plataforma"
           >
             <UploadCloud size={14} />
             {subir.isPending ? "SUBIENDO…" : p.version === null ? "ADJUNTAR" : "VOLVER A SUBIR"}
-          </button>
+          </Button>
         ) : (
-          esTesista && (
-            <span className="text-xs text-grafito-600">
-              {p.estado === "APROBADO"
-                ? "Documento aprobado"
-                : !esDeTesista
-                  ? p.documentoId || p.formato
-                    ? "Emitido oficialmente"
-                    : "Emisión a cargo de la facultad / jurado"
-                  : "Se carga en la subetapa correspondiente"}
-            </span>
-          )
+          <Button
+            tamano="sm"
+            variante="contorno"
+            disabled
+            title={
+              p.estado === "APROBADO"
+                ? "Documento aprobado formalmente"
+                : "Carga de archivo no habilitada en este estado"
+            }
+            type="button"
+          >
+            <UploadCloud size={14} />
+            ADJUNTAR
+          </Button>
         )}
         {puedeVisar && (
           <span className="flex gap-1.5">
