@@ -628,7 +628,7 @@ export function resolverNombreArchivo(
     case "ANEXO_02_DJ_P2":
       return `ANEXO N°2  _ 02 PARTICPANTE - 02 TESISTA - DECLARACIÓN JURADA.${ext}`;
     case "ANEXO_32_VERACIDAD":
-      return `ANEXO N°32 DECLARACIÓN JURADA VERACIDAD DE LA INFORMACIÓN - ${numTesistas > 1 ? "02 TESISTAS" : "02 TESISTA"}.${ext}`;
+      return `ANEXO N°32 DECLARACIÓN JURADA VERACIDAD DE LA INFORMACIÓN - ${numTesistas > 1 ? "02 TESISTAS" : "01 TESISTA"}.${ext}`;
     case "AUTORIZACION_IMPRESION":
       return `AUTORIZACIÓN DE IMPRESIÓN_TESIS - ${sufijo}.${ext}`;
     case "AUTORIZACION_PUBLICACION":
