@@ -238,6 +238,11 @@ export function DocumentoCard(p: Props) {
   async function onDescargar(): Promise<void> {
     setDescargando(true);
     try {
+      if (p.documentoId) {
+        await descargarArchivoProtegido(documentoDescargaUrl(p.documentoId), p.nombre);
+        avisar("Archivo descargado");
+        return;
+      }
       if (p.formato) {
         await descargarArchivoProtegido(formatoDescargaUrl(p.formato.id), `${p.nombre}.docx`);
         avisar("Documento Word (.docx) descargado con éxito");
@@ -255,11 +260,6 @@ export function DocumentoCard(p: Props) {
           avisar("Plantilla oficial generada y descargada para firma");
           return;
         }
-      }
-      if (p.documentoId) {
-        await descargarArchivoProtegido(documentoDescargaUrl(p.documentoId), p.nombre);
-        avisar("Archivo descargado");
-        return;
       }
       avisar("No hay plantilla o archivo disponible para descarga", "aviso");
     } catch (e) {
@@ -335,11 +335,15 @@ export function DocumentoCard(p: Props) {
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h3 className="truncate text-sm font-bold text-navy-950">{p.nombre}</h3>
-              {p.formato && (
+              {p.version !== null ? (
+                <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-xs font-bold text-blue-700 border border-blue-200">
+                  v{p.version}
+                </span>
+              ) : p.formato ? (
                 <span className="inline-flex items-center rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-700 border border-emerald-200">
                   v{p.formato.version}
                 </span>
-              )}
+              ) : null}
               {camposPendientes.length > 0 ? (
                 <span className="inline-flex items-center gap-1 rounded-md bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-800 border border-amber-200">
                   <span className="h-1.5 w-1.5 rounded-full bg-amber-600" />
@@ -369,7 +373,7 @@ export function DocumentoCard(p: Props) {
               ) : (
                 p.tipo
               )}
-              {p.version !== null && !p.formato ? ` · v${p.version}` : ""}
+              {p.version !== null ? ` · v${p.version}` : p.formato ? ` · v${p.formato.version}` : ""}
             </p>
           </div>
         </div>
@@ -414,7 +418,18 @@ export function DocumentoCard(p: Props) {
         </p>
       )}
       <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-200/70 pt-3">
-        {p.formato && p.onVistaPrevia ? (
+        {p.documentoId ? (
+          <Button
+            tamano="sm"
+            variante="oscuro"
+            onClick={() => setVisorAbierto(true)}
+            title="Ver documento cargado en el visor"
+            type="button"
+          >
+            <Eye size={14} />
+            VER
+          </Button>
+        ) : p.formato && p.onVistaPrevia ? (
           <Button
             tamano="sm"
             variante="oscuro"
@@ -428,14 +443,9 @@ export function DocumentoCard(p: Props) {
                 pendientes: p.formato.pendientes,
               });
             }}
-            title="Ver documento oficial y acceder a descargas (PDF / Word)"
+            title="Ver formato oficial prellenado y acceder a descargas (PDF / Word)"
             type="button"
           >
-            <Eye size={14} />
-            VER
-          </Button>
-        ) : p.documentoId ? (
-          <Button tamano="sm" variante="oscuro" onClick={() => setVisorAbierto(true)} type="button">
             <Eye size={14} />
             VER
           </Button>
@@ -575,30 +585,17 @@ export function DocumentoCard(p: Props) {
           </Button>
         )}
         {puedeVisar && (
-          <span className="flex gap-1.5">
-            <Button
-              tamano="sm"
-              variante="exito"
-              disabled={vistoBueno.isPending}
-              onClick={() => void visar(true)}
-              type="button"
-            >
-              <Stamp size={14} />
-              V°B°
-            </Button>
-            <Button
-              tamano="sm"
-              variante="contorno"
-              disabled={vistoBueno.isPending}
-              onClick={() => {
-                setModoObservarDirecto(true);
-                setObservacionesAbiertas(true);
-              }}
-              type="button"
-            >
-              Observar
-            </Button>
-          </span>
+          <Button
+            tamano="sm"
+            variante="exito"
+            disabled={vistoBueno.isPending}
+            onClick={() => void visar(true)}
+            type="button"
+            title="Otorgar Visto Bueno institucional"
+          >
+            <Stamp size={14} />
+            V°B°
+          </Button>
         )}
         <input
           accept="application/pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"

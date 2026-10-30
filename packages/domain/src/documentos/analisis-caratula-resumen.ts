@@ -517,6 +517,239 @@ export function esTipoBoleta(tipo: string): boolean {
 }
 
 /**
+ * Comprueba si el texto contiene el encabezado o título oficial esperado para el tipo
+ * documental, permitiendo descartar de inmediato documentos ajenos o no pertinentes.
+ */
+export function verificarTituloEncabezadoDocumento(
+  tipo: string,
+  textoCompleto: string,
+): { valido: boolean; nombreOficial: string; razon?: string | undefined } {
+  const t = tipo.toUpperCase();
+
+  // 1. Boletas y comprobantes de pago
+  if (esTipoBoleta(tipo)) {
+    const esValido =
+      /(?:boleta|recibo|comprobante|dep[oó]sito|voucher|transacci[oó]n|operaci[oó]n|banco\s+de\s+la\s+naci[oó]n|caja\s+unsa|bcp|bbva|interbank)/iu.test(
+        textoCompleto,
+      );
+    return {
+      valido: esValido,
+      nombreOficial: "Boleta / Comprobante de Pago",
+      razon: esValido
+        ? undefined
+        : "No se identificó un formato de boleta, voucher bancario ni comprobante de depósito.",
+    };
+  }
+
+  // 2. Anexo 17 / Solicitud de inscripción del plan
+  if (t === "SOLICITUD_INSCRIPCION" || t === "ANEXO_17" || t.includes("INSCRIPCION")) {
+    const esValido =
+      /(?:anexo\s*(?:n[°o.]*\s*)?17|solicit(?:ud|o)|inscripci[oó]n|se[nñ]or\s+(?:director|decano)|director\s+de\s+(?:la\s+)?unidad|plan\s+de\s+tesis)/iu.test(
+        textoCompleto,
+      );
+    return {
+      valido: esValido,
+      nombreOficial: "Anexo 17 — Solicitud de inscripción del plan de tesis",
+      razon: esValido
+        ? undefined
+        : "No se detectó el encabezado oficial de Solicitud de Inscripción ni mención a Anexo 17.",
+    };
+  }
+
+  // 3. Aceptación de asesoría
+  if (t.includes("ASESORIA") || t === "ACEPTACION_ASESORIA") {
+    const esValido =
+      /(?:aceptaci[oó]n\s+(?:de\s+)?asesor[ií]a|designaci[oó]n\s+(?:de\s+)?asesor|acepto\s+asesorar|compromiso\s+(?:de\s+)?asesor[ií]a|carta\s+de\s+aceptaci[oó]n|acepta\s+asesorar)/iu.test(
+        textoCompleto,
+      );
+    return {
+      valido: esValido,
+      nombreOficial: "Formato de aceptación de asesoría",
+      razon: esValido
+        ? undefined
+        : "No se detectó el título de Aceptación o Compromiso de Asesoría.",
+    };
+  }
+
+  // 4. Plan de tesis / Proyecto / Tesis estructurada
+  if (t === "PLAN_ESTRUCTURADO" || t.includes("PLAN") || t.includes("TESIS")) {
+    const esValido =
+      /(?:plan\s+de\s+tesis|proyecto\s+de\s+(?:plan\s+de\s+)?tesis|plan\s+de\s+trabajo\s+acad[eé]mico|borrador\s+de\s+tesis|segunda\s+especialidad|tesis\s+presentada)/iu.test(
+        textoCompleto,
+      );
+    return {
+      valido: esValido,
+      nombreOficial: "Plan estructurado de tesis / Trabajo académico",
+      razon: esValido
+        ? undefined
+        : "No se identificó la carátula o estructura de un Plan de Tesis o Trabajo Académico.",
+    };
+  }
+
+  // 5. Declaración jurada de confidencialidad
+  if (t.includes("CONFIDENCIALIDAD")) {
+    const esValido =
+      /(?:confidencialidad|autorizaci[oó]n\s+de\s+uso\s+de\s+informaci[oó]n|reserva\s+de\s+informaci[oó]n)/iu.test(
+        textoCompleto,
+      );
+    return {
+      valido: esValido,
+      nombreOficial: "Declaración jurada de confidencialidad",
+      razon: esValido
+        ? undefined
+        : "No se detectó el encabezado de Confidencialidad o Autorización de Uso de Información.",
+    };
+  }
+
+  // 6. Anexo 18
+  if (t === "ANEXO_18" || t.includes("ANEXO_18")) {
+    const esValido =
+      /(?:anexo\s*(?:n[°o.]*\s*)?18|conformidad\s+(?:de\s+)?asesoramiento|conformidad\s+de\s+proyecto|acta\s+de\s+conformidad)/iu.test(
+        textoCompleto,
+      );
+    return {
+      valido: esValido,
+      nombreOficial: "Anexo 18 — Acta de conformidad de asesoramiento de proyecto",
+      razon: esValido
+        ? undefined
+        : "No se identificó el encabezado de Anexo 18 o Conformidad de Asesoramiento.",
+    };
+  }
+
+  // 7. Anexo 33
+  if (t === "ANEXO_33" || t.includes("ANEXO_33")) {
+    const esValido =
+      /(?:anexo\s*(?:n[°o.]*\s*)?33|nombramiento\s+(?:de\s+)?jurado|jurado\s+evaluador|terna\s+evaluadora|propuesta\s+(?:de\s+)?jurado)/iu.test(
+        textoCompleto,
+      );
+    return {
+      valido: esValido,
+      nombreOficial: "Anexo 33 — Nombramiento de jurado evaluador",
+      razon: esValido
+        ? undefined
+        : "No se identificó el encabezado de Anexo 33 o Nombramiento de Jurado Evaluador.",
+    };
+  }
+
+  // 8. Anexo 27
+  if (t === "ANEXO_27" || t.includes("ANEXO_27")) {
+    const esValido =
+      /(?:anexo\s*(?:n[°o.]*\s*)?27|solicit(?:ud|o)|optar|dictamen|t[ií]tulo|segunda\s+especialidad)/iu.test(
+        textoCompleto,
+      );
+    return {
+      valido: esValido,
+      nombreOficial: "Anexo 27 — Solicitud para optar título de segunda especialidad",
+      razon: esValido
+        ? undefined
+        : "No se detectó el encabezado de Anexo 27 ni solicitud para optar título.",
+    };
+  }
+
+  // 9. Anexo 01 DJ
+  if (t.includes("ANEXO_01") || t.includes("ANEXO_1")) {
+    const esValido =
+      /(?:anexo\s*(?:n[°o.]*\s*)?0?1\b|autorizaci[oó]n\s+.*publicaci[oó]n|repositorio\s+institucional)/iu.test(
+        textoCompleto,
+      );
+    return {
+      valido: esValido,
+      nombreOficial: "Anexo 1 — Autorización para publicación digital en el repositorio",
+      razon: esValido
+        ? undefined
+        : "No se identificó el encabezado de Anexo 1 ni autorización de publicación digital.",
+    };
+  }
+
+  // 10. Anexo 02 DJ
+  if (t.includes("ANEXO_02") || t.includes("ANEXO_2")) {
+    const esValido =
+      /(?:anexo\s*(?:n[°o.]*\s*)?0?2\b|declaraci[oó]n\s+jurada\s+.*antecedentes|antecedentes\s+penales|terrorismo)/iu.test(
+        textoCompleto,
+      );
+    return {
+      valido: esValido,
+      nombreOficial: "Anexo 2 — Declaración jurada de no antecedentes penales / terrorismo",
+      razon: esValido
+        ? undefined
+        : "No se identificó el encabezado de Anexo 2 ni declaración jurada de antecedentes.",
+    };
+  }
+
+  // 11. Anexo 32 DJ Veracidad
+  if (t.includes("ANEXO_32") || t.includes("VERACIDAD")) {
+    const esValido =
+      /(?:anexo\s*(?:n[°o.]*\s*)?32|veracidad\s+(?:de\s+la\s+)?informaci[oó]n|declaraci[oó]n\s+jurada\s+.*(?:veracidad|autenticidad|originalidad))/iu.test(
+        textoCompleto,
+      );
+    return {
+      valido: esValido,
+      nombreOficial: "Anexo 32 — Declaración jurada de veracidad de la información",
+      razon: esValido
+        ? undefined
+        : "No se identificó el encabezado de Anexo 32 ni declaración de veracidad.",
+    };
+  }
+
+  // 12. Actas e informes institucionales
+  if (t.includes("ACTA_CONFORMIDAD")) {
+    const esValido = /acta\s+de\s+conformidad/iu.test(textoCompleto);
+    return {
+      valido: esValido,
+      nombreOficial: "Acta de conformidad de tesis",
+      razon: esValido ? undefined : "No se identificó el encabezado de Acta de Conformidad.",
+    };
+  }
+
+  if (t.includes("ACTA_DICTAMEN")) {
+    const esValido = /acta\s+de\s+dictamen/iu.test(textoCompleto);
+    return {
+      valido: esValido,
+      nombreOficial: "Acta de dictamen de tesis",
+      razon: esValido ? undefined : "No se identificó el encabezado de Acta de Dictamen.",
+    };
+  }
+
+  if (t.includes("ACTA_SUSTENTACION")) {
+    const esValido = /acta\s+de\s+sustentaci[oó]n/iu.test(textoCompleto);
+    return {
+      valido: esValido,
+      nombreOficial: "Acta de sustentación",
+      razon: esValido ? undefined : "No se identificó el encabezado de Acta de Sustentación.",
+    };
+  }
+
+  if (t.includes("RESOLUCION_DECANAL")) {
+    const esValido = /resoluci[oó]n\s+decanal/iu.test(textoCompleto);
+    return {
+      valido: esValido,
+      nombreOficial: "Resolución Decanal",
+      razon: esValido ? undefined : "No se identificó el encabezado de Resolución Decanal.",
+    };
+  }
+
+  if (t.includes("DECRETO")) {
+    const esValido = /decreto/iu.test(textoCompleto);
+    return {
+      valido: esValido,
+      nombreOficial: "Decreto de aprobación",
+      razon: esValido ? undefined : "No se identificó el encabezado de Decreto.",
+    };
+  }
+
+  if (t.includes("OFICIO")) {
+    const esValido = /oficio/iu.test(textoCompleto);
+    return {
+      valido: esValido,
+      nombreOficial: "Oficio formal",
+      razon: esValido ? undefined : "No se identificó el formato u oficio formal.",
+    };
+  }
+
+  return { valido: true, nombreOficial: tipo };
+}
+
+/**
  * Analiza documentos subidos que no poseen una plantilla para autorrellenar:
  * 1. Para boletas/comprobantes de pago:
  *    - Verifica nombres del tesista (sin importar mayúsculas/minúsculas).
@@ -575,6 +808,34 @@ export function analizarDocumentoSubido(
       hallazgos,
     };
   }
+
+  // 0. DESCARTE PREVIO: Validación del título / encabezado oficial del documento
+  const verifEncabezado = verificarTituloEncabezadoDocumento(tipo, textoCompleto);
+  if (!verifEncabezado.valido) {
+    agregar(
+      "DOCUMENTO_ERRONEO",
+      "ADVERTENCIA",
+      `Documento erróneo: El archivo cargado no corresponde a "${verifEncabezado.nombreOficial}". Se requiere adjuntar el documento oficial pertinente para habilitar la validación de tesistas, firmas y autoridades.`,
+      1,
+      verifEncabezado.nombreOficial,
+      "Encabezado oficial no detectado en el archivo subido",
+    );
+    return {
+      estado: "PARCIAL",
+      tituloDetectado: null,
+      similitudTitulo: null,
+      resumen: "",
+      resumenCompleto: false,
+      controles,
+      hallazgos,
+    };
+  }
+
+  agregar(
+    "DOCUMENTO_OFICIAL",
+    "CONFORME",
+    `Encabezado oficial verificado: Corresponde a "${verifEncabezado.nombreOficial}".`,
+  );
 
   const dnisEncontrados = Array.from(new Set(textoCompleto.match(/\b\d{8}\b/g) ?? []));
   const esBoleta = esTipoBoleta(tipo);

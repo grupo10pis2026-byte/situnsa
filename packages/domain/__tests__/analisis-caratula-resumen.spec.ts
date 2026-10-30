@@ -400,4 +400,29 @@ Yo, Maria Nunez Garcia, identificada con DNI 01234567...`;
     expect(hallazgoOrtografia).toBeDefined();
     expect(hallazgoOrtografia?.esperado).toBe("María Núñez García");
   });
+
+  it("descarte previo: descarta documento ajeno sin encabezado oficial y no continúa analizando", async () => {
+    const { analizarDocumentoSubido } = await import(
+      "../src/documentos/analisis-caratula-resumen.js"
+    );
+    const textoAjeno = `SÍLABO DE CURSO: INTRODUCCIÓN A LA PROGRAMACIÓN
+Docente: Ing. Roberto Sánchez
+Competencias: El estudiante aprenderá algoritmos básicos y estructuras de control.
+Bibliografía: Deitel & Deitel, 2020.`;
+
+    const res = analizarDocumentoSubido(
+      "SOLICITUD_INSCRIPCION",
+      [{ numero: 1, texto: textoAjeno }],
+      datos,
+      1,
+    );
+    expect(res.estado).toBe("PARCIAL");
+    expect(res.controles.some((c) => c.tipo === "DOCUMENTO_ERRONEO")).toBe(true);
+    expect(res.hallazgos).toHaveLength(1);
+    expect(res.hallazgos[0].tipo).toBe("DOCUMENTO_ERRONEO");
+    expect(res.hallazgos[0].mensaje).toContain("Documento erróneo");
+    // No debe evaluar tesistas ni dar falsos conformes cuando el archivo es ajeno
+    expect(res.controles.some((c) => c.tipo === "TESISTA")).toBe(false);
+    expect(res.controles.some((c) => c.tipo === "PROGRAMA")).toBe(false);
+  });
 });

@@ -2,7 +2,7 @@
  * Caso de uso de POST /api/documentos/upload, llamado desde documentos.routes.ts.
  * Coordina disco, versionado y auditoría; no ejecuta análisis editorial durante la carga.
  */
-import { db, documentos, expedientes } from "@pis/db";
+import { db, documentos, documentosGenerados, expedientes } from "@pis/db";
 import {
   CHECKLIST_COMPLETO,
   type ChecklistDef,
@@ -14,7 +14,7 @@ import {
   plantillaDe,
   type Result,
 } from "@pis/domain";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { DrizzleUnitOfWork } from "../../../../infra/db/unit-of-work.js";
 import type { AlmacenamientoPort } from "../../../../infra/storage/almacenamiento.port.js";
 import { LocalStorageService } from "../../../../infra/storage/local-storage.service.js";
@@ -184,7 +184,20 @@ export class SubirDocumentoUseCase {
         }
       }
 
-      // Limpiar archivo(s) anterior(es) en disco para no acumular basura
+      // Tipos equivalentes para limpieza integral (ej. ANEXO_17 y SOLICITUD_INSCRIPCION, participantes P1/P2)
+      const tiposEquivalentes = [input.tipo];
+      if (input.tipo === "SOLICITUD_INSCRIPCION" || input.tipo === "ANEXO_17") {
+        tiposEquivalentes.push("SOLICITUD_INSCRIPCION", "ANEXO_17");
+      }
+      if (input.tipo.startsWith("ANEXO_01_DJ")) {
+        tiposEquivalentes.push("ANEXO_01_DJ", "ANEXO_01_DJ_P1", "ANEXO_01_DJ_P2");
+      }
+      if (input.tipo.startsWith("ANEXO_02_DJ")) {
+        tiposEquivalentes.push("ANEXO_02_DJ", "ANEXO_02_DJ_P1", "ANEXO_02_DJ_P2");
+      }
+      const tiposSet = Array.from(new Set(tiposEquivalentes));
+
+      // 1. Limpiar archivo(s) anterior(es) en disco y registros en documentos para no acumular basura
       if (previos.length > 0) {
         for (const p of previos) {
           if (p.ruta) {
@@ -194,7 +207,36 @@ export class SubirDocumentoUseCase {
         await tx
           .delete(documentos)
           .where(
-            and(eq(documentos.expedienteId, input.expedienteId), eq(documentos.tipo, input.tipo)),
+            and(
+              eq(documentos.expedienteId, input.expedienteId),
+              inArray(documentos.tipo, tiposSet),
+            ),
+          );
+      }
+
+      // 2. Limpiar también cualquier formato autogenerado previo de la misma etapa/tipo
+      const generadosPrevios = await tx
+        .select({ id: documentosGenerados.id, ruta: documentosGenerados.ruta })
+        .from(documentosGenerados)
+        .where(
+          and(
+            eq(documentosGenerados.expedienteId, input.expedienteId),
+            inArray(documentosGenerados.tipo, tiposSet),
+          ),
+        );
+      for (const gp of generadosPrevios) {
+        if (gp.ruta) {
+          await this.storage.delete?.(gp.ruta);
+        }
+      }
+      if (generadosPrevios.length > 0) {
+        await tx
+          .delete(documentosGenerados)
+          .where(
+            and(
+              eq(documentosGenerados.expedienteId, input.expedienteId),
+              inArray(documentosGenerados.tipo, tiposSet),
+            ),
           );
       }
       const version = (ultimo?.version ?? 0) + 1;

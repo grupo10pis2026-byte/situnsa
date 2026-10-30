@@ -30,7 +30,7 @@ import {
   resolverSubcarpetaEtapa,
   VERSION_PLANTILLAS,
 } from "@pis/domain";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { DrizzleUnitOfWork } from "../../../../infra/db/unit-of-work.js";
 import { obtenerPlantillaDocx, procesarDocxBuffer } from "../../../../infra/docx/render-docx.js";
 import { type MetaPdf, renderizarPdf } from "../../../../infra/pdf/render-documento.js";
@@ -436,11 +436,20 @@ export class GenerarDocumentosUseCase {
         }
 
         // 2. Auto-subir y adjuntar el PDF oficial generado directamente al checklist
+        const tiposEquivalentes = [plantilla.tipo];
+        if (plantilla.tipo === "SOLICITUD_INSCRIPCION" || plantilla.tipo === "ANEXO_17") {
+          tiposEquivalentes.push("SOLICITUD_INSCRIPCION", "ANEXO_17");
+        }
+        const tiposSet = Array.from(new Set(tiposEquivalentes));
+
         const docsPrevios = await tx
           .select({ id: documentos.id, ruta: documentos.ruta })
           .from(documentos)
           .where(
-            and(eq(documentos.expedienteId, expedienteId), eq(documentos.tipo, plantilla.tipo)),
+            and(
+              eq(documentos.expedienteId, expedienteId),
+              inArray(documentos.tipo, tiposSet),
+            ),
           );
 
         for (const dp of docsPrevios) {
@@ -452,7 +461,10 @@ export class GenerarDocumentosUseCase {
           await tx
             .delete(documentos)
             .where(
-              and(eq(documentos.expedienteId, expedienteId), eq(documentos.tipo, plantilla.tipo)),
+              and(
+                eq(documentos.expedienteId, expedienteId),
+                inArray(documentos.tipo, tiposSet),
+              ),
             );
         }
 

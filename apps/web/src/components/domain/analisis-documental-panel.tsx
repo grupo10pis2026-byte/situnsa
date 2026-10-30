@@ -123,6 +123,17 @@ export function AnalisisDocumentalPanel({
             </div>
 
             <div className="rounded-lg bg-white p-3 border border-slate-200 space-y-1.5 text-xs">
+              {resultado.controles.some((c) => c.tipo === "DOCUMENTO_ERRONEO") && (
+                <div className="mb-2 flex items-start gap-2 rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-900">
+                  <AlertTriangle size={15} className="mt-0.5 shrink-0 text-red-600" />
+                  <div>
+                    <span className="font-bold text-red-950">Documento no corresponde:</span>{" "}
+                    <span>
+                      El archivo adjuntado no contiene el encabezado ni las características oficiales de este apartado.
+                    </span>
+                  </div>
+                </div>
+              )}
               {esPlan ? (
                 <>
                   <p>
