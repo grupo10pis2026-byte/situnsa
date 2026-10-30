@@ -320,7 +320,20 @@ export class GenerarDocumentosUseCase {
         let bytesDocx: Buffer | null = null;
         let pendientesDocx: string[] = [];
         if (plantillaDocx) {
-          const res = procesarDocxBuffer(plantillaDocx, datos);
+          const datosDocx: Record<string, string> = p.tipo.endsWith("_P2")
+            ? {
+                ...datos,
+                NOMBRES: datos.NOMBRES02 || datos.NOMBRES_2 || datos.NOMBRES || "",
+                DNI: datos.DNI02 || datos.DNI_2 || datos.DNI || "",
+                CUI: datos.CUI02 || datos.CUI_2 || datos.CUI || "",
+                CORREO: datos.CORREO02 || datos.CORREO || "",
+                NACIONALIDAD: datos.NACIONALIDAD02 || datos.NACIONALIDAD || "",
+                DIRECCION: datos.DIRECCION02 || datos.DIRECCION || "",
+                CIUDAD: datos.CIUDAD02 || datos.CIUDAD || "",
+                TELEFONO: datos.TELEFONO02 || datos.TELEFONO || "",
+              }
+            : datos;
+          const res = procesarDocxBuffer(plantillaDocx, datosDocx);
           bytesDocx = res.buffer;
           pendientesDocx = res.pendientes;
         }
