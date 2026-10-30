@@ -733,10 +733,15 @@ export function MesaDePartesPage() {
               <div className="flex items-start gap-2.5 rounded-xl border border-blue-200 bg-blue-50/80 p-3.5 text-xs text-blue-900">
                 <Info size={16} className="mt-0.5 shrink-0 text-blue-700" />
                 <div>
-                  <p className="font-semibold text-blue-950">Uso obligatorio de Correo Institucional</p>
+                  <p className="font-semibold text-blue-950">
+                    Uso obligatorio de Correo Institucional
+                  </p>
                   <p className="mt-0.5 text-blue-800">
                     Caso de NO contar con correo institucional, solicitar a{" "}
-                    <a className="font-bold underline text-blue-950" href="mailto:soportecorreo@unsa.edu.pe">
+                    <a
+                      className="font-bold underline text-blue-950"
+                      href="mailto:soportecorreo@unsa.edu.pe"
+                    >
                       soportecorreo@unsa.edu.pe
                     </a>{" "}
                     antes de iniciar el trámite.
