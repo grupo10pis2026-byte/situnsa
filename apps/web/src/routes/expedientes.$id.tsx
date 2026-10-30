@@ -31,6 +31,7 @@ import { useObservar } from "../api/seguimiento.js";
 import { useSession } from "../api/session.js";
 import { DatosForm } from "../components/domain/datos-form.js";
 import { DocumentoCard } from "../components/domain/documento-card.js";
+import { MenuFechasDocumentos } from "../components/domain/menu-fechas-documentos.js";
 import { ModalModificarFormato } from "../components/domain/modal-modificar-formato.js";
 import { ModalVistaPreviaFormato } from "../components/domain/modal-vista-previa-formato.js";
 import { ResumenTab } from "../components/domain/resumen-tab.js";
@@ -257,24 +258,29 @@ export function ExpedienteDetallePage() {
           <Tab value="resumen">Resumen del Trámite</Tab>
         </TabsLista>
         <TabPanel value="datos">
-          <DatosForm detalle={d} setEstado={setGuardado} onConflicto={setConflicto} />
-          {staff && <AccesoPortal detalle={d} />}
-          {staff && (
-            <div className="mt-4 print:hidden">
-              <Button
-                tamano="sm"
-                variante="peligro"
-                onClick={() => setEliminar(true)}
-                type="button"
-              >
-                <Trash2 size={14} />
-                ELIMINAR REGISTRO
-              </Button>
-              <p className="mt-1.5 text-xs text-grafito-600">
-                Baja lógica (ANULADO): se conserva el historial y la cadena de custodia.
-              </p>
+          <div className="flex flex-col lg:flex-row gap-6 items-start">
+            <div className="min-w-0 flex-1 w-full space-y-4">
+              <DatosForm detalle={d} setEstado={setGuardado} onConflicto={setConflicto} />
+              {staff && <AccesoPortal detalle={d} />}
+              {staff && (
+                <div className="mt-4 print:hidden">
+                  <Button
+                    tamano="sm"
+                    variante="peligro"
+                    onClick={() => setEliminar(true)}
+                    type="button"
+                  >
+                    <Trash2 size={14} />
+                    ELIMINAR REGISTRO
+                  </Button>
+                  <p className="mt-1.5 text-xs text-grafito-600">
+                    Baja lógica (ANULADO): se conserva el historial y la cadena de custodia.
+                  </p>
+                </div>
+              )}
             </div>
-          )}
+            <MenuFechasDocumentos detalle={d} onCambio={() => void query.refetch()} />
+          </div>
         </TabPanel>
         <TabPanel value="e1">
           <DocumentosTab etapa="E1" detalle={d} items={e1} staff={staff} />
