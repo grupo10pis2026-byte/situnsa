@@ -96,7 +96,12 @@ export function registerAnalisisDocumental(app: FastifyInstance): void {
         const persona = (id: string | null) => personas.find((p) => p.id === id);
         const tesistas = [persona(exp.participante1Id), persona(exp.participante2Id)]
           .filter((p) => p !== undefined)
-          .map((p) => ({ nombre: `${p.nombres} ${p.apellidos}`, dni: p.dni }));
+          .map((p) => ({
+            nombre: `${p.nombres} ${p.apellidos}`,
+            dni: p.dni,
+            cui: p.cui ?? undefined,
+            email: p.email,
+          }));
         const asesor = persona(exp.asesorId);
         const resultado = await new AnalizarDocumentoUseCase().execute(
           doc,
@@ -104,7 +109,11 @@ export function registerAnalisisDocumental(app: FastifyInstance): void {
             titulo: exp.titulo,
             tesistas,
             asesor: asesor
-              ? { nombre: `${asesor.nombres} ${asesor.apellidos}`, dni: asesor.dni }
+              ? {
+                  nombre: `${asesor.nombres} ${asesor.apellidos}`,
+                  dni: asesor.dni,
+                  grado: asesor.grado ?? undefined,
+                }
               : exp.asesorNombre
                 ? { nombre: exp.asesorNombre }
                 : null,
@@ -113,6 +122,10 @@ export function registerAnalisisDocumental(app: FastifyInstance): void {
             anoReferencia: exp.fechaSustentacion
               ? new Date(exp.fechaSustentacion).getFullYear()
               : undefined,
+            presidente: exp.presidenteE2 ?? exp.presidente ?? null,
+            secretario: exp.secretarioE2 ?? exp.secretario ?? null,
+            integrante: exp.integrante ?? null,
+            decanal: exp.decanal ?? null,
           },
           process.env.DOCS_VOLUME_PATH ?? "./var/data/titulacion-docs",
           entrada.data.revisionEditorial,

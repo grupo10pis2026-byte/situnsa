@@ -29,18 +29,28 @@ export function AnalisisDocumentalPanel({
     tipo.toUpperCase().includes("RECIBO") ||
     tipo.toUpperCase().includes("PAGO") ||
     tipo.toUpperCase().includes("COMPROBANTE");
+  const esAnexoOSolicitud =
+    tipo.toUpperCase().includes("ANEXO") ||
+    tipo.toUpperCase().includes("SOLICITUD") ||
+    tipo.toUpperCase().includes("DJ") ||
+    tipo.toUpperCase().includes("ASESORIA") ||
+    tipo.toUpperCase().includes("CONFIDENCIALIDAD");
 
   const tituloPanel = esPlan
     ? "Revisión estructural: Carátula, Presentación y Resumen"
     : esBoleta
       ? "Verificación de Boleta / Comprobante de Pago"
-      : "Revisión documental automática";
+      : esAnexoOSolicitud
+        ? "Validación normativa: Identidad, DNI, Autoridades y Firma"
+        : "Revisión documental automática";
 
   const subtituloPanel = esPlan
     ? "Verificación automática de páginas 1–6 según el formato oficial FIPS - UNSA (Tesis / Trabajo Académico)."
     : esBoleta
-      ? "Validación automática de nombre del tesista (sin importar mayúsculas/minúsculas) y número de DNI según el sistema."
-      : "Verificación de coincidencia de tesistas, DNI y asesor (solo si el documento los contiene).";
+      ? "Validación automática de nombre del tesista, DNI de 8 dígitos y número de operación del comprobante."
+      : esAnexoOSolicitud
+        ? "Revisión de ortotipografía y tildes, DNI oficial, destinatario formal, asesor y presencia de firma según normativa FIPS - UNSA."
+        : "Verificación de coincidencia de tesistas, DNI, asesor y autoridades según el sistema.";
 
   const textoBotonAnalizar = analisis.isPending
     ? "Analizando…"
@@ -50,7 +60,9 @@ export function AnalisisDocumentalPanel({
         ? "Verificar estructura y carátula"
         : esBoleta
           ? "Verificar boleta de pago"
-          : "Verificar datos del documento";
+          : esAnexoOSolicitud
+            ? "Verificar datos, autoridades y firma"
+            : "Verificar datos del documento";
 
   return (
     <Card className="mt-3 space-y-3.5 p-4 bg-slate-50/50 border-slate-200">

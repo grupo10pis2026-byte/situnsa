@@ -722,7 +722,7 @@ export function DocumentoCard(p: Props) {
           </div>
         </Dialogo>
       )}
-      {p.documentoId && !tieneFormatoGenerable && (
+      {p.documentoId && (
         <AnalisisDocumentalPanel
           key={p.documentoId}
           documentoId={p.documentoId}

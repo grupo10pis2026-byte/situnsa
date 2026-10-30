@@ -287,4 +287,117 @@ describe("motor de revisión de documentos subidos y boletas", () => {
       "NO_EVALUABLE",
     );
   });
+
+  it("solicitud Anexo 17: valida destinatario Director de Unidad y presencia de firma", async () => {
+    const { analizarDocumentoSubido } = await import(
+      "../src/documentos/analisis-caratula-resumen.js"
+    );
+    const textoValido = `SEÑOR DIRECTOR DE LA UNIDAD DE SEGUNDAS ESPECIALIDADES
+Yo, María Núñez García, con DNI 01234567, CUI 20180123...
+Solicito inscripción del plan de tesis: Optimización del consumo energético en sistemas de bombeo 2026.
+Firmado digitalmente por: María Núñez García`;
+
+    const res = analizarDocumentoSubido(
+      "SOLICITUD_INSCRIPCION",
+      [{ numero: 1, texto: textoValido }],
+      { ...datos, tesistas: [{ ...datos.tesistas[0], cui: "20180123" }] },
+      1,
+    );
+    expect(res.controles.find((c) => c.tipo === "AUTORIDAD_DESTINO")?.estado).toBe("CONFORME");
+    expect(res.controles.find((c) => c.tipo === "FIRMA_DOCUMENTO")?.estado).toBe("CONFORME");
+    expect(res.controles.find((c) => c.tipo === "CUI_TESISTA")?.estado).toBe("CONFORME");
+    expect(res.hallazgos).toHaveLength(0);
+  });
+
+  it("solicitud Anexo 17 con línea de firma vacía: emite advertencia de firma faltante", async () => {
+    const { analizarDocumentoSubido } = await import(
+      "../src/documentos/analisis-caratula-resumen.js"
+    );
+    const textoSinFirma = `SEÑOR DIRECTOR DE LA UNIDAD
+Yo, María Núñez García, con DNI 01234567...
+___________________________
+Firma del solicitante`;
+
+    const res = analizarDocumentoSubido(
+      "SOLICITUD_INSCRIPCION",
+      [{ numero: 1, texto: textoSinFirma }],
+      datos,
+      1,
+    );
+    const hallazgoFirma = res.hallazgos.find((h) => h.tipo === "FIRMA_DOCUMENTO");
+    expect(hallazgoFirma).toBeDefined();
+    expect(hallazgoFirma?.mensaje).toContain("línea de firma en blanco");
+  });
+
+  it("solicitud Anexo 27: valida destinatario Decano y advierte si falta", async () => {
+    const { analizarDocumentoSubido } = await import(
+      "../src/documentos/analisis-caratula-resumen.js"
+    );
+    const textoErroneo = `SEÑOR RECTOR DE LA UNIVERSIDAD
+Yo, María Núñez García, DNI 01234567, solicito optar el título...`;
+
+    const res = analizarDocumentoSubido(
+      "ANEXO_27",
+      [{ numero: 1, texto: textoErroneo }],
+      datos,
+      1,
+    );
+    const hallazgoDecano = res.hallazgos.find((h) => h.tipo === "AUTORIDAD_DESTINO");
+    expect(hallazgoDecano).toBeDefined();
+    expect(hallazgoDecano?.esperado).toContain("Decano");
+  });
+
+  it("anexo 02 DJ antecedentes: valida cláusulas penales y de terrorismo", async () => {
+    const { analizarDocumentoSubido } = await import(
+      "../src/documentos/analisis-caratula-resumen.js"
+    );
+    const textoIncompleto = `DECLARACIÓN JURADA
+Yo, María Núñez García, con DNI 01234567, declaro no tener antecedentes penales.`;
+
+    const res = analizarDocumentoSubido(
+      "ANEXO_02_DJ",
+      [{ numero: 1, texto: textoIncompleto }],
+      datos,
+      1,
+    );
+    const hallazgoClausula = res.hallazgos.find((h) => h.tipo === "CLAUSULA_NORMATIVA");
+    expect(hallazgoClausula).toBeDefined();
+    expect(hallazgoClausula?.mensaje).toContain("terrorismo");
+  });
+
+  it("anexo 32 DJ veracidad: valida cláusula de veracidad y originalidad", async () => {
+    const { analizarDocumentoSubido } = await import(
+      "../src/documentos/analisis-caratula-resumen.js"
+    );
+    const textoConforme = `DECLARACIÓN JURADA DE VERACIDAD DE INFORMACIÓN
+Yo, María Núñez García, con DNI 01234567, declaro bajo juramento la veracidad y autenticidad del contenido presentado en mi tesis...
+Firma del declarante`;
+
+    const res = analizarDocumentoSubido(
+      "ANEXO_32_VERACIDAD",
+      [{ numero: 1, texto: textoConforme }],
+      datos,
+      1,
+    );
+    expect(res.controles.find((c) => c.tipo === "CLAUSULA_NORMATIVA")?.estado).toBe("CONFORME");
+    expect(res.hallazgos).toHaveLength(0);
+  });
+
+  it("ortotipografía: advierte si el nombre en documento omite tildes oficiales", async () => {
+    const { analizarDocumentoSubido } = await import(
+      "../src/documentos/analisis-caratula-resumen.js"
+    );
+    const textoSinTildes = `SOLICITUD
+Yo, Maria Nunez Garcia, identificada con DNI 01234567...`;
+
+    const res = analizarDocumentoSubido(
+      "ANEXO_17",
+      [{ numero: 1, texto: textoSinTildes }],
+      datos,
+      1,
+    );
+    const hallazgoOrtografia = res.hallazgos.find((h) => h.tipo === "TESISTA_ORTOTIPOGRAFIA");
+    expect(hallazgoOrtografia).toBeDefined();
+    expect(hallazgoOrtografia?.esperado).toBe("María Núñez García");
+  });
 });

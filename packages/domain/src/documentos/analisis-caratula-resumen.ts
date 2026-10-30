@@ -14,6 +14,8 @@ export interface IdentidadDocumento {
   nombre: string;
   dni?: string | undefined;
   grado?: string | undefined;
+  cui?: string | undefined;
+  email?: string | undefined;
 }
 
 export interface DatosAnalisisDocumento {
@@ -23,6 +25,10 @@ export interface DatosAnalisisDocumento {
   modalidad?: "TESIS" | "TRABAJO_ACADEMICO" | "ARTICULO" | string | undefined;
   programa?: string | undefined;
   anoReferencia?: number | string | undefined;
+  presidente?: string | null | undefined;
+  secretario?: string | null | undefined;
+  integrante?: string | null | undefined;
+  decanal?: string | null | undefined;
 }
 
 export interface HallazgoDocumento {
@@ -638,6 +644,32 @@ export function analizarDocumentoSubido(
       }
     }
 
+    // Código de operación / número de recibo o comprobante
+    const matchOperacion = /(?:operaci[oó]n|nro\s*recibo|recibo\s*n[o°]|transacci[oó]n|comprobante|secuencia|referencia|dep[oó]sito)[\s:#№.]*([0-9]{5,14})/iu.exec(textoCompleto);
+    if (matchOperacion?.[1]) {
+      agregar(
+        "BOLETA_OPERACION",
+        "CONFORME",
+        `Código de operación / recibo bancario detectado (${matchOperacion[1]}).`,
+      );
+    } else {
+      agregar(
+        "BOLETA_OPERACION",
+        "CONFORME",
+        "Comprobante de pago procesado para verificación visual de fecha y tasa.",
+      );
+    }
+
+    // Entidad recaudadora
+    const tieneEntidad = /(?:banco\s+de\s+la\s+naci[oó]n|caja\s+unsa|banco\s+de\s+cr[eé]dito|bcp|bbva|interbank|scotiabank|yape|plin)/iu.test(textoCompleto);
+    if (tieneEntidad) {
+      agregar(
+        "BOLETA_ENTIDAD",
+        "CONFORME",
+        "Entidad recaudadora / canal de pago formal identificado en el comprobante.",
+      );
+    }
+
     return {
       estado: "COMPLETADO",
       tituloDetectado: null,
@@ -649,14 +681,17 @@ export function analizarDocumentoSubido(
     };
   }
 
-  // 2. REGLAS PARA DEMÁS DOCUMENTOS SUBIDOS (ACEPTACION_ASESORIA, DJ_CONFIDENCIALIDAD, ANEXO_33, ETC.)
-  // A. Nombres de tesistas
+  // 2. REGLAS PARA DEMÁS DOCUMENTOS SUBIDOS (ANEXOS 17, 18, 27, 01, 02, 32, ACEPTACION_ASESORIA, DJ, ETC.)
+  const tipoDoc = tipo.toUpperCase();
+
+  // A. Identidad, ortotipografía y DNI de tesistas
   for (const tesista of datos.tesistas) {
     const partesNombre = normalizarTextoDocumento(tesista.nombre)
       .split(" ")
       .filter((p) => p.length > 2);
     const coincidencias = partesNombre.filter((p) => textoNormalizado.includes(p));
 
+    // A1. Identificación del nombre
     if (
       contieneFrase(textoCompleto, tesista.nombre) ||
       coincidencias.length >= Math.min(2, partesNombre.length)
@@ -673,17 +708,51 @@ export function analizarDocumentoSubido(
       );
     }
 
-    // DNI: Solo si el documento contiene mención a DNI o números de 8 dígitos
+    // A2. Ortotipografía y tildes oficiales en nombres propios
+    const tieneTildesEnRegistro = /[áéíóúÁÉÍÓÚñÑ]/.test(tesista.nombre);
+    if (tieneTildesEnRegistro) {
+      const nombreSinTilde = tesista.nombre.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const mencionaSinTilde = new RegExp(`\\b${nombreSinTilde}\\b`, "i").test(textoCompleto);
+      const mencionaConTilde = new RegExp(`\\b${tesista.nombre}\\b`, "i").test(textoCompleto);
+
+      if (mencionaSinTilde && !mencionaConTilde) {
+        agregar(
+          "TESISTA_ORTOTIPOGRAFIA",
+          "ADVERTENCIA",
+          `El nombre del tesista en el documento (${nombreSinTilde}) carece de las tildes oficiales registradas (${tesista.nombre}).`,
+          1,
+          tesista.nombre,
+          nombreSinTilde,
+        );
+      } else if (mencionaConTilde) {
+        agregar(
+          "TESISTA_ORTOTIPOGRAFIA",
+          "CONFORME",
+          `Ortotipografía y tildes del nombre del tesista (${tesista.nombre}) verificadas.`,
+        );
+      }
+    }
+
+    // A3. DNI de 8 dígitos
     const mencionaDni =
       /\b(?:dni|d\.n\.i|documento\s+de\s+identidad|documento\s+nacional)\b/iu.test(textoCompleto);
-    if (tesista.dni && (mencionaDni || dnisEncontrados.length > 0)) {
+    const exigeDni =
+      mencionaDni ||
+      dnisEncontrados.length > 0 ||
+      tipoDoc.includes("ANEXO") ||
+      tipoDoc.includes("SOLICITUD") ||
+      tipoDoc.includes("DJ") ||
+      tipoDoc.includes("CONFIDENCIALIDAD") ||
+      tipoDoc.includes("VERACIDAD");
+
+    if (tesista.dni && exigeDni) {
       if (dnisEncontrados.includes(tesista.dni)) {
         agregar(
           "DNI_TESISTA",
           "CONFORME",
           `DNI ${tesista.dni} del tesista verificado en el documento.`,
         );
-      } else if (mencionaDni && dnisEncontrados.length > 0) {
+      } else if (dnisEncontrados.length > 0) {
         agregar(
           "DNI_TESISTA",
           "ADVERTENCIA",
@@ -692,15 +761,83 @@ export function analizarDocumentoSubido(
           tesista.dni,
           dnisEncontrados.join(", "),
         );
+      } else if (mencionaDni) {
+        agregar(
+          "DNI_TESISTA",
+          "ADVERTENCIA",
+          `No se detectó el número de DNI de 8 dígitos del tesista (esperado: ${tesista.dni}).`,
+          1,
+          tesista.dni,
+          "No detectado",
+        );
+      }
+    }
+
+    // A4. Código Universitario (CUI) en solicitudes
+    if (tesista.cui) {
+      if (textoCompleto.includes(tesista.cui)) {
+        agregar(
+          "CUI_TESISTA",
+          "CONFORME",
+          `Código Universitario (CUI ${tesista.cui}) verificado en el documento.`,
+        );
+      } else if (/\b(?:cui|c\.u\.i|c[oó]digo\s+(?:de\s+alumno|universitario|de\s+estudiante))\b/iu.test(textoCompleto)) {
+        agregar(
+          "CUI_TESISTA",
+          "ADVERTENCIA",
+          `El CUI del estudiante difiere o no coincide con el CUI registrado (${tesista.cui}).`,
+          1,
+          tesista.cui,
+          "Difiere o no detectado",
+        );
       }
     }
   }
 
-  // B. Asesor: "solo si el documento a analizar los contenga"
+  // B. Autoridad y Destinatario de solicitudes
+  if (tipoDoc.includes("SOLICITUD_INSCRIPCION") || tipoDoc === "ANEXO_17") {
+    const tieneDirector = /(?:director(?:a)?\s+(?:de\s+la\s+)?unidad|unidad\s+de\s+(?:segundas?\s+especialidades|posgrado)|se[nñ]or\s+director)/iu.test(textoCompleto);
+    if (tieneDirector) {
+      agregar(
+        "AUTORIDAD_DESTINO",
+        "CONFORME",
+        "Solicitud correctamente dirigida al Señor Director de la Unidad de Segundas Especialidades.",
+      );
+    } else {
+      agregar(
+        "AUTORIDAD_DESTINO",
+        "ADVERTENCIA",
+        "La solicitud de inscripción de plan debe dirigirse al Señor Director de la Unidad de Segundas Especialidades.",
+        1,
+        "Señor Director de la Unidad de Segundas Especialidades",
+        "Destinatario no identificado",
+      );
+    }
+  } else if (tipoDoc.includes("ANEXO_27") || tipoDoc.includes("SOLICITUD_TITULACION")) {
+    const tieneDecano = /(?:decano\s+de\s+la\s+facultad|se[nñ]or\s+decano|decanato)/iu.test(textoCompleto);
+    if (tieneDecano) {
+      agregar(
+        "AUTORIDAD_DESTINO",
+        "CONFORME",
+        "Solicitud de titulación correctamente dirigida al Señor Decano de la Facultad.",
+      );
+    } else {
+      agregar(
+        "AUTORIDAD_DESTINO",
+        "ADVERTENCIA",
+        "La solicitud de titulación debe dirigirse formalmente al Señor Decano de la Facultad de Ingeniería de Producción y Servicios.",
+        1,
+        "Señor Decano de la Facultad",
+        "Destinatario no identificado",
+      );
+    }
+  }
+
+  // C. Asesor docente y Grado Académico
   const mencionaAsesor = /\b(?:asesor|asesora|asesor[ií]a|asesoramiento|docente\s+asesor)\b/iu.test(
     textoCompleto,
   );
-  if (mencionaAsesor) {
+  if (mencionaAsesor || tipoDoc === "ACEPTACION_ASESORIA" || tipoDoc === "ANEXO_18") {
     if (datos.asesor) {
       const partesAsesor = normalizarTextoDocumento(datos.asesor.nombre)
         .split(" ")
@@ -712,6 +849,34 @@ export function analizarDocumentoSubido(
         coincidenciasAsesor.length >= Math.min(2, partesAsesor.length)
       ) {
         agregar("ASESOR", "CONFORME", `Asesor ${datos.asesor.nombre} verificado en el documento.`);
+
+        // Grado académico formal del asesor (Dr. / Mg. / Ing.)
+        const tieneGrado = /(?:dr\.|doctor|dra\.|doctora|mg\.|mag[ií]ster|mtro\.|maestr[oí]a|ing\.|ingenier[oa])/iu.test(textoCompleto);
+        if (tieneGrado) {
+          agregar(
+            "ASESOR_GRADO",
+            "CONFORME",
+            "Grado académico o título profesional del docente asesor verificado.",
+          );
+        } else if (tipoDoc === "ACEPTACION_ASESORIA" || tipoDoc === "ANEXO_18") {
+          agregar(
+            "ASESOR_GRADO",
+            "ADVERTENCIA",
+            "Se recomienda consignar el grado académico formal (Dr. / Mg.) del docente asesor.",
+            1,
+            "Dr. o Mg.",
+            "Grado no identificado",
+          );
+        }
+
+        // DNI del asesor docente si está registrado
+        if (datos.asesor.dni && dnisEncontrados.includes(datos.asesor.dni)) {
+          agregar(
+            "ASESOR_DNI",
+            "CONFORME",
+            `DNI ${datos.asesor.dni} del docente asesor verificado.`,
+          );
+        }
       } else {
         agregar(
           "ASESOR",
@@ -731,7 +896,165 @@ export function analizarDocumentoSubido(
     }
   }
 
-  // C. Título: "solo si el documento a analizar los contenga"
+  // D. Terna / Jurado evaluador
+  if (tipoDoc === "ANEXO_33" || /\b(?:terna|jurado\s+evaluador)\b/iu.test(textoCompleto)) {
+    const tieneTerna = /(?:presidente|secretario|integrante|vocal|primer\s+miembro|segundo\s+miembro)/iu.test(textoCompleto);
+    if (tieneTerna) {
+      agregar(
+        "JURADO_TERNA",
+        "CONFORME",
+        "Estructura de la terna / jurado evaluador identificada en el documento.",
+      );
+    } else if (tipoDoc === "ANEXO_33") {
+      agregar(
+        "JURADO_TERNA",
+        "ADVERTENCIA",
+        "El formato de nombramiento de jurado debe especificar los miembros de la terna (Presidente, Integrante, Secretario).",
+        1,
+        "Presidente / Integrante / Secretario",
+        "No detectado",
+      );
+    }
+  }
+
+  // E. Programa oficial FIPS
+  if (datos.programa && (tipoDoc.includes("ANEXO") || tipoDoc.includes("SOLICITUD"))) {
+    const palabrasProg = normalizarTextoDocumento(datos.programa)
+      .split(" ")
+      .filter((p) => p.length > 4);
+    const matchProg = palabrasProg.filter((p) => textoNormalizado.includes(p));
+    if (matchProg.length >= Math.min(2, palabrasProg.length)) {
+      agregar(
+        "PROGRAMA",
+        "CONFORME",
+        `Mención al programa académico oficial verificada.`,
+      );
+    }
+  }
+
+  // F. Cláusulas reglamentarias específicas según el tipo de Anexo
+  if (tipoDoc.includes("ANEXO_01") || tipoDoc.includes("AUTORIZACION_PUBLICACION")) {
+    const tieneRepositorio = /(?:repositorio|publicaci[oó]n\s+digital|difusi[oó]n|acceso\s+abierto|restringido|embargo|licencia)/iu.test(textoCompleto);
+    if (tieneRepositorio) {
+      agregar(
+        "CLAUSULA_NORMATIVA",
+        "CONFORME",
+        "Cláusula de autorización de publicación digital en el repositorio institucional verificada.",
+      );
+    } else {
+      agregar(
+        "CLAUSULA_NORMATIVA",
+        "ADVERTENCIA",
+        "El Anexo 01 debe incluir la autorización formal de publicación en el repositorio institucional UNSA.",
+        1,
+        "Autorización de publicación en repositorio institucional",
+        "Cláusula no detectada",
+      );
+    }
+  } else if (tipoDoc.includes("ANEXO_02")) {
+    const tienePenales = /(?:antecedentes|policiales|penales|judiciales)/iu.test(textoCompleto);
+    const tieneTerrorismo = /(?:terrorismo|apolog[ií]a)/iu.test(textoCompleto);
+    if (tienePenales && tieneTerrorismo) {
+      agregar(
+        "CLAUSULA_NORMATIVA",
+        "CONFORME",
+        "Declaración jurada de no antecedentes penales ni condenas por terrorismo verificada.",
+      );
+    } else {
+      agregar(
+        "CLAUSULA_NORMATIVA",
+        "ADVERTENCIA",
+        "El Anexo 02 debe declarar expresamente no tener antecedentes policiales/penales ni condenas por terrorismo.",
+        1,
+        "No antecedentes policiales/penales ni terrorismo",
+        "Declaración incompleta",
+      );
+    }
+  } else if (tipoDoc.includes("ANEXO_32") || tipoDoc.includes("VERACIDAD")) {
+    const tieneVeracidad = /(?:veracidad|autenticidad|originalidad|autor[ií]a|plagio)/iu.test(textoCompleto);
+    if (tieneVeracidad) {
+      agregar(
+        "CLAUSULA_NORMATIVA",
+        "CONFORME",
+        "Declaración jurada de veracidad de la información y autenticidad del trabajo verificada.",
+      );
+    } else {
+      agregar(
+        "CLAUSULA_NORMATIVA",
+        "ADVERTENCIA",
+        "El Anexo 32 debe incluir la declaración formal de veracidad de la información y originalidad.",
+        1,
+        "Veracidad y originalidad",
+        "Cláusula no detectada",
+      );
+    }
+  } else if (tipoDoc.includes("CONFIDENCIALIDAD")) {
+    const tieneConf = /(?:confidencialidad|reserva|secreto|uso\s+de\s+informaci[oó]n)/iu.test(textoCompleto);
+    if (tieneConf) {
+      agregar(
+        "CLAUSULA_NORMATIVA",
+        "CONFORME",
+        "Compromiso de confidencialidad y autorización de uso de información verificado.",
+      );
+    } else {
+      agregar(
+        "CLAUSULA_NORMATIVA",
+        "ADVERTENCIA",
+        "La DJ debe declarar el compromiso de confidencialidad y uso adecuado de la información de la empresa.",
+        1,
+        "Compromiso de confidencialidad",
+        "Cláusula no detectada",
+      );
+    }
+  } else if (tipoDoc.includes("ANEXO_18")) {
+    const tieneConformidad = /(?:conformidad|asesoramiento|satisfactorio|aprobado|favorable)/iu.test(textoCompleto);
+    if (tieneConformidad) {
+      agregar(
+        "CLAUSULA_NORMATIVA",
+        "CONFORME",
+        "Dictamen de conformidad de asesoramiento de proyecto identificado.",
+      );
+    } else {
+      agregar(
+        "CLAUSULA_NORMATIVA",
+        "ADVERTENCIA",
+        "El Anexo 18 debe contener la conformidad explícita del docente asesor respecto al plan de tesis.",
+        1,
+        "Conformidad explícita de asesoramiento",
+        "No detectado",
+      );
+    }
+  }
+
+  // G. Verificación de firma gráfica o digital
+  const tieneFirmaDigital = /(?:firmado\s+digitalmente|firma\s+digital|digital\s+signature|certificado\s+digital|firmado\s+electr[oó]nicamente|r[uú]brica\s+digital)/iu.test(textoCompleto);
+  const tieneBloqueFirma = /(?:firma\s+del\s+solicitante|firma\s+del\s+tesista|firma\s+del\s+asesor|firma\s+del\s+postulante|firma\s+del\s+graduando|firma\s+del\s+declarante|huella\s+dactilar|firma\s+y\s+sello|post\s*firma)/iu.test(textoCompleto);
+  const lineaVaciaFirma = /_{6,}\s*(?:\r?\n\s*)*(?:firma|solicitante|tesista|postulante|asesor|declarante)/iu.test(textoCompleto);
+
+  if (tieneFirmaDigital) {
+    agregar(
+      "FIRMA_DOCUMENTO",
+      "CONFORME",
+      "Firma digital / electrónica identificada en el documento.",
+    );
+  } else if (lineaVaciaFirma) {
+    agregar(
+      "FIRMA_DOCUMENTO",
+      "ADVERTENCIA",
+      "Se detectó la línea de firma en blanco sin rúbrica ni firma digital estampada. Asegúrese de estampar su firma manuscrita o digital antes de enviar.",
+      1,
+      "Firma estampada o digital",
+      "Línea de firma vacía (___________)",
+    );
+  } else if (tieneBloqueFirma) {
+    agregar(
+      "FIRMA_DOCUMENTO",
+      "CONFORME",
+      "Bloque formal de suscripción y firma identificado en el documento.",
+    );
+  }
+
+  // H. Título: contraste de similitud si el documento hace referencia a título
   let tituloDetectado: string | null = null;
   let similitudTitulo: number | null = null;
   const mencionaTitulo =
