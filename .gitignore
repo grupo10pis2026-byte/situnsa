@@ -43,6 +43,7 @@ RESUMEN_Entrevista 1 Sep 8, 14.17.docx.md
 # Agent IDE
 .agents/
 skills-lock.json
+.scratch/
 
 # Google Apps Script
 googlescriptsitunsa/
