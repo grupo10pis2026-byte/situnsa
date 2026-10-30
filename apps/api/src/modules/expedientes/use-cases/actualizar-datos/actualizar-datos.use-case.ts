@@ -48,6 +48,22 @@ const CAMPOS_EXPEDIENTE = [
   "modalidadFinal",
 ] as const;
 
+export const CAMPOS_FECHAS_DOCUMENTOS = [
+  "fechaSolicitud",
+  "fechaCircular",
+  "fechaDecanal",
+  "fechaDictamen",
+  "fechaConformidad",
+  "fechaImpresion",
+  "fechaPublicacion",
+  "fechaObservacionesBorrador",
+  "fechaSimilitud",
+  "fechaInvitacionPublica",
+  "fechaOficioOti",
+  "fechaOficioUgi",
+  "fechaNombramientoJurados",
+] as const;
+
 const CAMPOS_PERSONA = [
   ["Email", "email"],
   ["Telefono", "telefono"],
@@ -147,6 +163,35 @@ export class ActualizarDatosUseCase {
           }
         }
       }
+      // Guardar fechas documentales adicionales en metadata
+      const fechasDocPatch: Record<string, string | null> = {};
+      let tieneFechasDoc = false;
+      for (const k of CAMPOS_FECHAS_DOCUMENTOS) {
+        const v = patch[k];
+        if (v !== undefined) {
+          tieneFechasDoc = true;
+          fechasDocPatch[k] = v === "" ? null : fechaIso(v) || v.trim();
+        }
+      }
+      if (tieneFechasDoc) {
+        const filaExp = (
+          await tx
+            .select({ metadata: expedientes.metadata })
+            .from(expedientes)
+            .where(eq(expedientes.id, id))
+        )[0];
+        const metaActual = (filaExp?.metadata as Record<string, unknown> | null) ?? {};
+        const fechasActuales =
+          (metaActual.fechasDocumentos as Record<string, string | null> | null) ?? {};
+        patchExp.metadata = {
+          ...metaActual,
+          fechasDocumentos: {
+            ...fechasActuales,
+            ...fechasDocPatch,
+          },
+        };
+      }
+
       if (patch.titulo !== undefined) {
         // En tesis de 2 personas comparten título de tesis: sincronizar titulo02
         patchExp.titulo02 = patchExp.titulo;

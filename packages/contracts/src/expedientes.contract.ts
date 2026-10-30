@@ -103,6 +103,20 @@ export const DatosAdminDTOSchema = z.object({
   horaSustentacion: z.string().nullable(),
   lugarSustentacion: z.string().nullable(),
   modalidadVirtual: z.string().nullable(),
+  // Fechas documentales específicas (§6 Control Documental / Formatos)
+  fechaSolicitud: z.string().nullable().optional(),
+  fechaCircular: z.string().nullable().optional(),
+  fechaDecanal: z.string().nullable().optional(),
+  fechaDictamen: z.string().nullable().optional(),
+  fechaConformidad: z.string().nullable().optional(),
+  fechaImpresion: z.string().nullable().optional(),
+  fechaPublicacion: z.string().nullable().optional(),
+  fechaObservacionesBorrador: z.string().nullable().optional(),
+  fechaSimilitud: z.string().nullable().optional(),
+  fechaInvitacionPublica: z.string().nullable().optional(),
+  fechaOficioOti: z.string().nullable().optional(),
+  fechaOficioUgi: z.string().nullable().optional(),
+  fechaNombramientoJurados: z.string().nullable().optional(),
 });
 
 /** Documento del checklist (tarjeta documental §7–§8 INTERFACES). */
@@ -258,6 +272,20 @@ const patchBase = {
   horaSustentacion: z.string().max(16).optional(),
   lugarSustentacion: z.string().max(160).optional(),
   modalidadVirtual: z.string().max(64).optional(),
+  // Fechas documentales específicas
+  fechaSolicitud: z.string().max(32).optional(),
+  fechaCircular: z.string().max(32).optional(),
+  fechaDecanal: z.string().max(32).optional(),
+  fechaDictamen: z.string().max(32).optional(),
+  fechaConformidad: z.string().max(32).optional(),
+  fechaImpresion: z.string().max(32).optional(),
+  fechaPublicacion: z.string().max(32).optional(),
+  fechaObservacionesBorrador: z.string().max(32).optional(),
+  fechaSimilitud: z.string().max(32).optional(),
+  fechaInvitacionPublica: z.string().max(32).optional(),
+  fechaOficioOti: z.string().max(32).optional(),
+  fechaOficioUgi: z.string().max(32).optional(),
+  fechaNombramientoJurados: z.string().max(32).optional(),
   expectedUpdatedAt: z.string().optional(),
 };
 

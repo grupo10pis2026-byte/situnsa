@@ -419,6 +419,11 @@ export async function getDetalleById(
     datosAdmin[k] =
       v instanceof Date ? v.toISOString().slice(0, 10) : ((v as string | null) ?? null);
   }
+  const metaObj = (row.metadata as Record<string, unknown> | null) ?? {};
+  const fechasMeta = (metaObj.fechasDocumentos as Record<string, string | null> | null) ?? {};
+  for (const [k, v] of Object.entries(fechasMeta)) {
+    if (v !== undefined) datosAdmin[k] = v;
+  }
 
   const subetapasDTO = subs.map((s) => subetapaDTO(s, NOMBRES_ETAPA, ahora));
   const activa = subs.find((s) => s.estado === "EN_CURSO") ?? null;
