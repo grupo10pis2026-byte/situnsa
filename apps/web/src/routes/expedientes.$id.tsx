@@ -1,14 +1,15 @@
 import type { ExpedienteDetalleDTO } from "@pis/contracts";
-import { resolverNombreArchivoDescarga } from "@pis/domain/dist/documentos/plantillas.js";
+import { esDocumentoTesista } from "@pis/domain/dist/expediente/checklist-catalogo.js";
 import { Link, useNavigate, useParams } from "@tanstack/react-router";
 import {
   ArrowLeft,
-  FileDown,
+  FileBadge,
   KeyRound,
   Lock,
   MessageSquareWarning,
   Trash2,
   Undo2,
+  UserCheck,
   Users,
   WandSparkles,
 } from "lucide-react";
@@ -16,8 +17,6 @@ import { useEffect, useState } from "react";
 import { destinoPorRol } from "../api/auth.js";
 import { ApiError } from "../api/errores.js";
 import {
-  descargarArchivoProtegido,
-  formatoDescargaUrl,
   type GuardadoEstado,
   reportarPresenciaExpediente,
   type UsuarioConcurrente,
@@ -458,64 +457,6 @@ function AccesoPortal({ detalle: d }: { detalle: ExpedienteDetalleDTO }) {
   );
 }
 
-interface ExtraFormatoCardProps {
-  expedienteCodigo: string;
-  formato: {
-    id: string;
-    tipo: string;
-    nombre: string;
-    version: number;
-    pendientes: string[];
-  };
-}
-
-function ExtraFormatoCard({ expedienteCodigo, formato: g }: ExtraFormatoCardProps) {
-  const avisar = useToast();
-
-  return (
-    <div className="flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-3 shadow-card hover:border-slate-300 transition-colors">
-      <div className="min-w-0">
-        <p className="truncate text-xs font-bold text-navy-950" title={g.nombre}>
-          {g.nombre}
-        </p>
-        <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-grafito-600">
-          <span className="font-semibold text-navy-900">v{g.version}</span>
-          <span>·</span>
-          {g.pendientes.length > 0 ? (
-            <span className="rounded bg-amber-100 px-1.5 py-0.2 text-[10px] text-amber-800 font-semibold">
-              {g.pendientes.length} pendientes
-            </span>
-          ) : (
-            <span className="rounded bg-emerald-100 px-1.5 py-0.2 text-[10px] text-emerald-800 font-semibold">
-              Completo
-            </span>
-          )}
-        </div>
-      </div>
-      <div className="mt-3 flex items-center border-t border-slate-100 pt-2">
-        <Button
-          tamano="sm"
-          variante="contorno"
-          className="w-full justify-center"
-          onClick={() =>
-            void descargarArchivoProtegido(
-              formatoDescargaUrl(g.id),
-              resolverNombreArchivoDescarga(expedienteCodigo, g.tipo, "docx"),
-            ).catch((e: unknown) =>
-              avisar(e instanceof Error ? e.message : "No se pudo descargar", "error"),
-            )
-          }
-          title={g.pendientes.length > 0 ? `Pendiente: ${g.pendientes.join(", ")}` : undefined}
-          type="button"
-        >
-          <FileDown size={13} />
-          Descargar
-        </Button>
-      </div>
-    </div>
-  );
-}
-
 function DocumentosTab({
   etapa,
   detalle: d,
@@ -543,12 +484,53 @@ function DocumentosTab({
     pendientes?: string[];
   } | null>(null);
 
-  const cargados = items.filter((c) => c.documentoId !== null).length;
-  const pct = items.length > 0 ? Math.round((cargados / items.length) * 100) : 0;
   const generados = d.generados.filter((g) => g.etapa === etapa);
   const generadoPorTipo = new Map(generados.map((g) => [g.tipo, g]));
-  // Formatos que no son tarjeta del checklist (carátula del plan, decreto, oficios, etc.).
-  const extras = generados.filter((g) => !items.some((c) => c.tipo === g.tipo));
+
+  // 1. Requisitos entregados formalmente por el postulante / tesista
+  const docsTesista = items.filter((c) => esDocumentoTesista(c.tipo));
+
+  // 2. Formatos y actas emitidos institucionalmente por la facultad / jurado
+  const docsInstitucionalesChecklist = items.filter((c) => !esDocumentoTesista(c.tipo));
+  const extrasGenerados = generados
+    .filter((g) => !items.some((c) => c.tipo === g.tipo))
+    .map((g) => ({
+      tipo: g.tipo,
+      nombre: g.nombre,
+      documentoId: g.id,
+      estado: g.pendientes.length === 0 ? "APROBADO" : "CARGADO",
+      version: g.version,
+      faltantes: g.pendientes.map((p) => `Campo pendiente: ${p}`),
+      requeridoEn: null,
+      permitirSubir: true,
+      formato: g,
+    }));
+
+  const docsInstitucionales = [
+    ...docsInstitucionalesChecklist.map((c) => ({
+      ...c,
+      permitirSubir: true,
+      formato: generadoPorTipo.get(c.tipo) ?? null,
+    })),
+    ...extrasGenerados,
+  ];
+
+  const esCompletado = (doc: {
+    documentoId: string | null;
+    formato?: { pendientes: string[] } | null;
+  }) => {
+    if (doc.documentoId !== null) return true;
+    if (doc.formato && doc.formato.pendientes.length === 0) return true;
+    return false;
+  };
+
+  const tesistaCompletados = docsTesista.filter((c) =>
+    esCompletado({ ...c, formato: generadoPorTipo.get(c.tipo) ?? null }),
+  ).length;
+  const institucionalesCompletados = docsInstitucionales.filter(esCompletado).length;
+  const totalCompletados = tesistaCompletados + institucionalesCompletados;
+  const totalDocumentos = docsTesista.length + docsInstitucionales.length;
+  const pct = totalDocumentos > 0 ? Math.round((totalCompletados / totalDocumentos) * 100) : 0;
 
   async function onGenerar(): Promise<void> {
     try {
@@ -562,18 +544,41 @@ function DocumentosTab({
     }
   }
 
+  const etiquetaEtapa =
+    etapa === "E1"
+      ? "Etapa 1 · Verificación"
+      : etapa === "E2"
+        ? "Etapa 2 · Borrador"
+        : "Etapa 6 · Aprobaciones";
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <Card>
         <div className="flex flex-wrap items-center justify-between gap-3 p-4 md:px-5">
           <div>
             <h2 className="text-sm font-bold text-navy-950">
               DOCUMENTOS - ETAPA {etapa === "E1" ? "01" : "02"}
             </h2>
-            <p className="mt-0.5 flex items-center gap-2 text-xs text-grafito-600">
-              Inserción automática de datos ·
-              <span className="font-bold tabular-nums text-navy-950">
-                {cargados}/{items.length} · {pct}%
+            <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-grafito-600">
+              <span>
+                Documentos de la etapa completados:{" "}
+                <span className="font-bold tabular-nums text-navy-950">
+                  {totalCompletados}/{totalDocumentos} · {pct}%
+                </span>
+              </span>
+              <span className="text-slate-400">|</span>
+              <span>
+                Requisitos:{" "}
+                <strong className="text-navy-900">
+                  {tesistaCompletados}/{docsTesista.length}
+                </strong>
+              </span>
+              <span className="text-slate-400">·</span>
+              <span>
+                Institucionales:{" "}
+                <strong className="text-navy-900">
+                  {institucionalesCompletados}/{docsInstitucionales.length}
+                </strong>
               </span>
             </p>
             <div
@@ -605,50 +610,94 @@ function DocumentosTab({
             </Button>
           )}
         </div>
-        {extras.length > 0 && (
-          <div className="border-t border-slate-200/70 p-4 md:px-5 bg-slate-50/40">
-            <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-navy-950">
-              Formatos Institucionales Emitidos ({extras.length})
+      </Card>
+
+      {/* SECCIÓN 1: REQUISITOS DEL POSTULANTE */}
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/80 pb-2">
+          <div>
+            <h3 className="text-sm font-bold text-navy-950 flex items-center gap-2">
+              <UserCheck size={16} className="text-navy-700" />
+              Requisitos cargados por el postulante ({tesistaCompletados}/{docsTesista.length})
             </h3>
-            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
-              {extras.map((g) => (
-                <ExtraFormatoCard key={g.id} expedienteCodigo={d.codigo} formato={g} />
-              ))}
-            </div>
+            <p className="text-xs text-grafito-600">
+              Documentos de autoría, declaraciones juradas y requisitos que el tesista entrega
+              formalmente.
+            </p>
+          </div>
+        </div>
+
+        {docsTesista.length === 0 ? (
+          <EmptyState titulo="No hay requisitos de postulante para esta etapa" />
+        ) : (
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            {docsTesista.map((c) => (
+              <DocumentoCard
+                key={c.tipo}
+                documentoId={c.documentoId}
+                estado={c.estado}
+                expedienteId={d.id}
+                faltantes={c.faltantes}
+                nombre={c.nombre}
+                tipo={c.tipo}
+                version={c.version}
+                requeridoEn={c.requeridoEn}
+                subetapaActiva={d.subetapaActiva?.clave ?? null}
+                formato={generadoPorTipo.get(c.tipo) ?? null}
+                etapa={etapa}
+                etiquetaEtapa={etiquetaEtapa}
+                onModificar={setFormatoAModificar}
+                onVistaPrevia={setFormatoAVer}
+              />
+            ))}
           </div>
         )}
-      </Card>
-      {items.length === 0 ? (
-        <EmptyState titulo="Sin documentos configurados para esta etapa" />
-      ) : (
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          {items.map((c) => (
-            <DocumentoCard
-              key={c.tipo}
-              documentoId={c.documentoId}
-              estado={c.estado}
-              expedienteId={d.id}
-              faltantes={c.faltantes}
-              nombre={c.nombre}
-              tipo={c.tipo}
-              version={c.version}
-              requeridoEn={c.requeridoEn}
-              subetapaActiva={d.subetapaActiva?.clave ?? null}
-              formato={generadoPorTipo.get(c.tipo) ?? null}
-              etapa={etapa}
-              etiquetaEtapa={
-                etapa === "E1"
-                  ? "Etapa 1 · Verificación"
-                  : etapa === "E2"
-                    ? "Etapa 2 · Borrador"
-                    : "Etapa 6 · Aprobaciones"
-              }
-              onModificar={setFormatoAModificar}
-              onVistaPrevia={setFormatoAVer}
-            />
-          ))}
+      </div>
+
+      {/* SECCIÓN 2: FORMATOS Y ACTAS INSTITUCIONALES */}
+      <div className="space-y-3 pt-2">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/80 pb-2">
+          <div>
+            <h3 className="text-sm font-bold text-navy-950 flex items-center gap-2">
+              <FileBadge size={16} className="text-dorado-600" />
+              Formatos institucionales emitidos por la facultad ({institucionalesCompletados}/
+              {docsInstitucionales.length})
+            </h3>
+            <p className="text-xs text-grafito-600">
+              Actas, decretos y oficios oficiales generados con las plantillas oficiales de la
+              facultad.
+            </p>
+          </div>
         </div>
-      )}
+
+        {docsInstitucionales.length === 0 ? (
+          <EmptyState titulo="No hay formatos institucionales para esta etapa" />
+        ) : (
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            {docsInstitucionales.map((c) => (
+              <DocumentoCard
+                key={c.tipo}
+                documentoId={c.documentoId}
+                estado={c.estado}
+                expedienteId={d.id}
+                faltantes={c.faltantes}
+                nombre={c.nombre}
+                tipo={c.tipo}
+                version={c.version}
+                requeridoEn={c.requeridoEn}
+                subetapaActiva={d.subetapaActiva?.clave ?? null}
+                formato={c.formato}
+                etapa={etapa}
+                etiquetaEtapa={etiquetaEtapa}
+                permitirSubir={c.permitirSubir}
+                onModificar={setFormatoAModificar}
+                onVistaPrevia={setFormatoAVer}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
       <ModalModificarFormato
         abierto={!!formatoAModificar}
         onCerrar={() => setFormatoAModificar(null)}
