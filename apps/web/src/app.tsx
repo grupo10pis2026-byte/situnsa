@@ -19,6 +19,7 @@ import { ExpedienteDetallePage } from "./routes/expedientes.$id.js";
 import { NuevoExpedientePage } from "./routes/expedientes-nuevo.js";
 import { HomePage } from "./routes/index.js";
 import { InscripcionesPage } from "./routes/inscripciones.js";
+import { LandingPage } from "./routes/landing.js";
 import { LoginPage } from "./routes/login.js";
 import { MesaDePartesPage } from "./routes/mesa-de-partes.js";
 import { MiTallerPage } from "./routes/mi-taller.js";
@@ -166,6 +167,11 @@ const mesaDePartesRoute = createRoute({
   path: "/mesa-de-partes",
   component: MesaDePartesPage,
 });
+const landingRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/landing",
+  component: LandingPage,
+});
 const subsanarRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/subsanar/$token",
@@ -193,6 +199,7 @@ const routeTree = rootRoute.addChildren([
   solicitudesRoute,
   solicitudDetalleRoute,
   mesaDePartesRoute,
+  landingRoute,
   subsanarRoute,
   miTramiteRoute,
   asesorRoute,

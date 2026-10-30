@@ -22,6 +22,7 @@ import { Button } from "../components/ui/button.js";
 import { Card } from "../components/ui/card.js";
 import { Field } from "../components/ui/field.js";
 import { Select } from "../components/ui/select.js";
+import { LandingPage } from "./landing.js";
 
 type Via = "REGULAR" | "TALLER";
 type Modalidad = "TESIS" | "TRABAJO_ACADEMICO" | "ARTICULO";
@@ -53,6 +54,13 @@ const participanteInicial: DatosParticipante = {
 };
 
 export function MesaDePartesPage() {
+  const [enWizard, setEnWizard] = useState(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      return params.get("iniciar") === "true";
+    }
+    return false;
+  });
   const [paso, setPaso] = useState<1 | 2 | 3 | 4>(1);
 
   // Paso 1: Académicos
@@ -514,15 +522,24 @@ export function MesaDePartesPage() {
     );
   }
 
+  if (!enWizard) {
+    return <LandingPage onIniciarTramite={() => setEnWizard(true)} />;
+  }
+
   return (
     <main className="min-h-screen bg-[#eef1f4] py-8 px-4 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-3xl">
         {/* Encabezado Institucional */}
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-navy-950 text-white font-bold text-lg shadow-sm">
+            <button
+              type="button"
+              onClick={() => setEnWizard(false)}
+              className="flex h-11 w-11 items-center justify-center rounded-xl bg-navy-950 text-white font-bold text-lg shadow-sm hover:bg-navy-800 transition-colors"
+              title="Volver a la presentación"
+            >
               <GraduationCap size={24} />
-            </div>
+            </button>
             <div>
               <h1 className="text-lg font-bold text-navy-950">Mesa de Partes Virtual</h1>
               <p className="text-xs text-grafito-600">
@@ -530,11 +547,21 @@ export function MesaDePartesPage() {
               </p>
             </div>
           </div>
-          <Link to="/login">
-            <Button tamano="sm" variante="fantasma">
-              Ingreso Personal
+          <div className="flex items-center gap-2">
+            <Button
+              tamano="sm"
+              variante="fantasma"
+              type="button"
+              onClick={() => setEnWizard(false)}
+            >
+              Ver Requisitos
             </Button>
-          </Link>
+            <Link to="/login">
+              <Button tamano="sm" variante="contorno">
+                Ingreso Personal
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {/* Indicador de Pasos del Wizard */}
