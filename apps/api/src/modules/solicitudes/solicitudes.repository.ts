@@ -38,6 +38,7 @@ export async function listarSolicitudes(filtros: FiltrosSolicitudesQuery): Promi
 
   // Condiciones de filtro
   const condiciones = [];
+  if (filtros.modalidad) condiciones.push(eq(solicitudes.modalidad, filtros.modalidad));
   if (filtros.via) condiciones.push(eq(solicitudes.via, filtros.via));
   if (filtros.estado) condiciones.push(eq(solicitudes.estado, filtros.estado));
   if (filtros.programa) condiciones.push(ilike(solicitudes.programa, `%${filtros.programa}%`));

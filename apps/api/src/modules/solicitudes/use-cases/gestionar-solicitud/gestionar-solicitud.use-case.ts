@@ -52,7 +52,6 @@ export class ActualizarDatosMenoresUseCase {
           if (p.nombres !== undefined) upd.nombres = p.nombres;
           if (p.apellidos !== undefined) upd.apellidos = p.apellidos;
           if (p.cui !== undefined) upd.cui = p.cui;
-          if (p.email !== undefined) upd.email = p.email.toLowerCase();
           if (p.telefono !== undefined) upd.telefono = p.telefono;
           if (p.ciudad !== undefined) upd.ciudad = p.ciudad;
           if (p.direccion !== undefined) upd.direccion = p.direccion;

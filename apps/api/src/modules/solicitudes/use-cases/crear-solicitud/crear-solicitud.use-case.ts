@@ -115,7 +115,7 @@ export class CrearSolicitudUseCase {
       return fail(
         new DomainError(
           "VALIDACION_FALLIDA",
-          "El correo del Tesista 01 debe ser institucional (@unsa.edu.pe)",
+          "El correo del Participante 1 debe ser institucional (@unsa.edu.pe)",
         ),
       );
     }
@@ -126,7 +126,7 @@ export class CrearSolicitudUseCase {
       return fail(
         new DomainError(
           "VALIDACION_FALLIDA",
-          "El correo del Tesista 02 debe ser institucional (@unsa.edu.pe)",
+          "El correo del Participante 2 debe ser institucional (@unsa.edu.pe)",
         ),
       );
     }
@@ -136,22 +136,25 @@ export class CrearSolicitudUseCase {
       archivos.map((a) => {
         const t = a.tipo.toUpperCase();
         if (t === "FUT" || t === "EXPEDIENTE_17") return "ANEXO_17";
+        if (t === "FOTO") return "FOTO_ESTUDIANTE";
+        if (t === "FOTO_ESTUDIANTE_2") return "FOTO_PARTICIPANTE_2";
+        if (t === "ARTICULO") return "ARTICULO_INDEXADO";
         return t;
       }),
     );
 
-    let docsExigidos: string[] = [];
+    const docsBase = ["ANEXO_17", "ANEXO_18", "PAGO_TRAMITE", "FOTO_ESTUDIANTE"];
+    if (input.cantidadTesistas === 2) {
+      docsBase.push("FOTO_PARTICIPANTE_2");
+    }
+
+    const docsExigidos: string[] = [...docsBase];
     if (input.modalidad === "TESIS") {
-      docsExigidos = ["ANEXO_17", "ANEXO_18", "PLAN_TESIS", "PAGO_TRAMITE"];
+      docsExigidos.push("PLAN_TESIS");
     } else if (input.modalidad === "TRABAJO_ACADEMICO") {
-      docsExigidos = [
-        "ANEXO_17",
-        "ANEXO_18",
-        "PLAN_TRABAJO_ACADEMICO",
-        "CONSTANCIA_TRABAJO",
-        "CERTIFICADO_SUNARP",
-        "PAGO_TRAMITE",
-      ];
+      docsExigidos.push("PLAN_TRABAJO_ACADEMICO", "CONSTANCIA_TRABAJO", "CERTIFICADO_SUNARP");
+    } else if (input.modalidad === "ARTICULO") {
+      docsExigidos.push("ARTICULO_INDEXADO");
     }
 
     const faltantes = docsExigidos.filter((tipo) => !tiposPresentes.has(tipo));
@@ -207,12 +210,12 @@ export class CrearSolicitudUseCase {
         });
       }
 
-      // Insertar solicitud
+      // Insertar solicitud (exclusiva Vía Regular)
       const [solRow] = await tx
         .insert(solicitudes)
         .values({
           codigo,
-          via: input.via,
+          via: "REGULAR",
           modalidad: input.modalidad,
           programa: input.programa,
           titulo: input.titulo.trim(),
@@ -243,7 +246,7 @@ export class CrearSolicitudUseCase {
         direccion: input.participante1.direccion?.trim() || null,
         departamento: input.participante1.departamento?.trim() || null,
         provincia: input.participante1.provincia?.trim() || null,
-        distrito: input.participante1.distrito?.trim() || null,
+        distrito: null,
       });
 
       if (input.participante2) {
@@ -261,7 +264,7 @@ export class CrearSolicitudUseCase {
           direccion: input.participante2.direccion?.trim() || null,
           departamento: input.participante2.departamento?.trim() || null,
           provincia: input.participante2.provincia?.trim() || null,
-          distrito: input.participante2.distrito?.trim() || null,
+          distrito: null,
         });
       }
 
@@ -279,8 +282,8 @@ export class CrearSolicitudUseCase {
         actorId: null,
         actorDni: "portal-publico",
         ip: meta.ip ?? null,
-        detalle: `Solicitud ${codigo} recibida desde la Mesa de Partes Virtual (${input.via})`,
-        metadata: { via: input.via, cantidadArchivos: archivos.length },
+        detalle: `Solicitud ${codigo} recibida desde la Mesa de Partes Virtual (${input.modalidad})`,
+        metadata: { via: "REGULAR", modalidad: input.modalidad, cantidadArchivos: archivos.length },
       });
 
       return ok({ id: solRow.id, codigo });

@@ -11,7 +11,6 @@ import {
 describe("Contratos y Validación Zod de Solicitudes", () => {
   it("valida exitosamente un payload de solicitud de 1 participante", () => {
     const valid = {
-      via: "REGULAR",
       modalidad: "TESIS",
       programa: "Segunda Especialidad en Ingeniería de Sistemas",
       titulo: "Diseño e implementación de arquitectura serverless para expedientes",
@@ -33,9 +32,35 @@ describe("Contratos y Validación Zod de Solicitudes", () => {
     expect(parsed.success).toBe(true);
   });
 
+  it("valida teléfono de 9 dígitos y rechaza longitudes diferentes", () => {
+    const base = {
+      modalidad: "TESIS",
+      programa: "Segunda Especialidad en Ingeniería de Sistemas",
+      titulo: "Diseño e implementación de arquitectura serverless para expedientes",
+      cantidadTesistas: 1,
+      declaracionJurada: true,
+      participante1: {
+        nombres: "Juan Carlos",
+        apellidos: "Pérez Quispe",
+        dni: "71234567",
+        email: "jperez@unsa.edu.pe",
+        telefono: "987654321", // 9 dígitos
+      },
+    };
+    expect(CrearSolicitudPayloadSchema.safeParse(base).success).toBe(true);
+
+    const telefonoInvalido = {
+      ...base,
+      participante1: {
+        ...base.participante1,
+        telefono: "12345678", // 8 dígitos
+      },
+    };
+    expect(CrearSolicitudPayloadSchema.safeParse(telefonoInvalido).success).toBe(false);
+  });
+
   it("valida CUI de 8 dígitos y rechaza CUI con longitud inválida", () => {
     const base = {
-      via: "REGULAR",
       modalidad: "TESIS",
       programa: "Segunda Especialidad en Ingeniería de Sistemas",
       titulo: "Diseño e implementación de arquitectura serverless para expedientes",
@@ -73,7 +98,6 @@ describe("Contratos y Validación Zod de Solicitudes", () => {
 
   it("valida exitosamente un payload de 2 participantes con DNIs y correos distintos", () => {
     const valid = {
-      via: "TALLER",
       modalidad: "ARTICULO",
       programa: "Segunda Especialidad en Ingeniería de Sistemas",
       titulo: "Evaluación de modelos de lenguaje en análisis forense digital",
@@ -99,7 +123,6 @@ describe("Contratos y Validación Zod de Solicitudes", () => {
 
   it("rechaza correo no institucional en participante1", () => {
     const invalidEmail = {
-      via: "REGULAR",
       modalidad: "TESIS",
       programa: "Segunda Especialidad en Ingeniería de Sistemas",
       titulo: "Diseño e implementación de arquitectura serverless para expedientes",
@@ -118,7 +141,6 @@ describe("Contratos y Validación Zod de Solicitudes", () => {
 
   it("rechaza solicitud si cantidadTesistas es 2 pero no se envía participante2", () => {
     const invalid = {
-      via: "REGULAR",
       modalidad: "TESIS",
       programa: "Segunda Especialidad en Ingeniería de Sistemas",
       titulo: "Título de prueba válido de más de diez caracteres",
@@ -138,7 +160,6 @@ describe("Contratos y Validación Zod de Solicitudes", () => {
 
   it("rechaza solicitud si ambos participantes tienen el mismo DNI", () => {
     const invalid = {
-      via: "REGULAR",
       modalidad: "TESIS",
       programa: "Segunda Especialidad en Ingeniería de Sistemas",
       titulo: "Título de prueba válido de más de diez caracteres",
@@ -153,7 +174,7 @@ describe("Contratos y Validación Zod de Solicitudes", () => {
         nombres: "María Elena",
         apellidos: "Torres Flores",
         dni: "71234567",
-        email: "mtorres@gmail.com",
+        email: "mtorres@unsa.edu.pe",
       },
       declaracionJurada: true,
     };
@@ -164,7 +185,6 @@ describe("Contratos y Validación Zod de Solicitudes", () => {
 
   it("rechaza solicitud sin declaración jurada", () => {
     const invalid = {
-      via: "REGULAR",
       modalidad: "TESIS",
       programa: "Segunda Especialidad en Ingeniería de Sistemas",
       titulo: "Título de prueba válido de más de diez caracteres",
@@ -182,11 +202,9 @@ describe("Contratos y Validación Zod de Solicitudes", () => {
     expect(parsed.success).toBe(false);
   });
 
-  it("valida ObservarSolicitudSchema con motivos válidos", () => {
+  it("valida ObservarSolicitudSchema con detalle de observación", () => {
     const valid = {
-      motivosPredefinidos: ["Expediente 17 ilegible o sin firma"],
       detalleObservacion: "Por favor cargar nuevamente el documento firmado en formato PDF",
-      diasHabilesSubsanacion: 10,
     };
 
     const parsed = ObservarSolicitudSchema.safeParse(valid);

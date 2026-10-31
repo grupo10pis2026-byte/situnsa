@@ -1,4 +1,4 @@
-import type { EstadoConformidadDocumento } from "@pis/contracts";
+import type { EstadoConformidadDocumento, Modalidad } from "@pis/contracts";
 import { Link, useNavigate, useParams } from "@tanstack/react-router";
 import {
   AlertTriangle,
@@ -9,12 +9,14 @@ import {
   FileX,
   History,
   Pencil,
+  Save,
   Sparkles,
   User,
   Users,
+  X,
   XCircle,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { abrirArchivoProtegido } from "../api/expedientes.js";
 import {
   documentoSolicitudUrl,
@@ -28,9 +30,16 @@ import { ModalRechazarSolicitud } from "../components/domain/solicitudes/modal-r
 import { AppShell } from "../components/layout/app-shell.js";
 import { Button } from "../components/ui/button.js";
 import { Card } from "../components/ui/card.js";
-import { Dialogo } from "../components/ui/dialog.js";
 import { Field, ReadonlyField } from "../components/ui/field.js";
 import { StatusBadge } from "../components/ui/status-badge.js";
+import { Tab, TabPanel, Tabs, TabsLista } from "../components/ui/tabs.js";
+
+function formatoModalidad(m: Modalidad | string): string {
+  if (m === "TESIS") return "Modalidad de Tesis";
+  if (m === "TRABAJO_ACADEMICO") return "Modalidad de Trabajo Académico";
+  if (m === "ARTICULO") return "Tesis o Artículo en Revista Indexada";
+  return m;
+}
 
 export function SolicitudDetallePage() {
   const { id } = useParams({ strict: false }) as { id: string };
@@ -40,49 +49,132 @@ export function SolicitudDetallePage() {
   const conformidadMutation = useActualizarConformidadDocumento(id);
   const actualizarDatosMutation = useActualizarDatosMenores(id);
 
-  // Estados de modales
+  // Pestaña activa
+  const [tab, setTab] = useState("datos");
+
+  // Estados de modales de acción
   const [modalObservar, setModalObservar] = useState(false);
   const [modalRechazar, setModalRechazar] = useState(false);
   const [modalAceptar, setModalAceptar] = useState(false);
-  const [modalEditar, setModalEditar] = useState(false);
 
-  // Estado del modal de edición de datos menores
-  const [tituloEdit, setTituloEdit] = useState("");
-  const [telefonoP1Edit, setTelefonoP1Edit] = useState("");
-  const [ciudadP1Edit, setCiudadP1Edit] = useState("");
-  const [direccionP1Edit, setDireccionP1Edit] = useState("");
+  // Estado de edición inline
+  const [editando, setEditando] = useState(false);
   const [errorEdicion, setErrorEdicion] = useState<string | null>(null);
 
-  function abrirEdicion() {
+  // Campos editables
+  const [tituloEdit, setTituloEdit] = useState("");
+  const [p1Nombres, setP1Nombres] = useState("");
+  const [p1Apellidos, setP1Apellidos] = useState("");
+  const [p1Cui, setP1Cui] = useState("");
+  const [p1Telefono, setP1Telefono] = useState("");
+  const [p1Ciudad, setP1Ciudad] = useState("");
+  const [p1Direccion, setP1Direccion] = useState("");
+
+  const [p2Nombres, setP2Nombres] = useState("");
+  const [p2Apellidos, setP2Apellidos] = useState("");
+  const [p2Cui, setP2Cui] = useState("");
+  const [p2Telefono, setP2Telefono] = useState("");
+  const [p2Ciudad, setP2Ciudad] = useState("");
+  const [p2Direccion, setP2Direccion] = useState("");
+
+  // Sincronizar estado local al cargar la solicitud
+  useEffect(() => {
     if (!sol) return;
     setTituloEdit(sol.titulo);
-    const p1 = sol.participantes[0];
-    setTelefonoP1Edit(p1?.telefono ?? "");
-    setCiudadP1Edit(p1?.ciudad ?? "");
-    setDireccionP1Edit(p1?.direccion ?? "");
+    const p1 = sol.participantes.find((p) => p.orden === 1);
+    const p2 = sol.participantes.find((p) => p.orden === 2);
+
+    if (p1) {
+      setP1Nombres(p1.nombres);
+      setP1Apellidos(p1.apellidos);
+      setP1Cui(p1.cui ?? "");
+      setP1Telefono(p1.telefono ?? "");
+      setP1Ciudad(p1.ciudad ?? "");
+      setP1Direccion(p1.direccion ?? "");
+    }
+    if (p2) {
+      setP2Nombres(p2.nombres);
+      setP2Apellidos(p2.apellidos);
+      setP2Cui(p2.cui ?? "");
+      setP2Telefono(p2.telefono ?? "");
+      setP2Ciudad(p2.ciudad ?? "");
+      setP2Direccion(p2.direccion ?? "");
+    }
+  }, [sol]);
+
+  function cancelarEdicion() {
+    if (!sol) return;
+    setTituloEdit(sol.titulo);
+    const p1 = sol.participantes.find((p) => p.orden === 1);
+    const p2 = sol.participantes.find((p) => p.orden === 2);
+    if (p1) {
+      setP1Nombres(p1.nombres);
+      setP1Apellidos(p1.apellidos);
+      setP1Cui(p1.cui ?? "");
+      setP1Telefono(p1.telefono ?? "");
+      setP1Ciudad(p1.ciudad ?? "");
+      setP1Direccion(p1.direccion ?? "");
+    }
+    if (p2) {
+      setP2Nombres(p2.nombres);
+      setP2Apellidos(p2.apellidos);
+      setP2Cui(p2.cui ?? "");
+      setP2Telefono(p2.telefono ?? "");
+      setP2Ciudad(p2.ciudad ?? "");
+      setP2Direccion(p2.direccion ?? "");
+    }
     setErrorEdicion(null);
-    setModalEditar(true);
+    setEditando(false);
   }
 
-  async function handleGuardarEdicion() {
+  async function handleGuardarEdicionInline() {
     if (!sol) return;
     setErrorEdicion(null);
-    const p1 = sol.participantes[0];
+
+    const p1 = sol.participantes.find((p) => p.orden === 1);
+    const p2 = sol.participantes.find((p) => p.orden === 2);
+
+    // Validar teléfonos si están presentes
+    if (p1Telefono.trim() && !/^\d{9}$/.test(p1Telefono.trim())) {
+      setErrorEdicion("El teléfono del Participante 1 debe tener 9 dígitos numéricos");
+      return;
+    }
+    if (p2 && p2Telefono.trim() && !/^\d{9}$/.test(p2Telefono.trim())) {
+      setErrorEdicion("El teléfono del Participante 2 debe tener 9 dígitos numéricos");
+      return;
+    }
+
     try {
+      const participantesPayload = [];
+      if (p1) {
+        participantesPayload.push({
+          id: p1.id,
+          nombres: p1Nombres.trim() || undefined,
+          apellidos: p1Apellidos.trim() || undefined,
+          cui: p1Cui.trim() || undefined,
+          telefono: p1Telefono.trim() || undefined,
+          ciudad: p1Ciudad.trim() || undefined,
+          direccion: p1Direccion.trim() || undefined,
+        });
+      }
+      if (p2) {
+        participantesPayload.push({
+          id: p2.id,
+          nombres: p2Nombres.trim() || undefined,
+          apellidos: p2Apellidos.trim() || undefined,
+          cui: p2Cui.trim() || undefined,
+          telefono: p2Telefono.trim() || undefined,
+          ciudad: p2Ciudad.trim() || undefined,
+          direccion: p2Direccion.trim() || undefined,
+        });
+      }
+
       await actualizarDatosMutation.mutateAsync({
         titulo: tituloEdit.trim() !== sol.titulo ? tituloEdit.trim() : undefined,
-        participantes: p1
-          ? [
-              {
-                id: p1.id,
-                telefono: telefonoP1Edit.trim() || undefined,
-                ciudad: ciudadP1Edit.trim() || undefined,
-                direccion: direccionP1Edit.trim() || undefined,
-              },
-            ]
-          : undefined,
+        participantes: participantesPayload.length > 0 ? participantesPayload : undefined,
       });
-      setModalEditar(false);
+
+      setEditando(false);
       void refetch();
     } catch (err: unknown) {
       setErrorEdicion(err instanceof Error ? err.message : "Error al guardar los cambios");
@@ -99,7 +191,7 @@ export function SolicitudDetallePage() {
   if (isLoading) {
     return (
       <AppShell activo="/solicitudes">
-        <div className="p-8 text-center text-sm text-grafito-600">
+        <div className="p-12 text-center text-sm text-grafito-600">
           Cargando detalle de la solicitud...
         </div>
       </AppShell>
@@ -109,7 +201,7 @@ export function SolicitudDetallePage() {
   if (error || !sol) {
     return (
       <AppShell activo="/solicitudes">
-        <div className="p-8 text-center text-sm text-red-600">
+        <div className="p-12 text-center text-sm text-red-600">
           No se pudo cargar la solicitud. Verifique el identificador o sus permisos de acceso.
         </div>
       </AppShell>
@@ -122,11 +214,13 @@ export function SolicitudDetallePage() {
   const checklistAprobado =
     sol.documentos.length > 0 && sol.documentos.every((d) => d.estadoConformidad === "CONFORME");
 
+  const conformesCount = sol.documentos.filter((d) => d.estadoConformidad === "CONFORME").length;
+
   return (
     <AppShell activo="/solicitudes">
-      <div className="space-y-5 p-4 sm:p-6 lg:p-8">
+      <div className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
         {/* Cabecera y Barra de Acciones */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <Link to="/solicitudes">
               <Button tamano="sm" variante="contorno">
@@ -134,7 +228,7 @@ export function SolicitudDetallePage() {
               </Button>
             </Link>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="font-mono text-xl font-bold text-navy-950">{sol.codigo}</h1>
                 <StatusBadge estado={sol.estado} />
                 {sol.esPlazoVencido && sol.estado === "OBSERVADA" && (
@@ -143,17 +237,17 @@ export function SolicitudDetallePage() {
                   </span>
                 )}
               </div>
-              <p className="text-xs text-grafito-600">
-                {sol.via === "REGULAR" ? "Vía Regular" : "Taller de Tesis"} · {sol.modalidad} ·{" "}
-                Recibido el {new Date(sol.fechaRecepcion).toLocaleDateString("es-PE")}
+              <p className="text-xs text-grafito-600 mt-0.5">
+                {formatoModalidad(sol.modalidad)} · Recibido el{" "}
+                {new Date(sol.fechaRecepcion).toLocaleDateString("es-PE")}
               </p>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {!cerrada && (
+            {!cerrada && !editando && (
               <>
-                <Button onClick={abrirEdicion} tamano="sm" variante="contorno">
+                <Button onClick={() => setEditando(true)} tamano="sm" variante="contorno">
                   <Pencil size={14} /> Corregir Datos
                 </Button>
                 <Button onClick={() => setModalObservar(true)} tamano="sm" variante="contorno">
@@ -168,12 +262,29 @@ export function SolicitudDetallePage() {
                   tamano="sm"
                   title={
                     !checklistAprobado
-                      ? "Todos los documentos deben estar en estado CONFORME para aceptar la solicitud (ninguno PENDIENTE u OBSERVADO)"
+                      ? "Todos los documentos deben estar en estado CONFORME para aceptar la solicitud"
                       : undefined
                   }
                   variante="exito"
                 >
                   <Sparkles size={14} /> Aceptar y Crear SET
+                </Button>
+              </>
+            )}
+
+            {!cerrada && editando && (
+              <>
+                <Button onClick={cancelarEdicion} tamano="sm" variante="contorno">
+                  <X size={14} /> Cancelar
+                </Button>
+                <Button
+                  disabled={actualizarDatosMutation.isPending}
+                  onClick={() => void handleGuardarEdicionInline()}
+                  tamano="sm"
+                  variante="primario"
+                >
+                  <Save size={14} />{" "}
+                  {actualizarDatosMutation.isPending ? "Guardando..." : "Guardar Cambios"}
                 </Button>
               </>
             )}
@@ -188,13 +299,13 @@ export function SolicitudDetallePage() {
           </div>
         </div>
 
-        {/* Motivo de observación o rechazo si existen */}
+        {/* Notificación de observación o rechazo activo */}
         {sol.motivoObservacion && (
           <Card className="border-orange-200 bg-orange-50/70 p-4 text-xs text-orange-950">
             <div className="flex items-start gap-2.5">
               <AlertTriangle className="mt-0.5 shrink-0 text-orange-600" size={16} />
               <div>
-                <p className="font-bold">Observación Activa:</p>
+                <p className="font-bold">Observación Activa para el Estudiante:</p>
                 <p className="mt-0.5 whitespace-pre-line text-orange-900 leading-relaxed font-medium">
                   {sol.motivoObservacion}
                 </p>
@@ -222,136 +333,339 @@ export function SolicitudDetallePage() {
           </Card>
         )}
 
-        {/* Distribución Principal en 2 Columnas */}
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-          {/* Columna Izquierda (2 spans) */}
-          <div className="space-y-5 lg:col-span-2">
-            {/* Card Datos del Plan */}
-            <Card className="p-5 shadow-card space-y-3">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-grafito-600">
-                Información Académica
-              </h2>
-              <ReadonlyField etiqueta="Título del Plan" valor={sol.titulo} />
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <ReadonlyField etiqueta="Programa" valor={sol.programa} className="sm:col-span-2" />
+        {errorEdicion && (
+          <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700">
+            {errorEdicion}
+          </div>
+        )}
+
+        {/* Pestañas organizadas al estilo de Expediente */}
+        <Tabs value={tab} onValueChange={setTab}>
+          <TabsLista aria-label="Pestañas de la solicitud">
+            <Tab value="datos">Datos de la Solicitud</Tab>
+            <Tab value="documentos" contador={`${conformesCount}/${sol.documentos.length}`}>
+              Documentos Adjuntos
+            </Tab>
+            <Tab value="historial">Trazabilidad</Tab>
+          </TabsLista>
+
+          {/* PANEL 1: DATOS */}
+          <TabPanel value="datos" className="pt-4 space-y-6">
+            {/* Card Información Académica */}
+            <Card className="p-6 shadow-card space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                <h2 className="text-xs font-bold uppercase tracking-wider text-grafito-600">
+                  Información Académica
+                </h2>
+                {editando && (
+                  <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">
+                    Modo Edición Activo
+                  </span>
+                )}
+              </div>
+
+              {editando ? (
+                <Field etiqueta="Título del Plan o Trabajo">
+                  <textarea
+                    className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-grafito-900 shadow-card focus:border-navy-800 focus:outline-none"
+                    rows={3}
+                    value={tituloEdit}
+                    onChange={(e) => setTituloEdit(e.target.value)}
+                  />
+                </Field>
+              ) : (
+                <ReadonlyField etiqueta="Título del Plan o Trabajo" valor={sol.titulo} />
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <ReadonlyField etiqueta="Modalidad" valor={formatoModalidad(sol.modalidad)} />
+                <ReadonlyField etiqueta="Programa" valor={sol.programa} />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <ReadonlyField
                   etiqueta="Año de Egreso"
                   valor={sol.anioEgreso ? String(sol.anioEgreso) : "—"}
+                />
+                <ReadonlyField
+                  etiqueta="Cantidad de Participantes"
+                  valor={sol.cantidadTesistas === 1 ? "1 Participante" : "2 Participantes"}
                 />
               </div>
             </Card>
 
             {/* Card Participante 1 */}
             {p1 && (
-              <Card className="p-5 shadow-card space-y-3">
-                <div className="flex items-center justify-between">
+              <Card className="p-6 shadow-card space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                   <div className="flex items-center gap-2">
                     <User size={16} className="text-navy-800" />
                     <h2 className="text-xs font-bold uppercase tracking-wider text-grafito-600">
-                      Tesista Titular
+                      Participante 1
                     </h2>
                   </div>
                   {p1.poseeCuentaPrevia && (
-                    <span className="rounded-full bg-blue-100 text-blue-800 px-2 py-0.5 text-[10px] font-bold">
+                    <span className="rounded-full bg-blue-100 text-blue-800 px-2.5 py-0.5 text-[10px] font-bold">
                       Cuenta Previa Detectada
                     </span>
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <ReadonlyField etiqueta="Nombres" valor={p1.nombres} />
-                  <ReadonlyField etiqueta="Apellidos" valor={p1.apellidos} />
+                {/* Formulario en 2 columnas pares */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {editando ? (
+                    <>
+                      <Field etiqueta="Nombres">
+                        <input
+                          className="h-9 w-full rounded-lg border border-slate-300 px-3 text-xs shadow-card focus:border-navy-800 focus:outline-none"
+                          value={p1Nombres}
+                          onChange={(e) => setP1Nombres(e.target.value)}
+                        />
+                      </Field>
+                      <Field etiqueta="Apellidos">
+                        <input
+                          className="h-9 w-full rounded-lg border border-slate-300 px-3 text-xs shadow-card focus:border-navy-800 focus:outline-none"
+                          value={p1Apellidos}
+                          onChange={(e) => setP1Apellidos(e.target.value)}
+                        />
+                      </Field>
+                    </>
+                  ) : (
+                    <>
+                      <ReadonlyField etiqueta="Nombres" valor={p1.nombres} />
+                      <ReadonlyField etiqueta="Apellidos" valor={p1.apellidos} />
+                    </>
+                  )}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <ReadonlyField etiqueta="DNI" valor={p1.dni} />
-                  <ReadonlyField etiqueta="CUI" valor={p1.cui ?? "—"} />
-                  <ReadonlyField etiqueta="Teléfono" valor={p1.telefono ?? "—"} />
+                  {editando ? (
+                    <Field etiqueta="CUI (8 dígitos)">
+                      <input
+                        className="h-9 w-full rounded-lg border border-slate-300 px-3 text-xs font-mono shadow-card focus:border-navy-800 focus:outline-none"
+                        maxLength={8}
+                        value={p1Cui}
+                        onChange={(e) => setP1Cui(e.target.value.replace(/\D/g, "").slice(0, 8))}
+                      />
+                    </Field>
+                  ) : (
+                    <ReadonlyField etiqueta="CUI" valor={p1.cui ?? "—"} />
+                  )}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <ReadonlyField etiqueta="Correo Electrónico" valor={p1.email} />
-                  <ReadonlyField etiqueta="Ciudad" valor={p1.ciudad ?? "—"} />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <ReadonlyField etiqueta="Correo Electrónico Institucional" valor={p1.email} />
+                  {editando ? (
+                    <Field etiqueta="Teléfono / Celular (9 dígitos)">
+                      <input
+                        className="h-9 w-full rounded-lg border border-slate-300 px-3 text-xs shadow-card focus:border-navy-800 focus:outline-none"
+                        maxLength={9}
+                        value={p1Telefono}
+                        onChange={(e) =>
+                          setP1Telefono(e.target.value.replace(/\D/g, "").slice(0, 9))
+                        }
+                      />
+                    </Field>
+                  ) : (
+                    <ReadonlyField etiqueta="Teléfono / Celular" valor={p1.telefono ?? "—"} />
+                  )}
                 </div>
 
-                <ReadonlyField etiqueta="Dirección" valor={p1.direccion ?? "—"} />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {editando ? (
+                    <>
+                      <Field etiqueta="Dirección">
+                        <input
+                          className="h-9 w-full rounded-lg border border-slate-300 px-3 text-xs shadow-card focus:border-navy-800 focus:outline-none"
+                          value={p1Direccion}
+                          onChange={(e) => setP1Direccion(e.target.value)}
+                        />
+                      </Field>
+                      <Field etiqueta="Ciudad">
+                        <input
+                          className="h-9 w-full rounded-lg border border-slate-300 px-3 text-xs shadow-card focus:border-navy-800 focus:outline-none"
+                          value={p1Ciudad}
+                          onChange={(e) => setP1Ciudad(e.target.value)}
+                        />
+                      </Field>
+                    </>
+                  ) : (
+                    <>
+                      <ReadonlyField etiqueta="Dirección" valor={p1.direccion ?? "—"} />
+                      <ReadonlyField etiqueta="Ciudad" valor={p1.ciudad ?? "—"} />
+                    </>
+                  )}
+                </div>
               </Card>
             )}
 
             {/* Card Participante 2 si existe */}
             {p2 && (
-              <Card className="p-5 shadow-card space-y-3">
-                <div className="flex items-center justify-between">
+              <Card className="p-6 shadow-card space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                   <div className="flex items-center gap-2">
                     <Users size={16} className="text-navy-800" />
                     <h2 className="text-xs font-bold uppercase tracking-wider text-grafito-600">
-                      Segundo Tesista (Co-Tesista)
+                      Participante 2
                     </h2>
                   </div>
                   {p2.poseeCuentaPrevia && (
-                    <span className="rounded-full bg-blue-100 text-blue-800 px-2 py-0.5 text-[10px] font-bold">
+                    <span className="rounded-full bg-blue-100 text-blue-800 px-2.5 py-0.5 text-[10px] font-bold">
                       Cuenta Previa Detectada
                     </span>
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <ReadonlyField etiqueta="Nombres" valor={p2.nombres} />
-                  <ReadonlyField etiqueta="Apellidos" valor={p2.apellidos} />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {editando ? (
+                    <>
+                      <Field etiqueta="Nombres">
+                        <input
+                          className="h-9 w-full rounded-lg border border-slate-300 px-3 text-xs shadow-card focus:border-navy-800 focus:outline-none"
+                          value={p2Nombres}
+                          onChange={(e) => setP2Nombres(e.target.value)}
+                        />
+                      </Field>
+                      <Field etiqueta="Apellidos">
+                        <input
+                          className="h-9 w-full rounded-lg border border-slate-300 px-3 text-xs shadow-card focus:border-navy-800 focus:outline-none"
+                          value={p2Apellidos}
+                          onChange={(e) => setP2Apellidos(e.target.value)}
+                        />
+                      </Field>
+                    </>
+                  ) : (
+                    <>
+                      <ReadonlyField etiqueta="Nombres" valor={p2.nombres} />
+                      <ReadonlyField etiqueta="Apellidos" valor={p2.apellidos} />
+                    </>
+                  )}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <ReadonlyField etiqueta="DNI" valor={p2.dni} />
-                  <ReadonlyField etiqueta="CUI" valor={p2.cui ?? "—"} />
-                  <ReadonlyField etiqueta="Teléfono" valor={p2.telefono ?? "—"} />
+                  {editando ? (
+                    <Field etiqueta="CUI (8 dígitos)">
+                      <input
+                        className="h-9 w-full rounded-lg border border-slate-300 px-3 text-xs font-mono shadow-card focus:border-navy-800 focus:outline-none"
+                        maxLength={8}
+                        value={p2Cui}
+                        onChange={(e) => setP2Cui(e.target.value.replace(/\D/g, "").slice(0, 8))}
+                      />
+                    </Field>
+                  ) : (
+                    <ReadonlyField etiqueta="CUI" valor={p2.cui ?? "—"} />
+                  )}
                 </div>
 
-                <ReadonlyField etiqueta="Correo Electrónico" valor={p2.email} />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <ReadonlyField etiqueta="Correo Electrónico Institucional" valor={p2.email} />
+                  {editando ? (
+                    <Field etiqueta="Teléfono / Celular (9 dígitos)">
+                      <input
+                        className="h-9 w-full rounded-lg border border-slate-300 px-3 text-xs shadow-card focus:border-navy-800 focus:outline-none"
+                        maxLength={9}
+                        value={p2Telefono}
+                        onChange={(e) =>
+                          setP2Telefono(e.target.value.replace(/\D/g, "").slice(0, 9))
+                        }
+                      />
+                    </Field>
+                  ) : (
+                    <ReadonlyField etiqueta="Teléfono / Celular" valor={p2.telefono ?? "—"} />
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {editando ? (
+                    <>
+                      <Field etiqueta="Dirección">
+                        <input
+                          className="h-9 w-full rounded-lg border border-slate-300 px-3 text-xs shadow-card focus:border-navy-800 focus:outline-none"
+                          value={p2Direccion}
+                          onChange={(e) => setP2Direccion(e.target.value)}
+                        />
+                      </Field>
+                      <Field etiqueta="Ciudad">
+                        <input
+                          className="h-9 w-full rounded-lg border border-slate-300 px-3 text-xs shadow-card focus:border-navy-800 focus:outline-none"
+                          value={p2Ciudad}
+                          onChange={(e) => setP2Ciudad(e.target.value)}
+                        />
+                      </Field>
+                    </>
+                  ) : (
+                    <>
+                      <ReadonlyField etiqueta="Dirección" valor={p2.direccion ?? "—"} />
+                      <ReadonlyField etiqueta="Ciudad" valor={p2.ciudad ?? "—"} />
+                    </>
+                  )}
+                </div>
               </Card>
             )}
 
-            {/* Checklist Documentario (RF-02xx[008]) */}
-            <Card className="p-5 shadow-card space-y-4">
-              <div className="flex items-center justify-between">
+            {/* Botones de acción al final si está en edición inline */}
+            {editando && (
+              <div className="flex justify-end gap-3 pt-2">
+                <Button onClick={cancelarEdicion} variante="contorno">
+                  Cancelar
+                </Button>
+                <Button
+                  disabled={actualizarDatosMutation.isPending}
+                  onClick={() => void handleGuardarEdicionInline()}
+                  variante="primario"
+                >
+                  <Save size={15} />{" "}
+                  {actualizarDatosMutation.isPending ? "Guardando..." : "Guardar Cambios"}
+                </Button>
+              </div>
+            )}
+          </TabPanel>
+
+          {/* PANEL 2: DOCUMENTOS */}
+          <TabPanel value="documentos" className="pt-4">
+            <Card className="p-6 shadow-card space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
                 <div>
                   <h2 className="text-xs font-bold uppercase tracking-wider text-grafito-600">
                     Checklist Documentario
                   </h2>
                   <p className="text-[11px] text-grafito-500">
-                    Verifique cada requisito adjunto y marque su estado de conformidad.
+                    Verifique cada requisito y marque su conformidad para habilitar la apertura del
+                    expediente.
                   </p>
                 </div>
                 <span className="font-mono text-xs font-bold text-navy-950">
-                  {sol.documentos.filter((d) => d.estadoConformidad === "CONFORME").length} /{" "}
-                  {sol.documentos.length} conformes
+                  {conformesCount} / {sol.documentos.length} conformes
                 </span>
               </div>
 
               <div className="space-y-3">
                 {sol.documentos.map((doc) => (
                   <div
-                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm"
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:border-slate-300 transition-colors"
                     key={doc.id}
                   >
                     <div className="flex items-start gap-3 min-w-0">
-                      <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
-                        <FileText size={16} />
+                      <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
+                        <FileText size={18} />
                       </span>
                       <div className="min-w-0 text-xs">
                         <p className="font-bold text-navy-950 truncate">{doc.nombreOriginal}</p>
-                        <p className="text-grafito-500 text-[11px]">
+                        <p className="text-grafito-500 text-[11px] mt-0.5">
                           {doc.tipo} · {Math.round(doc.pesoBytes / 1024)} KB · Versión {doc.version}
                         </p>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
                       <button
-                        className="rounded p-1 text-slate-500 hover:text-navy-950 hover:bg-slate-100 transition-colors"
+                        className="rounded p-1.5 text-slate-500 hover:text-navy-950 hover:bg-slate-100 transition-colors"
                         onClick={() =>
                           void abrirArchivoProtegido(documentoSolicitudUrl(sol.id, doc.id))
                         }
-                        title="Ver documento adjunto"
+                        title="Abrir y verificar documento"
                         type="button"
                       >
                         <ExternalLink size={16} />
@@ -360,24 +674,24 @@ export function SolicitudDetallePage() {
                       <StatusBadge estado={doc.estadoConformidad} />
 
                       {!cerrada && (
-                        <div className="flex items-center gap-1 border-l pl-2 border-slate-200">
+                        <div className="flex items-center gap-1 border-l pl-2 border-slate-200 ml-1">
                           <button
-                            className="rounded p-1 text-slate-400 hover:text-verde-inst-700 hover:bg-verde-inst-50"
+                            className="rounded p-1 text-slate-400 hover:text-verde-inst-700 hover:bg-verde-inst-50 transition-colors"
                             disabled={conformidadMutation.isPending}
                             onClick={() => void cambiarConformidad(doc.id, "CONFORME")}
                             title="Marcar Conforme"
                             type="button"
                           >
-                            <FileCheck size={16} />
+                            <FileCheck size={17} />
                           </button>
                           <button
-                            className="rounded p-1 text-slate-400 hover:text-orange-600 hover:bg-orange-50"
+                            className="rounded p-1 text-slate-400 hover:text-orange-600 hover:bg-orange-50 transition-colors"
                             disabled={conformidadMutation.isPending}
                             onClick={() => void cambiarConformidad(doc.id, "OBSERVADO")}
                             title="Marcar Observado"
                             type="button"
                           >
-                            <AlertTriangle size={16} />
+                            <AlertTriangle size={17} />
                           </button>
                         </div>
                       )}
@@ -386,12 +700,12 @@ export function SolicitudDetallePage() {
                 ))}
               </div>
             </Card>
-          </div>
+          </TabPanel>
 
-          {/* Columna Derecha (Trazabilidad e Historial) */}
-          <div className="space-y-5">
-            <Card className="p-5 shadow-card space-y-4">
-              <div className="flex items-center gap-2">
+          {/* PANEL 3: TRAZABILIDAD */}
+          <TabPanel value="historial" className="pt-4">
+            <Card className="p-6 shadow-card space-y-4">
+              <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
                 <History size={16} className="text-navy-800" />
                 <h2 className="text-xs font-bold uppercase tracking-wider text-grafito-600">
                   Trazabilidad de la Solicitud
@@ -402,7 +716,7 @@ export function SolicitudDetallePage() {
                 {sol.trazabilidad.map((h) => (
                   <div className="relative text-xs" key={h.id}>
                     <span className="absolute -left-[23px] top-1 h-3 w-3 rounded-full border-2 border-white bg-navy-800 shadow-sm" />
-                    <div className="rounded-lg bg-slate-50/80 p-2.5 border border-slate-200/80">
+                    <div className="rounded-xl bg-slate-50/80 p-3 border border-slate-200/80">
                       <div className="flex items-center justify-between gap-1 mb-1">
                         <span className="font-bold text-navy-950 uppercase text-[10px]">
                           {h.accion}
@@ -427,11 +741,11 @@ export function SolicitudDetallePage() {
                 ))}
               </div>
             </Card>
-          </div>
-        </div>
+          </TabPanel>
+        </Tabs>
       </div>
 
-      {/* Modales de Gestión */}
+      {/* Modales de Gestión Administrativa */}
       <ModalObservarSolicitud
         abierto={modalObservar}
         codigoSolicitud={sol.codigo}
@@ -456,76 +770,6 @@ export function SolicitudDetallePage() {
         }}
         solicitud={sol}
       />
-
-      {/* Modal de Edición de Datos Menores */}
-      <Dialogo
-        abierto={modalEditar}
-        ancho="max-w-lg"
-        descripcion="Corrija errores tipográficos o actualice datos de contacto antes de aprobar."
-        onAbierto={setModalEditar}
-        titulo="Corrección de Datos de la Solicitud"
-      >
-        <div className="space-y-4 text-xs">
-          {errorEdicion && (
-            <div className="rounded-lg bg-red-50 p-2.5 text-red-700 font-medium">
-              {errorEdicion}
-            </div>
-          )}
-
-          <Field etiqueta="Título del Plan">
-            <textarea
-              className="w-full rounded-lg border border-slate-300 p-2 text-xs shadow-card focus:border-navy-800 focus:outline-none"
-              rows={3}
-              value={tituloEdit}
-              onChange={(e) => setTituloEdit(e.target.value)}
-            />
-          </Field>
-
-          <div className="grid grid-cols-2 gap-3">
-            <Field etiqueta="Teléfono del Tesista">
-              <input
-                className="h-8 w-full rounded-lg border border-slate-300 px-2 text-xs shadow-card focus:border-navy-800 focus:outline-none"
-                value={telefonoP1Edit}
-                onChange={(e) => setTelefonoP1Edit(e.target.value)}
-              />
-            </Field>
-            <Field etiqueta="Ciudad">
-              <input
-                className="h-8 w-full rounded-lg border border-slate-300 px-2 text-xs shadow-card focus:border-navy-800 focus:outline-none"
-                value={ciudadP1Edit}
-                onChange={(e) => setCiudadP1Edit(e.target.value)}
-              />
-            </Field>
-          </div>
-
-          <Field etiqueta="Dirección">
-            <input
-              className="h-8 w-full rounded-lg border border-slate-300 px-2 text-xs shadow-card focus:border-navy-800 focus:outline-none"
-              value={direccionP1Edit}
-              onChange={(e) => setDireccionP1Edit(e.target.value)}
-            />
-          </Field>
-
-          <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
-            <Button
-              disabled={actualizarDatosMutation.isPending}
-              onClick={() => setModalEditar(false)}
-              tamano="sm"
-              variante="contorno"
-            >
-              Cancelar
-            </Button>
-            <Button
-              disabled={actualizarDatosMutation.isPending}
-              onClick={() => void handleGuardarEdicion()}
-              tamano="sm"
-              variante="primario"
-            >
-              {actualizarDatosMutation.isPending ? "Guardando..." : "Guardar Cambios"}
-            </Button>
-          </div>
-        </div>
-      </Dialogo>
     </AppShell>
   );
 }

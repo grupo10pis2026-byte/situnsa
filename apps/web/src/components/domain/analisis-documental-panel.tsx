@@ -129,7 +129,8 @@ export function AnalisisDocumentalPanel({
                   <div>
                     <span className="font-bold text-red-950">Documento no corresponde:</span>{" "}
                     <span>
-                      El archivo adjuntado no contiene el encabezado ni las características oficiales de este apartado.
+                      El archivo adjuntado no contiene el encabezado ni las características
+                      oficiales de este apartado.
                     </span>
                   </div>
                 </div>
