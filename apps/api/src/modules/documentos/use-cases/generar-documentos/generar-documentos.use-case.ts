@@ -320,7 +320,7 @@ export class GenerarDocumentosUseCase {
         let bytesDocx: Buffer | null = null;
         let pendientesDocx: string[] = [];
         if (plantillaDocx) {
-          const datosDocx: Record<string, string> = p.tipo.endsWith("_P2")
+          const baseDatos: Record<string, string> = p.tipo.endsWith("_P2")
             ? {
                 ...datos,
                 NOMBRES: datos.NOMBRES02 || datos.NOMBRES_2 || datos.NOMBRES || "",
@@ -333,6 +333,18 @@ export class GenerarDocumentosUseCase {
                 TELEFONO: datos.TELEFONO02 || datos.TELEFONO || "",
               }
             : datos;
+
+          // En plantillas docx (como Anexo 1, Anexo 2, Anexo 27), la etiqueta <<FECHA>> corresponde a la fecha de emisión del documento.
+          // Solo en actas de sustentación y secretaría <<FECHA>> representa la fecha de sustentación del expediente.
+          const esActaSustentacion =
+            p.tipo.includes("SUSTENTACION") || p.tipo.includes("SECRETARIA");
+          const datosDocx: Record<string, string> = {
+            ...baseDatos,
+            FECHA:
+              baseDatos.FECHA ||
+              (!esActaSustentacion ? baseDatos.FECHA_EMISION || "" : ""),
+          };
+
           const res = procesarDocxBuffer(plantillaDocx, datosDocx);
           bytesDocx = res.buffer;
           pendientesDocx = res.pendientes;

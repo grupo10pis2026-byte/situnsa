@@ -749,6 +749,70 @@ export function verificarTituloEncabezadoDocumento(
   return { valido: true, nombreOficial: tipo };
 }
 
+export const TIPOS_CON_TITULO = new Set<string>([
+  "CARATULA_PLAN",
+  "PLAN_ESTRUCTURADO",
+  "PLAN_TESIS",
+  "PROYECTO_TESIS",
+  "SOLICITUD_INSCRIPCION",
+  "ANEXO_17",
+  "ANEXO_27",
+  "SOLICITUD_TITULACION",
+  "ANEXO_01_DJ",
+  "ANEXO_01_DJ_P1",
+  "ANEXO_01_DJ_P2",
+  "ANEXO_01",
+  "AUTORIZACION_PUBLICACION",
+  "ANEXO_18",
+  "INFORME_ASESORAMIENTO",
+  "ACEPTACION_ASESORIA",
+  "ACTA_CONFORMIDAD",
+  "ACTA_DICTAMEN",
+  "ACTA_SUSTENTACION",
+  "CARATULA_FINAL",
+  "AUTORIZACION_IMPRESION",
+  "VERSION_FINAL",
+  "BORRADOR_TESIS",
+  "TESIS",
+  "DJ_CONFIDENCIALIDAD",
+]);
+
+export const TIPOS_EXCLUIDOS_DE_TITULO = new Set<string>([
+  "ANEXO_02_DJ",
+  "ANEXO_02_DJ_P1",
+  "ANEXO_02_DJ_P2",
+  "ANEXO_02",
+  "DJ_ANTECEDENTES",
+  "ANEXO_32_VERACIDAD",
+  "ANEXO_32",
+  "DJ_VERACIDAD",
+  "BOLETA",
+  "COMPROBANTE",
+  "VOUCHER",
+  "RECIBO",
+  "FOTO",
+  "CONSTANCIA",
+  "CERTIFICADO",
+  "DNI",
+]);
+
+export function requiereFirma(tipo: string): boolean {
+  const t = tipo.toUpperCase();
+  if (
+    t.includes("BOLETA") ||
+    t.includes("COMPROBANTE") ||
+    t.includes("VOUCHER") ||
+    t.includes("RECIBO") ||
+    t.includes("FOTO") ||
+    t.includes("CONSTANCIA") ||
+    t.includes("CERTIFICADO") ||
+    t.includes("DNI")
+  ) {
+    return false;
+  }
+  return true;
+}
+
 /**
  * Analiza documentos subidos que no poseen una plantilla para autorrellenar:
  * 1. Para boletas/comprobantes de pago:
@@ -837,8 +901,35 @@ export function analizarDocumentoSubido(
     `Encabezado oficial verificado: Corresponde a "${verifEncabezado.nombreOficial}".`,
   );
 
-  const dnisEncontrados = Array.from(new Set(textoCompleto.match(/\b\d{8}\b/g) ?? []));
   const esBoleta = esTipoBoleta(tipo);
+
+  // 0.1 Validación de etiquetas o campos incompletos (<<CAMPO>> o &lt;&lt;CAMPO&gt;&gt;)
+  const tagsPendientes = Array.from(
+    new Set(
+      [...textoCompleto.matchAll(/(?:<<|&lt;&lt;)\s*([A-Za-z0-9_ -]+)\s*(?:>>|&gt;&gt;)/gu)]
+        .map((m) => (m[1] ? m[1].trim().toUpperCase() : ""))
+        .filter((t): t is string => typeof t === "string" && t.length > 1),
+    ),
+  );
+
+  if (tagsPendientes.length > 0) {
+    agregar(
+      "CAMPOS_INCOMPLETOS",
+      "ADVERTENCIA",
+      `Se detectaron ${tagsPendientes.length} campo(s) pendiente(s) por completar en el documento: ${tagsPendientes.map((t) => `<<${t}>>`).join(", ")}. Complete estos datos antes de continuar.`,
+      1,
+      "Campos completados",
+      tagsPendientes.map((t) => `<<${t}>>`).join(", "),
+    );
+  } else if (!esBoleta) {
+    agregar(
+      "CAMPOS_INCOMPLETOS",
+      "CONFORME",
+      "Todos los campos del formato han sido debidamente completados (sin etiquetas pendientes).",
+    );
+  }
+
+  const dnisEncontrados = Array.from(new Set(textoCompleto.match(/\b\d{8}\b/g) ?? []));
 
   if (esBoleta) {
     // 1. REGLAS PARA BOLETAS / COMPROBANTES DE PAGO
@@ -1288,9 +1379,18 @@ export function analizarDocumentoSubido(
   }
 
   // G. Verificación de firma gráfica o digital
-  const tieneFirmaDigital = /(?:firmado\s+digitalmente|firma\s+digital|digital\s+signature|certificado\s+digital|firmado\s+electr[oó]nicamente|r[uú]brica\s+digital)/iu.test(textoCompleto);
-  const tieneBloqueFirma = /(?:firma\s+del\s+solicitante|firma\s+del\s+tesista|firma\s+del\s+asesor|firma\s+del\s+postulante|firma\s+del\s+graduando|firma\s+del\s+declarante|huella\s+dactilar|firma\s+y\s+sello|post\s*firma)/iu.test(textoCompleto);
-  const lineaVaciaFirma = /_{6,}\s*(?:\r?\n\s*)*(?:firma|solicitante|tesista|postulante|asesor|declarante)/iu.test(textoCompleto);
+  const tieneFirmaDigital =
+    /(?:firmado\s+digitalmente|firma\s+digital|digital\s+signature|certificado\s+digital|firmado\s+electr[oó]nicamente|r[uú]brica\s+digital)/iu.test(
+      textoCompleto,
+    );
+  const tieneBloqueFirma =
+    /(?:firma\s+del\s+solicitante|firma\s+del\s+tesista|firma\s+del\s+autor|firma\s+del\s+asesor|firma\s+del\s+postulante|firma\s+del\s+graduando|firma\s+del\s+declarante|huella\s+dactilar|huella\s+digital|firma\s+y\s+sello|post\s*firma)/iu.test(
+      textoCompleto,
+    );
+  const lineaVaciaFirma =
+    /(?:_{4,}|—{4,}|–{4,}|-{6,})(?:[^\n\r]{0,100}(?:\r?\n|$)){1,4}[^\n\r]{0,80}(?:firma|autor|solicitante|tesista|postulante|graduando|asesor|declarante|huella|dni)/iu.test(
+      textoCompleto,
+    );
 
   if (tieneFirmaDigital) {
     agregar(
@@ -1315,33 +1415,45 @@ export function analizarDocumentoSubido(
     );
   }
 
-  // H. Título: contraste de similitud si el documento hace referencia a título
+  // H. Título: contraste de similitud si el documento requiere y hace referencia a título
   let tituloDetectado: string | null = null;
   let similitudTitulo: number | null = null;
-  const mencionaTitulo =
-    /\b(?:t[ií]tulo|denominad[oa]|proyecto\s+de\s+tesis|plan\s+de\s+tesis|trabajo\s+acad[eé]mico)\b/iu.test(
-      textoCompleto,
-    );
 
-  if (mencionaTitulo && datos.titulo) {
-    const similitud = similitudTituloDocumento(datos.titulo, textoCompleto);
-    similitudTitulo = similitud;
-    if (similitud >= 35 || contieneFrase(textoCompleto, datos.titulo)) {
-      tituloDetectado = datos.titulo;
-      agregar(
-        "TITULO",
-        "CONFORME",
-        "Referencia al título del proyecto/tesis verificada en el documento.",
-      );
-    } else {
-      agregar(
-        "TITULO",
-        "ADVERTENCIA",
-        "El documento hace referencia a un título o proyecto que difiere del registrado en el expediente.",
-        1,
-        datos.titulo,
-        "Título diferente en documento",
-      );
+  const tipoDocPermiteTitulo =
+    TIPOS_CON_TITULO.has(tipoDoc) || [...TIPOS_CON_TITULO].some((t) => tipoDoc.includes(t));
+
+  const estaExcluidoDeTitulo =
+    TIPOS_EXCLUIDOS_DE_TITULO.has(tipoDoc) ||
+    [...TIPOS_EXCLUIDOS_DE_TITULO].some((t) => tipoDoc.includes(t));
+
+  if (!estaExcluidoDeTitulo && tipoDocPermiteTitulo && datos.titulo) {
+    const mencionaTitulo =
+      /(?:titulad[oa]|t[ií]tulo\s+(?:de\s+la\s+tesis|del\s+proyecto|del\s+trabajo|de\s+investigaci[oó]n|propuesto|de\s+plan)|denominad[oa]|«[^»]+»|“[^”]+”|"[^"]+"|(?:proyecto|plan|borrador)\s+de\s+tesis|trabajo\s+acad[eé]mico)/iu.test(
+        textoCompleto,
+      ) ||
+      contieneFrase(textoCompleto, datos.titulo) ||
+      similitudTituloDocumento(datos.titulo, textoCompleto) >= 30;
+
+    if (mencionaTitulo) {
+      const similitud = similitudTituloDocumento(datos.titulo, textoCompleto);
+      similitudTitulo = similitud;
+      if (similitud >= 35 || contieneFrase(textoCompleto, datos.titulo)) {
+        tituloDetectado = datos.titulo;
+        agregar(
+          "TITULO",
+          "CONFORME",
+          "Referencia al título del proyecto/tesis verificada en el documento.",
+        );
+      } else {
+        agregar(
+          "TITULO",
+          "ADVERTENCIA",
+          "El documento hace referencia a un título o proyecto que difiere del registrado en el expediente.",
+          1,
+          datos.titulo,
+          "Título diferente en documento",
+        );
+      }
     }
   }
 

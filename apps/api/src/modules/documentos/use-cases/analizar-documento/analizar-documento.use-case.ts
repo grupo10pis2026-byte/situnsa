@@ -45,7 +45,7 @@ export class AnalizarDocumentoUseCase {
     base: string,
     editorial: boolean,
   ): Promise<AnalisisDocumentoDTO> {
-    const esPlan = documento.tipo === "PLAN_ESTRUCTURADO";
+    const esPlan = !documento.tipo || documento.tipo === "PLAN_ESTRUCTURADO";
     let texto: TextoPdf;
     try {
       texto = await this.extraer(documento.ruta, base, documento.sha256);

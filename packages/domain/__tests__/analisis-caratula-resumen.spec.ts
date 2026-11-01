@@ -425,4 +425,73 @@ Bibliografía: Deitel & Deitel, 2020.`;
     expect(res.controles.some((c) => c.tipo === "TESISTA")).toBe(false);
     expect(res.controles.some((c) => c.tipo === "PROGRAMA")).toBe(false);
   });
+
+  it("anexo 02 DJ antecedentes: excluye validación de título de tesis aunque mencione título en segunda especialidad", async () => {
+    const { analizarDocumentoSubido } = await import(
+      "../src/documentos/analisis-caratula-resumen.js"
+    );
+    const textoAnexo2 = `ANEXO 2 DECLARACIÓN JURADA DE NO REGISTRAR ANTECEDENTES PENALES Y/O JUDICIALES POR TERRORISMO
+DATOS DEL DECLARANTE: Apellidos y Nombres: María Núñez García • Nacionalidad: Peruana • DNI: 01234567 • CUI: 20180123
+Dirección: Calle Universidad 123 • Ciudad: Arequipa • Teléfono: 999333444 • Correo: maria@unsa.edu.pe
+DECLARO BAJO JURAMENTO NO REGISTRAR ANTECEDENTES PENALES Y/O JUDICIALES POR LOS DELITOS DE TERRORISMO, a efecto de realizar el trámite de obtención del Título en SEGUNDA ESPECIALIDAD EN INGENIERÍA DE SISTEMAS.
+Firmado digitalmente por: María Núñez García`;
+
+    const res = analizarDocumentoSubido(
+      "ANEXO_02_DJ",
+      [{ numero: 1, texto: textoAnexo2 }],
+      datos,
+      1,
+    );
+    // Anexo 02 NO debe generar control ni hallazgo de TITULO
+    expect(res.controles.some((c) => c.tipo === "TITULO")).toBe(false);
+    expect(res.hallazgos.some((h) => h.tipo === "TITULO")).toBe(false);
+    expect(res.controles.find((c) => c.tipo === "CLAUSULA_NORMATIVA")?.estado).toBe("CONFORME");
+    expect(res.controles.find((c) => c.tipo === "CAMPOS_INCOMPLETOS")?.estado).toBe("CONFORME");
+    expect(res.controles.find((c) => c.tipo === "FIRMA_DOCUMENTO")?.estado).toBe("CONFORME");
+  });
+
+  it("campos incompletos: advierte si el documento contiene etiquetas sin rellenar (<<DIRECCION>>)", async () => {
+    const { analizarDocumentoSubido } = await import(
+      "../src/documentos/analisis-caratula-resumen.js"
+    );
+    const textoConTag = `ANEXO 2 DECLARACIÓN JURADA DE NO REGISTRAR ANTECEDENTES PENALES Y/O JUDICIALES POR TERRORISMO
+DATOS DEL DECLARANTE: Apellidos y Nombres: María Núñez García • DNI: 01234567 • Dirección: <<DIRECCION>>
+DECLARO BAJO JURAMENTO NO REGISTRAR ANTECEDENTES PENALES NI POR TERRORISMO.
+Firmado digitalmente por: María Núñez García`;
+
+    const res = analizarDocumentoSubido(
+      "ANEXO_02_DJ",
+      [{ numero: 1, texto: textoConTag }],
+      datos,
+      1,
+    );
+    const hallazgoCampos = res.hallazgos.find((h) => h.tipo === "CAMPOS_INCOMPLETOS");
+    expect(hallazgoCampos).toBeDefined();
+    expect(hallazgoCampos?.mensaje).toContain("<<DIRECCION>>");
+  });
+
+  it("firma documento: advierte si la línea de firma está vacía con Firma del Autor", async () => {
+    const { analizarDocumentoSubido } = await import(
+      "../src/documentos/analisis-caratula-resumen.js"
+    );
+    const textoFirmaAutor = `ANEXO 01 DECLARACIÓN JURADA Y AUTORIZACIÓN DE PUBLICACIÓN DIGITAL
+Apellidos y Nombres: María Núñez García • DNI: 01234567
+Título de la Investigación: «${datos.titulo}»
+Por el presente documento autorizo la publicación en el Repositorio UNSA.
+_________________________________________
+María Núñez García
+Firma del Autor
+DNI Nº 01234567`;
+
+    const res = analizarDocumentoSubido(
+      "ANEXO_01_DJ",
+      [{ numero: 1, texto: textoFirmaAutor }],
+      datos,
+      1,
+    );
+    const hallazgoFirma = res.hallazgos.find((h) => h.tipo === "FIRMA_DOCUMENTO");
+    expect(hallazgoFirma).toBeDefined();
+    expect(hallazgoFirma?.mensaje).toContain("línea de firma en blanco");
+    expect(res.controles.find((c) => c.tipo === "TITULO")?.estado).toBe("CONFORME");
+  });
 });
