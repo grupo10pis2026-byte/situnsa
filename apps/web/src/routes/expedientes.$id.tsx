@@ -463,6 +463,30 @@ function AccesoPortal({ detalle: d }: { detalle: ExpedienteDetalleDTO }) {
   );
 }
 
+const FORMATOS_INSTITUCIONALES_BASE_E1 = [
+  { tipo: "DECRETO_APROBACION", nombre: "Decreto de aprobación del plan" },
+  { tipo: "OFICIO_CIRCULAR_TERNA", nombre: "Oficio circular — Designación de terna evaluadora" },
+  { tipo: "OBSERVACIONES_PLAN", nombre: "Formato de observaciones de plan de tesis" },
+  { tipo: "ETIQUETAS", nombre: "Etiquetas institucionales de plan y empastado" },
+  { tipo: "CARATULA_PLAN", nombre: "Carátula oficial de plan de tesis" },
+] as const;
+
+const FORMATOS_INSTITUCIONALES_BASE_E2 = [
+  { tipo: "RESOLUCION_DECANAL", nombre: "Nombramiento de jurado — Resolución Decanal (Unidad)" },
+  { tipo: "ACTA_CONFORMIDAD", nombre: "Acta de conformidad (Unidad)" },
+  { tipo: "ACTA_DICTAMEN", nombre: "Acta de dictamen (Unidad)" },
+  { tipo: "ACTA_SUSTENTACION", nombre: "Acta de sustentación (Unidad)" },
+  { tipo: "ANEXO_08", nombre: "Acta de conformidad de asesoramiento de proyecto (Anexo 08)" },
+  { tipo: "OFICIO_OTI_SIMILITUD", nombre: "Oficio formal a OTI para reporte de similitud" },
+  { tipo: "INFORME_SIMILITUD", nombre: "Informe de similitud (Unidad)" },
+  { tipo: "OFICIO_UGI_REPOSITORIO", nombre: "Oficio formal a UGI para repositorio institucional" },
+  { tipo: "INVITACION_PUBLICA", nombre: "Invitación pública a sustentación" },
+  { tipo: "OBSERVACIONES_TESIS", nombre: "Formato de observaciones de borrador de tesis" },
+  { tipo: "AUTORIZACION_IMPRESION", nombre: "Autorización de impresión de tesis" },
+  { tipo: "AUTORIZACION_PUBLICACION", nombre: "Autorización de publicación de tesis" },
+  { tipo: "CARATULA_FINAL", nombre: "Carátula oficial de tesis final" },
+] as const;
+
 function DocumentosTab({
   etapa,
   detalle: d,
@@ -497,29 +521,75 @@ function DocumentosTab({
   const docsTesista = items.filter((c) => esDocumentoTesista(c.tipo));
 
   // 2. Formatos y actas emitidos institucionalmente por la facultad / jurado
-  const docsInstitucionalesChecklist = items.filter((c) => !esDocumentoTesista(c.tipo));
-  const extrasGenerados = generados
-    .filter((g) => !items.some((c) => c.tipo === g.tipo))
-    .map((g) => ({
-      tipo: g.tipo,
-      nombre: g.nombre,
-      documentoId: g.id,
-      estado: g.pendientes.length === 0 ? "APROBADO" : "CARGADO",
-      version: g.version,
-      faltantes: g.pendientes.map((p) => `Campo pendiente: ${p}`),
+  const baseInstitucionales =
+    etapa === "E1" ? FORMATOS_INSTITUCIONALES_BASE_E1 : FORMATOS_INSTITUCIONALES_BASE_E2;
+  const mapaItems = new Map(items.map((i) => [i.tipo, i]));
+
+  type DocItemVisual = {
+    tipo: string;
+    nombre: string;
+    documentoId: string | null;
+    estado: string;
+    version: number | null;
+    faltantes: string[];
+    requeridoEn: string | null;
+    permitirSubir: boolean;
+    formato: (typeof generados)[number] | null;
+  };
+
+  const docsInstitucionales: DocItemVisual[] = baseInstitucionales.map((f) => {
+    const gen = generadoPorTipo.get(f.tipo);
+    const item = mapaItems.get(f.tipo);
+    if (gen) {
+      return {
+        tipo: f.tipo,
+        nombre: gen.nombre || f.nombre,
+        documentoId: gen.documentoId ?? gen.id,
+        estado: gen.pendientes.length === 0 ? "APROBADO" : "CARGADO",
+        version: gen.version,
+        faltantes: gen.pendientes.map((p) => `Campo pendiente: ${p}`),
+        requeridoEn: item?.requeridoEn ?? null,
+        permitirSubir: true,
+        formato: gen,
+      };
+    }
+    if (item) {
+      return {
+        ...item,
+        permitirSubir: true,
+        formato: null,
+      };
+    }
+    return {
+      tipo: f.tipo,
+      nombre: f.nombre,
+      documentoId: null,
+      estado: "PENDIENTE",
+      version: null,
+      faltantes: ["Formato institucional pendiente de generar"],
       requeridoEn: null,
       permitirSubir: true,
-      formato: g,
-    }));
+      formato: null,
+    };
+  });
 
-  const docsInstitucionales = [
-    ...docsInstitucionalesChecklist.map((c) => ({
-      ...c,
-      permitirSubir: true,
-      formato: generadoPorTipo.get(c.tipo) ?? null,
-    })),
-    ...extrasGenerados,
-  ];
+  // Agregar cualquier otro formato generado que no esté en la lista base
+  const tiposBaseSet = new Set<string>(baseInstitucionales.map((b) => b.tipo));
+  for (const g of generados) {
+    if (!tiposBaseSet.has(g.tipo) && !esDocumentoTesista(g.tipo)) {
+      docsInstitucionales.push({
+        tipo: g.tipo,
+        nombre: g.nombre,
+        documentoId: g.documentoId ?? g.id,
+        estado: g.pendientes.length === 0 ? "APROBADO" : "CARGADO",
+        version: g.version,
+        faltantes: g.pendientes.map((p) => `Campo pendiente: ${p}`),
+        requeridoEn: null,
+        permitirSubir: true,
+        formato: g,
+      });
+    }
+  }
 
   const esCompletado = (doc: {
     documentoId: string | null;
@@ -692,10 +762,10 @@ function DocumentosTab({
                 version={c.version}
                 requeridoEn={c.requeridoEn}
                 subetapaActiva={d.subetapaActiva?.clave ?? null}
-                formato={c.formato}
+                formato={c.formato ?? null}
                 etapa={etapa}
                 etiquetaEtapa={etiquetaEtapa}
-                permitirSubir={c.permitirSubir}
+                permitirSubir={c.permitirSubir ?? true}
                 onModificar={setFormatoAModificar}
                 onVistaPrevia={setFormatoAVer}
               />

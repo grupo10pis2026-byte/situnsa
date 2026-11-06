@@ -269,10 +269,11 @@ export async function renderizarPdf(doc: DocumentoRenderizado, meta: MetaPdf): P
           lienzo.asegurar(90);
         }
         const x0 = MARGEN + col * anchoCol;
-        const ancho = anchoCol - 20;
+        const anchoLineaFirma = Math.min(anchoCol - 20, 200);
+        const offsetLinea = (anchoCol - anchoLineaFirma) / 2;
         lienzo.page.drawLine({
-          start: { x: x0 + 10, y: lienzo.y + 14 },
-          end: { x: x0 + 10 + ancho, y: lienzo.y + 14 },
+          start: { x: x0 + offsetLinea, y: lienzo.y + 14 },
+          end: { x: x0 + offsetLinea + anchoLineaFirma, y: lienzo.y + 14 },
           thickness: 0.7,
           color: NEGRO,
         });
@@ -282,9 +283,9 @@ export async function renderizarPdf(doc: DocumentoRenderizado, meta: MetaPdf): P
           const palabras = aPalabras(segs);
           const tam = j === 0 ? 10 : 9;
           const font = j === 0 ? serifBold : serif;
-          for (const l of lineas(palabras, font, tam, ancho)) {
+          for (const l of lineas(palabras, font, tam, anchoCol)) {
             const w = anchoLinea(l, font, tam);
-            dibujarLinea(lienzo.page, l, x0 + 10 + (ancho - w) / 2, lienzo.y - j * 13, font, tam);
+            dibujarLinea(lienzo.page, l, x0 + (anchoCol - w) / 2, lienzo.y - j * 13, font, tam);
           }
         });
       });

@@ -468,7 +468,7 @@ export function MiTramitePage() {
 
               {/* Si hay observaciones vigentes para esta etapa */}
               {observacionesDeEstaEtapa.length > 0 ? (
-                <div className="space-y-3">
+                <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1.5">
                   {observacionesDeEstaEtapa.map((obs) => (
                     <div
                       key={obs.id}

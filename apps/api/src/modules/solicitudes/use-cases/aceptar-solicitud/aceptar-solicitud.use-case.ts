@@ -26,6 +26,7 @@ import { appendAuditoria } from "../../../expedientes/expedientes.auditoria.js";
 import type { Actor } from "../../../expedientes/use-cases/inscribir-plan/inscribir-plan.use-case.js";
 import { asignarRol } from "../../../seguridad/roles.repository.js";
 import { appendHistorialSolicitud, getSolicitudRaw } from "../../solicitudes.repository.js";
+import { GenerarDocumentosUseCase } from "../../../documentos/use-cases/generar-documentos/generar-documentos.use-case.js";
 
 export interface ExpedienteAceptado {
   expedienteId: string;
@@ -295,6 +296,17 @@ export class AceptarSolicitudUseCase {
           detalleCredenciales,
         para: [cred.email],
       });
+    }
+
+    // Post-commit: autogenerar documentación institucional inicial de Etapa 1
+    try {
+      await new GenerarDocumentosUseCase().execute(
+        r.value.expedienteId,
+        "E1",
+        { id: actor.id, dni: actor.dni },
+      );
+    } catch (err) {
+      console.warn("[AceptarSolicitudUseCase] Advertencia autogenerando documentos E1:", err);
     }
 
     return ok({ expedienteId: r.value.expedienteId, codigoSet: r.value.codigoSet });

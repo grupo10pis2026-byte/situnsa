@@ -15,6 +15,7 @@ import {
   DomainError,
   type EtapaPlantilla,
   type ExpedienteDocumento,
+  esDocumentoTesista,
   esEtiquetaFecha,
   esEtiquetaHora,
   fail,
@@ -302,7 +303,7 @@ export class GenerarDocumentosUseCase {
         : opts.tipo === "ANEXO_02_DJ" && numTesistas === 2
           ? plantillasEtapa.filter((p) => p.tipo.startsWith("ANEXO_02_DJ_P"))
           : plantillasEtapa.filter((p) => p.tipo === opts.tipo)
-      : plantillasEtapa;
+      : plantillasEtapa.filter((p) => !esDocumentoTesista(p.tipo));
 
     if (plantillas.length === 0) {
       return fail(
@@ -448,58 +449,62 @@ export class GenerarDocumentosUseCase {
         }
 
         // 2. Auto-subir y adjuntar el PDF oficial generado directamente al checklist
-        const tiposEquivalentes = [plantilla.tipo];
-        if (plantilla.tipo === "SOLICITUD_INSCRIPCION" || plantilla.tipo === "ANEXO_17") {
-          tiposEquivalentes.push("SOLICITUD_INSCRIPCION", "ANEXO_17");
-        }
-        const tiposSet = Array.from(new Set(tiposEquivalentes));
-
-        const docsPrevios = await tx
-          .select({ id: documentos.id, ruta: documentos.ruta })
-          .from(documentos)
-          .where(
-            and(
-              eq(documentos.expedienteId, expedienteId),
-              inArray(documentos.tipo, tiposSet),
-            ),
-          );
-
-        for (const dp of docsPrevios) {
-          if (dp.ruta) {
-            await this.storage.delete?.(dp.ruta);
+        // SOLO para documentos institucionales emitidos por la facultad/jurado.
+        // NUNCA sobreescribir ni eliminar los documentos entregados formalmente por el tesista.
+        if (!esDocumentoTesista(plantilla.tipo)) {
+          const tiposEquivalentes = [plantilla.tipo];
+          if (plantilla.tipo === "SOLICITUD_INSCRIPCION" || plantilla.tipo === "ANEXO_17") {
+            tiposEquivalentes.push("SOLICITUD_INSCRIPCION", "ANEXO_17");
           }
-        }
-        if (docsPrevios.length > 0) {
-          await tx
-            .delete(documentos)
+          const tiposSet = Array.from(new Set(tiposEquivalentes));
+
+          const docsPrevios = await tx
+            .select({ id: documentos.id, ruta: documentos.ruta })
+            .from(documentos)
             .where(
               and(
                 eq(documentos.expedienteId, expedienteId),
                 inArray(documentos.tipo, tiposSet),
               ),
             );
+
+          for (const dp of docsPrevios) {
+            if (dp.ruta) {
+              await this.storage.delete?.(dp.ruta);
+            }
+          }
+          if (docsPrevios.length > 0) {
+            await tx
+              .delete(documentos)
+              .where(
+                and(
+                  eq(documentos.expedienteId, expedienteId),
+                  inArray(documentos.tipo, tiposSet),
+                ),
+              );
+          }
+
+          const pdfGuardado = await this.storage.save(
+            expedienteId,
+            `${plantilla.tipo}_v${version}.pdf`,
+            bytesPdf,
+          );
+
+          await tx.insert(documentos).values({
+            expedienteId,
+            tipo: plantilla.tipo,
+            etapa: plantilla.etapa,
+            ruta: pdfGuardado.ruta,
+            version,
+            sha256: pdfGuardado.sha256,
+            estado: "CARGADO",
+            origen: "SISTEMA",
+            driveSyncEstado: process.env.GOOGLE_DRIVE_ENABLED === "true" ? "PENDIENTE" : "NO_APLICA",
+            archivoContenido: bytesPdf,
+            tamanoBytes: bytesPdf.length,
+            createdAt: ahora,
+          });
         }
-
-        const pdfGuardado = await this.storage.save(
-          expedienteId,
-          `${plantilla.tipo}_v${version}.pdf`,
-          bytesPdf,
-        );
-
-        await tx.insert(documentos).values({
-          expedienteId,
-          tipo: plantilla.tipo,
-          etapa: plantilla.etapa,
-          ruta: pdfGuardado.ruta,
-          version,
-          sha256: pdfGuardado.sha256,
-          estado: "CARGADO",
-          origen: "SISTEMA",
-          driveSyncEstado: process.env.GOOGLE_DRIVE_ENABLED === "true" ? "PENDIENTE" : "NO_APLICA",
-          archivoContenido: bytesPdf,
-          tamanoBytes: bytesPdf.length,
-          createdAt: ahora,
-        });
 
         generados.push({
           id,

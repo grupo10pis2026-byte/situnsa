@@ -195,7 +195,7 @@ export function SolicitudDetallePage() {
               <AlertTriangle className="mt-0.5 shrink-0 text-orange-600" size={16} />
               <div>
                 <p className="font-bold">Observación Activa:</p>
-                <p className="mt-0.5 whitespace-pre-line text-orange-900 leading-relaxed font-medium">
+                <p className="mt-0.5 whitespace-pre-line text-orange-900 leading-relaxed font-medium max-h-56 overflow-y-auto pr-1">
                   {sol.motivoObservacion}
                 </p>
                 {sol.fechaLimiteSubsanacion && (

@@ -15,6 +15,7 @@ import { and, eq, ne, sql } from "drizzle-orm";
 import { DrizzleUnitOfWork } from "../../../../infra/db/unit-of-work.js";
 import { appendAuditoria } from "../../expedientes.auditoria.js";
 import { type DetalleRow, getDetalleById } from "../../expedientes.repository.js";
+import { GenerarDocumentosUseCase } from "../../../documentos/use-cases/generar-documentos/generar-documentos.use-case.js";
 
 export interface Actor {
   id: string;
@@ -133,7 +134,7 @@ export class ActualizarDatosUseCase {
       canon = c;
     }
     const uow = new DrizzleUnitOfWork(db);
-    return uow.run(async (tx) => {
+    const r = await uow.run(async (tx) => {
       const actual = await getDetalleById(tx, id);
       if (!actual) return fail(new DomainError("NO_ENCONTRADO", "Expediente no encontrado"));
       if (patch.expectedUpdatedAt && patch.expectedUpdatedAt !== actual.updatedAt) {
@@ -248,5 +249,17 @@ export class ActualizarDatosUseCase {
       if (!detalle) return fail(new DomainError("NO_ENCONTRADO", "Expediente no encontrado"));
       return ok(detalle);
     });
+
+    if (r.ok) {
+      try {
+        const numEtapa = r.value.avance?.etapaActual ?? r.value.subetapaActiva?.etapa ?? 1;
+        const etapa = (numEtapa >= 2 ? "E2" : "E1") as "E1" | "E2" | "E6";
+        await new GenerarDocumentosUseCase().execute(id, etapa, { id: actor.id, dni: actor.dni });
+      } catch (err) {
+        console.warn("[ActualizarDatosUseCase] Advertencia sincronizando formatos generados:", err);
+      }
+    }
+
+    return r;
   }
 }

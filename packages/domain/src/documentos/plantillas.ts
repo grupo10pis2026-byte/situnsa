@@ -38,9 +38,9 @@ export const PLANTILLAS: readonly PlantillaDocumento[] = [
     titulo: "ANEXO 17\nSOLICITUD DE INSCRIPCIÓN DE PROYECTO DE PLAN DE TESIS",
     parrafos: [
       "Señor(a): <<DECANO>>\nDecano de la Facultad de Ingeniería de Producción y Servicios",
-      "DATOS DEL (DE LA) SOLICITANTE:\n• Apellidos y Nombres: <<NOMBRES>>\n• Nacionalidad: <<NACIONALIDAD>>\n• DNI/C.E./Pasaporte: <<DNI>>\n• CUI: <<CUI>>\n• Dirección: <<DIRECCION>>\n• Distrito y Ciudad: <<CIUDAD>>\n• Teléfono/Celular: <<TELEFONO>>\n• Correo Electrónico: <<CORREO>>\n• Facultad: FACULTAD DE INGENIERÍA DE PRODUCCIÓN Y SERVICIOS\n• Programa de Estudios: <<PROGRAMA>>",
+      "DATOS DEL (DE LA) SOLICITANTE:\n  Apellidos y Nombres: <<NOMBRES>>\n  Nacionalidad: <<NACIONALIDAD>>\n  DNI/C.E./Pasaporte: <<DNI>>\n  CUI: <<CUI>>\n  Dirección: <<DIRECCION>>\n  Distrito y Ciudad: <<CIUDAD>>\n  Teléfono/Celular: <<TELEFONO>>\n  Correo Electrónico: <<CORREO>>\n  Facultad: FACULTAD DE INGENIERÍA DE PRODUCCIÓN Y SERVICIOS\n  Programa de Estudios: <<PROGRAMA>>",
       "Ante usted me presento con el debido respeto y expongo:\nEn virtud al Reglamento General: Obtención del Título Profesional de Segunda Especialidad, solicito a usted considerar el Proyecto de Plan de Tesis:\n«<<TESIS>>»",
-      "Con el objeto de su inscripción y revisión, solicitando la designación:\n• Asesor: <<ASESOR>>\n• Coasesor: <<CO ASESOR>>",
+      "Con el objeto de su inscripción y revisión, solicitando la designación:\n  Asesor: <<ASESOR>>\n  Coasesor: <<CO ASESOR>>",
       "Todo ello a efecto de optar el Título de Segunda Especialidad Profesional en <<PROGRAMA>>.",
       "Por lo expuesto, pido a usted acceder a mi solicitud disponiendo el trámite correspondiente.",
       "Arequipa, <<FECHA_SOLICITUD>>.",
@@ -105,7 +105,7 @@ export const PLANTILLAS: readonly PlantillaDocumento[] = [
       "DECRETO Nº <<DECRETO>>-USE-FIPS",
       "Arequipa, <<FECHA_DECRETO>>.",
       "Vista la solicitud presentada por don(ña) <<NOMBRES>>, egresado(a) de la <<PROGRAMA>>, por el que solicita Inscripción del Plan de Tesis de conformidad con lo establecido en el reglamento vigente de las Segundas Especialidades de la UNSA.",
-      "CONSIDERANDO:\nQue el Director de la Unidad de Segunda Especialidad de la Facultad de Ingeniería de Producción y Servicios inscribió y registró el Plan de Tesis: «<<TESIS>>».\nEl jurado que evaluó el presente Plan de Tesis está integrado por los docentes:\n• Presidente: <<PRESIDENTE>>\n• Secretario: <<SECRETARIO>>\nSiendo su asesor el docente: <<ASESOR>>.\nQue, mediante ACTA DE CONFORMIDAD del Plan de Tesis, el jurado evaluador acordó APROBAR y continuar con el trámite correspondiente.",
+      "CONSIDERANDO:\nQue el Director de la Unidad de Segunda Especialidad de la Facultad de Ingeniería de Producción y Servicios inscribió y registró el Plan de Tesis: «<<TESIS>>».\nEl jurado que evaluó el presente Plan de Tesis está integrado por los docentes:\n  Presidente: <<PRESIDENTE>>\n  Secretario: <<SECRETARIO>>\nSiendo su asesor el docente: <<ASESOR>>.\nQue, mediante ACTA DE CONFORMIDAD del Plan de Tesis, el jurado evaluador acordó APROBAR y continuar con el trámite correspondiente.",
       "SE DECRETA:\nAcceder a la inscripción al Plan de Tesis titulado: «<<TESIS>>»; presentada por don(ña) <<NOMBRES>>, egresado(a) de la <<PROGRAMA>>, de la Facultad de Ingeniería de Producción y Servicios.\nRecomendación: <<RECOMENDACION>>.",
       "Regístrese, comuníquese, archívese.",
     ],
@@ -146,7 +146,7 @@ export const PLANTILLAS: readonly PlantillaDocumento[] = [
       "Que se adjunta a la presente, los que deberán ser subsanadas en un periodo máximo de 08 días hábiles contados a partir de la recepción del presente formato, de acuerdo al Reglamento de inscripción del plan de tesis de la Facultad de Ingeniería de Producción y Servicios.",
       "Arequipa, <<FECHA_OBSERVACION>>.",
       "OPINIONES Y/O RECOMENDACIONES DEL PLAN DE TESIS:\n<<RECOMENDACION>>",
-      "EVALUADORES:\n• Presidente(a): <<PRESIDENTE>>\n• Asesor(a): <<ASESOR>>",
+      "EVALUADORES:\n  Presidente(a): <<PRESIDENTE>>\n  Asesor(a): <<ASESOR>>",
       "Fecha de Presentación: <<FECHA_PRESENTACION>>.",
     ],
     firmas: [
@@ -199,7 +199,7 @@ export const PLANTILLAS: readonly PlantillaDocumento[] = [
     titulo:
       "UNIVERSIDAD NACIONAL DE SAN AGUSTÍN\nFACULTAD DE INGENIERÍA DE PRODUCCIÓN Y SERVICIOS\nUNIDAD DE SEGUNDA ESPECIALIDAD\nACTA DE DICTAMEN",
     parrafos: [
-      "Vista la Resolución Decanal N° <<DECANAL>>-FIPS, así como el expediente adjunto, el Jurado Dictaminador integrado por los Docentes:\n• <<PRESIDENTE ETAPA 02>> (Presidente)\n• <<INTEGRANTE>> (Integrante)\n• <<SECRETARIO ETAPA 02>> (Secretario)",
+      "Vista la Resolución Decanal N° <<DECANAL>>-FIPS, así como el expediente adjunto, el Jurado Dictaminador integrado por los Docentes:\n  <<PRESIDENTE ETAPA 02>> (Presidente)\n  <<INTEGRANTE>> (Integrante)\n  <<SECRETARIO ETAPA 02>> (Secretario)",
       "Reunidos en la Sesión de fecha <<FECHA_DICTAMEN>>, con objeto de DICTAMINAR <<MOD_F>> titulado: «<<TESIS>>», presentado por <<NOMBRES>>.",
       "Luego de haber revisado la investigación correspondiente se ACORDÓ DAR PASE AL ACTO DE SUSTENTACIÓN PÚBLICA, en <<LUGAR SUSTENTACION>>, fijado para el día <<FECHA>> a horas <<HORA>>.",
       "En fe de lo cual firmamos en Arequipa a los <<FECHA_DICTAMEN>>.",
@@ -218,7 +218,7 @@ export const PLANTILLAS: readonly PlantillaDocumento[] = [
     titulo: "ACTA DE SUSTENTACIÓN N° <<ACTA_NUMERO>>\nSEGUNDA ESPECIALIDAD EN <<PROGRAMA>>",
     parrafos: [
       "Para optar el Título de Segunda Especialidad Profesional en <<PROGRAMA>>.\nGraduando(s): <<NOMBRES>>",
-      "En Arequipa, siendo las <<HORA>> horas, del día <<FECHA>>, en <<LUGAR SUSTENTACION>>, en cumplimiento a la Resolución Decanal Nº <<DECANAL>>-FIPS, se reunió el jurado calificador integrado por:\n• Presidente: <<PRESIDENTE ETAPA 02>>\n• Integrante: <<INTEGRANTE>>\n• Secretario: <<SECRETARIO ETAPA 02>>",
+      "En Arequipa, siendo las <<HORA>> horas, del día <<FECHA>>, en <<LUGAR SUSTENTACION>>, en cumplimiento a la Resolución Decanal Nº <<DECANAL>>-FIPS, se reunió el jurado calificador integrado por:\n  Presidente: <<PRESIDENTE ETAPA 02>>\n  Integrante: <<INTEGRANTE>>\n  Secretario: <<SECRETARIO ETAPA 02>>",
       "Dándose inicio al Acto Público de Sustentación y Evaluación, en que expuso la investigación titulada: «<<TESIS>>».",
       "Rendida la sustentación, absueltas las observaciones y preguntas formuladas y efectuada la evaluación correspondiente, el resultado fue: <<VEREDICTO>>.",
       "En fe de lo cual se asentó la presente acta que firman los miembros integrantes del jurado.",
@@ -237,7 +237,7 @@ export const PLANTILLAS: readonly PlantillaDocumento[] = [
     titulo: "ANEXO 8\nINFORME DE CONFORMIDAD DEL ASESOR",
     parrafos: [
       "Señor(a): <<DECANO>>\nDecano de la Facultad de Ingeniería de Producción y Servicios",
-      "DATOS DEL ASESOR Y GRADUANDO:\n• Asesor: <<ASESOR>>\n• Graduando(s): <<NOMBRES>> (DNI <<DNI>>)\n• Programa: <<PROGRAMA>>",
+      "DATOS DEL ASESOR Y GRADUANDO:\n  Asesor: <<ASESOR>>\n  Graduando(s): <<NOMBRES>> (DNI <<DNI>>)\n  Programa: <<PROGRAMA>>",
       "Por medio del presente documento, cumplo con informar que se ha procedido con la revisión del contenido, diseño, redacción, sistema de citas y referencias exigidas por la U.N.S.A. de la investigación titulada: «<<TESIS>>».",
       "En tal sentido, de la revisión efectuada se hace constar que la investigación queda: APROBADA y expedita para continuar con el trámite correspondiente.",
       "Arequipa, <<FECHA_CONFORMIDAD_ASESOR>>.",
@@ -266,7 +266,7 @@ export const PLANTILLAS: readonly PlantillaDocumento[] = [
     titulo:
       "ANEXO 2\nDECLARACIÓN JURADA DE NO REGISTRAR ANTECEDENTES PENALES Y/O JUDICIALES POR TERRORISMO",
     parrafos: [
-      "DATOS DEL DECLARANTE:\n• Apellidos y Nombres: <<NOMBRES>>\n• Nacionalidad: <<NACIONALIDAD>>\n• DNI: <<DNI>>\n• CUI: <<CUI>>\n• Dirección: <<DIRECCION>>\n• Ciudad: <<CIUDAD>>\n• Teléfono: <<TELEFONO>>\n• Correo: <<CORREO>>\n• Programa: <<PROGRAMA>>",
+      "DATOS DEL DECLARANTE:\n  Apellidos y Nombres: <<NOMBRES>>\n  Nacionalidad: <<NACIONALIDAD>>\n  DNI: <<DNI>>\n  CUI: <<CUI>>\n  Dirección: <<DIRECCION>>\n  Ciudad: <<CIUDAD>>\n  Teléfono: <<TELEFONO>>\n  Correo: <<CORREO>>\n  Programa: <<PROGRAMA>>",
       "Estando al amparo de lo dispuesto por los artículos 49° y 51° del D.S. 004-2019-JUS (TUO Ley N° 27444) y en pleno ejercicio de mis derechos ciudadanos: DECLARO BAJO JURAMENTO NO REGISTRAR ANTECEDENTES PENALES Y/O JUDICIALES POR LOS DELITOS DE TERRORISMO O APOLOGÍA AL TERRORISMO, a efecto de realizar el trámite de obtención del Título en <<PROGRAMA>>.",
       "Asimismo, manifiesto que lo declarado corresponde a la verdad, teniendo conocimiento de las responsabilidades civiles y penales (artículo 411° del Código Penal).",
       "Arequipa, <<FECHA_EMISION>>.",
@@ -281,7 +281,7 @@ export const PLANTILLAS: readonly PlantillaDocumento[] = [
     titulo:
       "ANEXO 2\nDECLARACIÓN JURADA DE NO REGISTRAR ANTECEDENTES PENALES Y/O JUDICIALES POR TERRORISMO",
     parrafos: [
-      "DATOS DEL DECLARANTE:\n• Apellidos y Nombres: <<NOMBRES>>\n• Nacionalidad: <<NACIONALIDAD>>\n• DNI: <<DNI>>\n• CUI: <<CUI>>\n• Dirección: <<DIRECCION>>\n• Ciudad: <<CIUDAD>>\n• Teléfono: <<TELEFONO>>\n• Correo: <<CORREO>>\n• Programa: <<PROGRAMA>>",
+      "DATOS DEL DECLARANTE:\n  Apellidos y Nombres: <<NOMBRES>>\n  Nacionalidad: <<NACIONALIDAD>>\n  DNI: <<DNI>>\n  CUI: <<CUI>>\n  Dirección: <<DIRECCION>>\n  Ciudad: <<CIUDAD>>\n  Teléfono: <<TELEFONO>>\n  Correo: <<CORREO>>\n  Programa: <<PROGRAMA>>",
       "Estando al amparo de lo dispuesto por los artículos 49° y 51° del D.S. 004-2019-JUS (TUO Ley N° 27444) y en pleno ejercicio de mis derechos ciudadanos: DECLARO BAJO JURAMENTO NO REGISTRAR ANTECEDENTES PENALES Y/O JUDICIALES POR LOS DELITOS DE TERRORISMO O APOLOGÍA AL TERRORISMO, a efecto de realizar el trámite de obtención del Título en <<PROGRAMA>>.",
       "Asimismo, manifiesto que lo declarado corresponde a la verdad, teniendo conocimiento de las responsabilidades civiles y penales (artículo 411° del Código Penal).",
       "Arequipa, <<FECHA_EMISION>>.",
@@ -296,7 +296,7 @@ export const PLANTILLAS: readonly PlantillaDocumento[] = [
     titulo:
       "ANEXO 2\nDECLARACIÓN JURADA DE NO REGISTRAR ANTECEDENTES PENALES Y/O JUDICIALES POR TERRORISMO",
     parrafos: [
-      "DATOS DEL DECLARANTE:\n• Apellidos y Nombres: <<NOMBRES02>>\n• Nacionalidad: <<NACIONALIDAD02>>\n• DNI: <<DNI02>>\n• CUI: <<CUI02>>\n• Dirección: <<DIRECCION02>>\n• Ciudad: <<CIUDAD02>>\n• Teléfono: <<TELEFONO02>>\n• Correo: <<CORREO02>>\n• Programa: <<PROGRAMA>>",
+      "DATOS DEL DECLARANTE:\n  Apellidos y Nombres: <<NOMBRES02>>\n  Nacionalidad: <<NACIONALIDAD02>>\n  DNI: <<DNI02>>\n  CUI: <<CUI02>>\n  Dirección: <<DIRECCION02>>\n  Ciudad: <<CIUDAD02>>\n  Teléfono: <<TELEFONO02>>\n  Correo: <<CORREO02>>\n  Programa: <<PROGRAMA>>",
       "Estando al amparo de lo dispuesto por los artículos 49° y 51° del D.S. 004-2019-JUS (TUO Ley N° 27444) y en pleno ejercicio de mis derechos ciudadanos: DECLARO BAJO JURAMENTO NO REGISTRAR ANTECEDENTES PENALES Y/O JUDICIALES POR LOS DELITOS DE TERRORISMO O APOLOGÍA AL TERRORISMO, a efecto de realizar el trámite de obtención del Título en <<PROGRAMA>>.",
       "Asimismo, manifiesto que lo declarado corresponde a la verdad, teniendo conocimiento de las responsabilidades civiles y penales (artículo 411° del Código Penal).",
       "Arequipa, <<FECHA_EMISION>>.",
@@ -326,7 +326,7 @@ export const PLANTILLAS: readonly PlantillaDocumento[] = [
     parrafos: [
       "Señor(a): <<NOMBRES>>",
       "Cumpliendo con el Reglamento de Grados y Títulos, el jurado calificador acuerda APROBAR LA IMPRESIÓN de la investigación para optar el Título de Segunda Especialidad en <<PROGRAMA>>, titulada: «<<TESIS>>».",
-      "Miembros del Jurado:\n• Presidente: <<PRESIDENTE ETAPA 02>>\n• Integrante: <<INTEGRANTE>>\n• Secretario: <<SECRETARIO ETAPA 02>>",
+      "Miembros del Jurado:\n  Presidente: <<PRESIDENTE ETAPA 02>>\n  Integrante: <<INTEGRANTE>>\n  Secretario: <<SECRETARIO ETAPA 02>>",
       "Arequipa, <<FECHA_IMPRESION>>.",
     ],
     firmas: [
@@ -345,7 +345,7 @@ export const PLANTILLAS: readonly PlantillaDocumento[] = [
     parrafos: [
       "Señor(a): <<NOMBRES>>",
       "Cumpliendo con el Reglamento de Grados y Títulos, el jurado calificador acuerda APROBAR LA PUBLICACIÓN de dicha investigación para optar el Título de Segunda Especialidad en <<PROGRAMA>>, titulada: «<<TESIS>>».",
-      "Miembros del Jurado:\n• Presidente: <<PRESIDENTE ETAPA 02>>\n• Integrante: <<INTEGRANTE>>\n• Secretario: <<SECRETARIO ETAPA 02>>",
+      "Miembros del Jurado:\n  Presidente: <<PRESIDENTE ETAPA 02>>\n  Integrante: <<INTEGRANTE>>\n  Secretario: <<SECRETARIO ETAPA 02>>",
       "Arequipa, <<FECHA_PUBLICACION>>.",
     ],
     firmas: [
@@ -362,7 +362,7 @@ export const PLANTILLAS: readonly PlantillaDocumento[] = [
     titulo: "ANEXO 01\nDECLARACIÓN JURADA Y AUTORIZACIÓN DE PUBLICACIÓN DIGITAL",
     parrafos: [
       "Lugar y Fecha: Arequipa, <<FECHA_EMISION>>.",
-      "DATOS DEL AUTOR:\n• Apellidos y Nombres: <<NOMBRES>>\n• DNI: <<DNI>>\n• CUI: <<CUI>>\n• Teléfono: <<TELEFONO>>\n• Correo: <<CORREO>>\n• Facultad: FACULTAD DE INGENIERÍA DE PRODUCCIÓN Y SERVICIOS\n• Programa: <<PROGRAMA>>",
+      "DATOS DEL AUTOR:\n  Apellidos y Nombres: <<NOMBRES>>\n  DNI: <<DNI>>\n  CUI: <<CUI>>\n  Teléfono: <<TELEFONO>>\n  Correo: <<CORREO>>\n  Facultad: FACULTAD DE INGENIERÍA DE PRODUCCIÓN Y SERVICIOS\n  Programa: <<PROGRAMA>>",
       "Título de la Investigación: «<<TESIS>>»",
       "Por el presente documento autorizo a la Universidad Nacional de San Agustín de Arequipa a publicar en formato digital y en acceso abierto el trabajo de investigación en el Repositorio Institucional de la UNSA.",
     ],
@@ -376,7 +376,7 @@ export const PLANTILLAS: readonly PlantillaDocumento[] = [
     titulo: "ANEXO 01\nDECLARACIÓN JURADA Y AUTORIZACIÓN DE PUBLICACIÓN DIGITAL",
     parrafos: [
       "Lugar y Fecha: Arequipa, <<FECHA_EMISION>>.",
-      "DATOS DEL AUTOR:\n• Apellidos y Nombres: <<NOMBRES>>\n• DNI: <<DNI>>\n• CUI: <<CUI>>\n• Teléfono: <<TELEFONO>>\n• Correo: <<CORREO>>\n• Facultad: FACULTAD DE INGENIERÍA DE PRODUCCIÓN Y SERVICIOS\n• Programa: <<PROGRAMA>>",
+      "DATOS DEL AUTOR:\n  Apellidos y Nombres: <<NOMBRES>>\n  DNI: <<DNI>>\n  CUI: <<CUI>>\n  Teléfono: <<TELEFONO>>\n  Correo: <<CORREO>>\n  Facultad: FACULTAD DE INGENIERÍA DE PRODUCCIÓN Y SERVICIOS\n  Programa: <<PROGRAMA>>",
       "Título de la Investigación: «<<TESIS>>»",
       "Por el presente documento autorizo a la Universidad Nacional de San Agustín de Arequipa a publicar en formato digital y en acceso abierto el trabajo de investigación en el Repositorio Institucional de la UNSA.",
     ],
@@ -390,7 +390,7 @@ export const PLANTILLAS: readonly PlantillaDocumento[] = [
     titulo: "ANEXO 01\nDECLARACIÓN JURADA Y AUTORIZACIÓN DE PUBLICACIÓN DIGITAL",
     parrafos: [
       "Lugar y Fecha: Arequipa, <<FECHA_EMISION>>.",
-      "DATOS DEL AUTOR:\n• Apellidos y Nombres: <<NOMBRES02>>\n• DNI: <<DNI02>>\n• CUI: <<CUI02>>\n• Teléfono: <<TELEFONO02>>\n• Correo: <<CORREO02>>\n• Facultad: FACULTAD DE INGENIERÍA DE PRODUCCIÓN Y SERVICIOS\n• Programa: <<PROGRAMA>>",
+      "DATOS DEL AUTOR:\n  Apellidos y Nombres: <<NOMBRES02>>\n  DNI: <<DNI02>>\n  CUI: <<CUI02>>\n  Teléfono: <<TELEFONO02>>\n  Correo: <<CORREO02>>\n  Facultad: FACULTAD DE INGENIERÍA DE PRODUCCIÓN Y SERVICIOS\n  Programa: <<PROGRAMA>>",
       "Título de la Investigación: «<<TESIS>>»",
       "Por el presente documento autorizo a la Universidad Nacional de San Agustín de Arequipa a publicar en formato digital y en acceso abierto el trabajo de investigación en el Repositorio Institucional de la UNSA.",
     ],
@@ -429,7 +429,7 @@ export const PLANTILLAS: readonly PlantillaDocumento[] = [
       "Los cuales deberán ser subsanadas en un periodo máximo de 08 días hábiles contados a partir de la recepción del presente formato, de acuerdo al Reglamento de la FIPS.",
       "Arequipa, <<FECHA DE OBSERVACIONES 02>>.",
       "OPINIONES Y/O RECOMENDACIONES:\n<<RECOMENDACIONES_TESIS>>",
-      "EVALUADORES:\n• Presidente: <<PRESIDENTE ETAPA 02>>\n• Integrante: <<INTEGRANTE>>\n• Asesor: <<ASESOR>>",
+      "EVALUADORES:\n  Presidente: <<PRESIDENTE ETAPA 02>>\n  Integrante: <<INTEGRANTE>>\n  Asesor: <<ASESOR>>",
     ],
     firmas: ["<<PRESIDENTE ETAPA 02>>\nPresidente de la Terna del Jurado de Tesis"],
   },
@@ -462,7 +462,7 @@ export const PLANTILLAS: readonly PlantillaDocumento[] = [
       "<<PROGRAMA>>",
       "Se invita al público en general a la sustentación pública de la Tesis titulada: «<<TESIS>>», para optar el Título de Segunda Especialidad en <<PROGRAMA>>.",
       "Presentado por: <<NOMBRES>>",
-      "JURADOS:\n• Presidente: <<PRESIDENTE ETAPA 02>>\n• Integrante: <<INTEGRANTE>>\n• Secretario: <<SECRETARIO ETAPA 02>>\n• Suplente: <<SUPLENTE ETAPA 02>>",
+      "JURADOS:\n  Presidente: <<PRESIDENTE ETAPA 02>>\n  Integrante: <<INTEGRANTE>>\n  Secretario: <<SECRETARIO ETAPA 02>>\n  Suplente: <<SUPLENTE ETAPA 02>>",
       "FECHA: <<FECHA>>\nHORA: <<HORA>>\nLUGAR: <<LUGAR SUSTENTACION>>",
       "Arequipa, <<FECHA_INVITACION>>.",
     ],
@@ -517,7 +517,7 @@ export const PLANTILLAS: readonly PlantillaDocumento[] = [
       "Arequipa, <<FECHA JURADOS>>.",
       "Vista la solicitud de <<NOMBRES>> y el expediente adjunto (<<CODIGO>>), a fin de optar el Título de Segunda Especialidad en <<PROGRAMA>>, así como el informe de Secretaría de la FIPS.",
       "CONSIDERANDO:\nQue esta Unidad conduce a optar el Título de Segunda Especialidad de conformidad con lo dispuesto en el Estatuto de la UNSA y el Reglamento General de Segundas Especialidades, en uso de las atribuciones conferidas a este Decanato:",
-      "SE DECRETA:\nNombrar la Terna del Jurado, integrado por los señores Docentes:\n• Presidente: <<PRESIDENTE ETAPA 02>>\n• Integrante: <<INTEGRANTE>>\n• Secretario: <<SECRETARIO ETAPA 02>>\n• Suplente: <<SUPLENTE ETAPA 02>>\nPresidida por el primero de los nombrados.",
+      "SE DECRETA:\nNombrar la Terna del Jurado, integrado por los señores Docentes:\n  Presidente: <<PRESIDENTE ETAPA 02>>\n  Integrante: <<INTEGRANTE>>\n  Secretario: <<SECRETARIO ETAPA 02>>\n  Suplente: <<SUPLENTE ETAPA 02>>\nPresidida por el primero de los nombrados.",
       "El Jurado revisará la documentación y estudiará el contenido de la Tesis titulada: «<<TESIS>>».\nEl Jurado dictaminará si cumple con los requisitos y comunicará su decisión en un plazo de veinte días hábiles.",
       "Regístrese, comuníquese y archívese.",
     ],

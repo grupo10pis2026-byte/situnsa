@@ -121,7 +121,7 @@ export function SubsanarSolicitudPage() {
                   </span>
                 )}
               </div>
-              <p className="whitespace-pre-line text-orange-900 font-medium leading-relaxed">
+              <p className="whitespace-pre-line text-orange-900 font-medium leading-relaxed max-h-56 overflow-y-auto pr-1">
                 {solicitud.motivoObservacion || "No se detallaron motivos específicos."}
               </p>
               {solicitud.fechaLimiteSubsanacion && (

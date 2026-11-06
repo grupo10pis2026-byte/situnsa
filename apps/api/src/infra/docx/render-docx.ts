@@ -91,10 +91,31 @@ export function procesarDocxBuffer(
   };
 }
 
-const DIR_MAESTRAS = join(
-  dirname(fileURLToPath(import.meta.url)),
-  "../../../../../packages/domain/plantillas/maestras",
-);
+function resolverDirectorioMaestras(): string {
+  if (process.env.PLANTILLAS_MAESTRAS_PATH && existsSync(process.env.PLANTILLAS_MAESTRAS_PATH)) {
+    return process.env.PLANTILLAS_MAESTRAS_PATH;
+  }
+  const rutaDocker = "/app/packages/domain/plantillas/maestras";
+  if (existsSync(rutaDocker)) {
+    return rutaDocker;
+  }
+  let dirActual = dirname(fileURLToPath(import.meta.url));
+  for (let i = 0; i < 6; i++) {
+    const candidata = join(dirActual, "packages/domain/plantillas/maestras");
+    if (existsSync(candidata)) {
+      return candidata;
+    }
+    const padre = dirname(dirActual);
+    if (padre === dirActual) break;
+    dirActual = padre;
+  }
+  return join(
+    dirname(fileURLToPath(import.meta.url)),
+    "../../../../../packages/domain/plantillas/maestras",
+  );
+}
+
+const DIR_MAESTRAS = resolverDirectorioMaestras();
 
 const MAPA_ARCHIVOS: Record<string, { 1: string; 2: string }> = {
   // Etapa 01

@@ -66,7 +66,7 @@ export function construirListadoConsejo(expedientes: readonly TitulandoConsejo[]
     encabezados: ENCABEZADOS_CONSEJO,
     filas: titulandos.map(({ e, p }, i) => [
       i + 1,
-      normalizarAdministrativo("programa", e.programa),
+      e.programa.trim().toUpperCase(),
       `${p.apellidos.trim()}, ${p.nombres.trim()}`.toUpperCase(),
       p.dni,
       MODALIDAD_TITULACION[e.modalidad],
