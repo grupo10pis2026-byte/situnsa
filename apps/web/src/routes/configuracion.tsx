@@ -2,6 +2,7 @@ import type { ProcesoConfigDTO } from "@pis/contracts";
 import { Plus, Save, Settings2, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useEditarProceso, useProceso } from "../api/configuracion.js";
+import { ConfiguracionTallerPanel } from "../components/domain/config-taller.js";
 import { AppShell } from "../components/layout/app-shell.js";
 import { Button } from "../components/ui/button.js";
 import { Card, CardEncabezado } from "../components/ui/card.js";
@@ -10,6 +11,7 @@ import { EmptyState } from "../components/ui/empty-state.js";
 import { controlClase } from "../components/ui/field.js";
 import { PageHeader } from "../components/ui/page-header.js";
 import { Select } from "../components/ui/select.js";
+import { Tab, TabPanel, Tabs, TabsLista } from "../components/ui/tabs.js";
 import { useToast } from "../components/ui/toast.js";
 import { cn } from "../utils/cn.js";
 
@@ -18,16 +20,43 @@ type Subetapa = Etapa["subetapas"][number];
 type Documento = ProcesoConfigDTO["documentos"][number];
 type Editar = ReturnType<typeof useEditarProceso>;
 
-/** HU-0052: etapas, subetapas y documentos requeridos como datos (solo administración). */
+/**
+ * Configuración (solo administración): el proceso de titulación (HU-0052)
+ * y el Módulo Taller de Tesis (spec v1.0 P16), cada uno en su pestaña.
+ */
 export function ConfiguracionPage() {
-  const proceso = useProceso();
-  const editar = useEditarProceso();
+  const [seccion, setSeccion] = useState("proceso");
   return (
     <AppShell activo="/configuracion">
       <PageHeader
-        titulo="Configuración del proceso"
-        descripcion="Etapas, subetapas y documentos requeridos. Los cambios aplican a los expedientes que se validen desde ahora."
+        titulo="Configuración"
+        descripcion={
+          seccion === "taller"
+            ? "Feriados, plan institucional, especialidades y parámetros del Taller de Tesis. Los talleres ya creados conservan lo que copiaron al crearse."
+            : "Etapas, subetapas y documentos requeridos. Los cambios aplican a los expedientes que se validen desde ahora."
+        }
       />
+      <Tabs value={seccion} onValueChange={setSeccion}>
+        <TabsLista>
+          <Tab value="proceso">Proceso de titulación</Tab>
+          <Tab value="taller">Taller de Tesis</Tab>
+        </TabsLista>
+        <TabPanel value="proceso">
+          <ProcesoPanel />
+        </TabPanel>
+        <TabPanel value="taller">
+          <ConfiguracionTallerPanel />
+        </TabPanel>
+      </Tabs>
+    </AppShell>
+  );
+}
+
+function ProcesoPanel() {
+  const proceso = useProceso();
+  const editar = useEditarProceso();
+  return (
+    <div className="space-y-4">
       {proceso.isPending && <p className="text-sm text-grafito-600">Cargando…</p>}
       {proceso.isError && (
         <EmptyState
@@ -43,7 +72,7 @@ export function ConfiguracionPage() {
           <DocumentosCard proceso={proceso.data} editar={editar} />
         </>
       )}
-    </AppShell>
+    </div>
   );
 }
 

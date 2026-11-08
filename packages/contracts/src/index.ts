@@ -11,6 +11,7 @@ import { seguimientoContract } from "./seguimiento.contract.js";
 import { seguridadContract } from "./seguridad.contract.js";
 import { sesionesContract } from "./sesiones.contract.js";
 import { tallerAvancesContract } from "./taller-avances.contract.js";
+import { tallerConfiguracionContract } from "./taller-configuracion.contract.js";
 import { asesoresContract, talleresContract } from "./talleres.contract.js";
 
 const c = initContract();
@@ -29,6 +30,7 @@ export const appContract = c.router({
   reportes: reportesContract,
   cierre: cierreContract,
   configuracion: configuracionContract,
+  tallerConfiguracion: tallerConfiguracionContract,
   programas: programasContract,
   health: {
     method: "GET",
@@ -52,4 +54,5 @@ export * from "./seguimiento.contract.js";
 export * from "./seguridad.contract.js";
 export * from "./sesiones.contract.js";
 export * from "./taller-avances.contract.js";
+export * from "./taller-configuracion.contract.js";
 export * from "./talleres.contract.js";

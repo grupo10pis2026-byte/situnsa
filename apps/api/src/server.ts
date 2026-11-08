@@ -16,6 +16,7 @@ import { registerExpedientesRoutes } from "./modules/expedientes/expedientes.rou
 import { registerReportesTitulacionRoutes } from "./modules/reportes/reportes.routes.js";
 import { registerSeguimientoRoutes } from "./modules/seguimiento/seguimiento.routes.js";
 import { registerSeguridadRoutes } from "./modules/seguridad/seguridad.routes.js";
+import { registerTallerConfigRoutes } from "./modules/taller-config/taller-config.routes.js";
 import {
   registerGruposRoutes,
   registerReportesRoutes,
@@ -66,6 +67,7 @@ export async function buildServer() {
   registerReportesRoutes(app);
   registerReportesTitulacionRoutes(app);
   registerConfiguracionRoutes(app);
+  registerTallerConfigRoutes(app);
 
   return app;
 }

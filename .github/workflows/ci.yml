@@ -73,7 +73,7 @@ jobs:
           done
           cat "$RUNNER_TEMP/api.log"
           exit 1
-      - run: pnpm --filter pis-e2e test flujo-titulacion
+      - run: pnpm --filter pis-e2e test flujo-titulacion taller-configuracion
       # La cadena de custodia de todo lo creado por el flujo debe verificarse íntegra.
       - run: pnpm --filter @pis/api verificar-auditoria
       - name: Log de la API
