@@ -12,6 +12,7 @@ export * from "./programas.js";
 export * from "./seguridad.js";
 export * from "./subetapas.js";
 export * from "./taller-operativa.js";
+export * from "./taller-v1.js";
 export * from "./talleres.js";
 export * from "./tokens-acceso.js";
 export * from "./usuarios.js";
