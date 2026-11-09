@@ -51,6 +51,8 @@ jobs:
       SMTP_HOST: localhost
       SMTP_PORT: "1025"
       DOCS_ENTREGA: stream
+      # La suite e2e supera el límite global de 500 peticiones/min (producción no cambia).
+      RATE_LIMIT_MAX: "5000"
       E2E_BASE_URL: http://localhost:3001
       E2E_MAILPIT_URL: http://localhost:8025
     steps:
@@ -73,9 +75,25 @@ jobs:
           done
           cat "$RUNNER_TEMP/api.log"
           exit 1
-      - run: pnpm --filter pis-e2e test flujo-titulacion taller-configuracion
+      - run: pnpm --filter pis-e2e test flujo-titulacion taller-configuracion asesores talleres.api proyectos.api taller-seguimiento
+      # Pruebas de interfaz del Taller (#7, #11, #18/#19, #24): web con proxy a la API.
+      - run: pnpm --filter pis-e2e exec playwright install --with-deps chromium
+      - name: Arrancar web
+        run: |
+          nohup pnpm --filter @pis/web dev > "$RUNNER_TEMP/web.log" 2>&1 &
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:5173/login > /dev/null && exit 0
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/web.log"
+          exit 1
+      - run: pnpm --filter pis-e2e test taller-ui
+        env:
+          E2E_BASE_URL: http://localhost:5173
       # La cadena de custodia de todo lo creado por el flujo debe verificarse íntegra.
       - run: pnpm --filter @pis/api verificar-auditoria
-      - name: Log de la API
+      - name: Logs de la API y la web
         if: failure()
-        run: cat "$RUNNER_TEMP/api.log"
+        run: |
+          cat "$RUNNER_TEMP/api.log"
+          cat "$RUNNER_TEMP/web.log" || true
