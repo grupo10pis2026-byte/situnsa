@@ -17,9 +17,9 @@ import {
   validarParametroTaller,
   validarSemanaPlan,
 } from "@pis/domain";
-import { and, eq, ne, sql } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { DrizzleUnitOfWork } from "../../../infra/db/unit-of-work.js";
-import { leerConfigTaller } from "../taller-config.repository.js";
+import { buscarEspecialidadPorNombre, leerConfigTaller } from "../taller-config.repository.js";
 
 /**
  * Casos de uso de P16 (Configuración del taller). Patrón: validar con el
@@ -156,24 +156,13 @@ export class EditarSemanaPlanUseCase {
 
 // ── Especialidades ─────────────────────────────────────────────────────
 
-/** Mismo criterio que el índice único `lower(nombre)`: la comparación la hace Postgres. */
-async function especialidadConNombre(tx: DbExecutor, nombre: string, exceptoId?: string) {
-  const mismoNombre = sql`lower(${especialidades.nombre}) = lower(${nombre})`;
-  const filas = await tx
-    .select({ id: especialidades.id, nombre: especialidades.nombre })
-    .from(especialidades)
-    .where(exceptoId ? and(mismoNombre, ne(especialidades.id, exceptoId)) : mismoNombre)
-    .limit(1);
-  return filas[0] ?? null;
-}
-
 export class AgregarEspecialidadUseCase {
   async execute(input: { nombre: string }, actor: Actor): Salida {
     const v = validarNombreEspecialidad(input.nombre);
     if (!v.ok) return v;
     const nombre = v.value;
     return conConfig(actor, `agregar especialidad ${nombre}`, async (tx) => {
-      const existente = await especialidadConNombre(tx, nombre);
+      const existente = await buscarEspecialidadPorNombre(tx, nombre);
       if (existente) return duplicado(`La especialidad "${existente.nombre}" ya existe`);
       await tx.insert(especialidades).values({ nombre, creadoPor: idActor(actor) });
       return ok(true);
@@ -199,7 +188,7 @@ export class EditarEspecialidadUseCase {
         .limit(1);
       if (!filas[0]) return noEncontrado("Especialidad no encontrada");
       if (nombre !== undefined) {
-        const otra = await especialidadConNombre(tx, nombre, id);
+        const otra = await buscarEspecialidadPorNombre(tx, nombre, id);
         if (otra) return duplicado(`La especialidad "${otra.nombre}" ya existe`);
       }
       await tx

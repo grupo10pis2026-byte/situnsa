@@ -7,6 +7,7 @@ import multipart from "@fastify/multipart";
 import rateLimit from "@fastify/rate-limit";
 import Fastify from "fastify";
 import { manejarError, manejarNoEncontrado } from "./infra/http/manejador-errores.js";
+import { registerAsesoresRoutes } from "./modules/asesores/asesores.routes.js";
 import { registerAuthRoutes } from "./modules/auth/auth.routes.js";
 import { registerProgramasRoutes } from "./modules/catalogos/catalogos.routes.js";
 import { registerCierreRoutes } from "./modules/cierre/cierre.routes.js";
@@ -17,17 +18,15 @@ import { registerReportesTitulacionRoutes } from "./modules/reportes/reportes.ro
 import { registerSeguimientoRoutes } from "./modules/seguimiento/seguimiento.routes.js";
 import { registerSeguridadRoutes } from "./modules/seguridad/seguridad.routes.js";
 import { registerTallerConfigRoutes } from "./modules/taller-config/taller-config.routes.js";
-import {
-  registerGruposRoutes,
-  registerReportesRoutes,
-} from "./modules/talleres/grupos-pagos.routes.js";
-import { registerSesionesRoutes } from "./modules/talleres/sesiones.routes.js";
-import { registerTallerArchivosRoutes } from "./modules/talleres/taller-archivos.routes.js";
-import { registerTallerAvancesRoutes } from "./modules/talleres/taller-avances.routes.js";
-import {
-  registerAsesoresRoutes,
-  registerTalleresRoutes,
-} from "./modules/talleres/talleres.routes.js";
+import { registerAlertasTallerRoutes } from "./modules/talleres/alertas/alertas.routes.js";
+import { registerEncuestasTallerRoutes } from "./modules/talleres/encuestas/encuestas.js";
+import { registerFichaCierreRoutes } from "./modules/talleres/ficha/ficha-cierre.routes.js";
+import { registerHitosRoutes } from "./modules/talleres/hitos/hitos.routes.js";
+import { registerMiTallerRoutes } from "./modules/talleres/mi-taller/mi-taller.js";
+import { registerPagosTallerRoutes } from "./modules/talleres/pagos/pagos.routes.js";
+import { registerProyectosRoutes } from "./modules/talleres/proyectos/proyectos.routes.js";
+import { registerSesionesRoutes } from "./modules/talleres/sesiones/sesiones.routes.js";
+import { registerTalleresRoutes } from "./modules/talleres/talleres.routes.js";
 
 const PORT = Number(process.env.PORT ?? 3001);
 
@@ -38,7 +37,13 @@ export async function buildServer() {
   await app.register(cookie);
   await app.register(multipart, { limits: { fileSize: 50 * 1024 * 1024 } });
   // Límite global anti-abuso (S-FIPS Controles); login tiene tope propio + bloqueo 5×15min.
-  await app.register(rateLimit, { global: true, max: 500, timeWindow: "1 minute" });
+  // RATE_LIMIT_MAX solo para entornos de prueba (la suite e2e supera 500/min).
+  const maxPorMinuto = Number(process.env.RATE_LIMIT_MAX ?? 500);
+  await app.register(rateLimit, {
+    global: true,
+    max: Number.isInteger(maxPorMinuto) && maxPorMinuto > 0 ? maxPorMinuto : 500,
+    timeWindow: "1 minute",
+  });
 
   // Errores sin fugas (INC-02) y 404 homogéneo para cualquier ruta.
   app.setErrorHandler(manejarError);
@@ -59,12 +64,15 @@ export async function buildServer() {
   registerDocumentosRoutes(app);
   registerCierreRoutes(app);
   registerTalleresRoutes(app);
-  registerAsesoresRoutes(app);
-  registerGruposRoutes(app);
+  registerProyectosRoutes(app);
   registerSesionesRoutes(app);
-  registerTallerAvancesRoutes(app);
-  registerTallerArchivosRoutes(app);
-  registerReportesRoutes(app);
+  registerHitosRoutes(app);
+  registerPagosTallerRoutes(app);
+  registerFichaCierreRoutes(app);
+  registerAlertasTallerRoutes(app);
+  registerEncuestasTallerRoutes(app);
+  registerMiTallerRoutes(app);
+  registerAsesoresRoutes(app);
   registerReportesTitulacionRoutes(app);
   registerConfiguracionRoutes(app);
   registerTallerConfigRoutes(app);

@@ -15,11 +15,21 @@ export interface AccesoEmitido {
  * clave) y los envía por correo. Invalida los enlaces anteriores sin usar del
  * mismo propósito. Solo usuarios activos.
  */
+/** Texto de bienvenida de la activación según a quién se le crea la cuenta. */
+export type PerfilAcceso = "TESISTA" | "ASESOR";
+
+function textoActivacion(perfil: PerfilAcceso, nombres: string): string {
+  return perfil === "ASESOR"
+    ? `Hola ${nombres}: la Secretaría del Taller de Tesis te registró como asesor. Crea tu clave para gestionar tu taller, registrar la asistencia y revisar los avances de tus tesistas. El enlace vence en 72 horas y solo puede usarse una vez.`
+    : `Hola ${nombres}: tu expediente fue validado. Crea tu clave para consultar tu trámite, cargar tus documentos y recibir notificaciones. El enlace vence en 72 horas y solo puede usarse una vez.`;
+}
+
 export class EmitirAccesoUseCase {
   async execute(
     usuarioIds: readonly string[],
     proposito: PropositoToken,
     ahora: Date = new Date(),
+    perfil: PerfilAcceso = "TESISTA",
   ): Promise<AccesoEmitido[]> {
     if (usuarioIds.length === 0) return [];
     const uow = new DrizzleUnitOfWork(db);
@@ -56,9 +66,13 @@ export class EmitirAccesoUseCase {
         asunto: activacion
           ? "Activa tu acceso al Sistema de Titulación FIPS"
           : "Restablece tu clave del Sistema de Titulación FIPS",
-        titulo: activacion ? "Tu portal de titulación está listo" : "Restablecimiento de clave",
+        titulo: activacion
+          ? perfil === "ASESOR"
+            ? "Tu acceso como asesor está listo"
+            : "Tu portal de titulación está listo"
+          : "Restablecimiento de clave",
         texto: activacion
-          ? `Hola ${e.nombres}: tu expediente fue validado. Crea tu clave para consultar tu trámite, cargar tus documentos y recibir notificaciones. El enlace vence en 72 horas y solo puede usarse una vez.`
+          ? textoActivacion(perfil, e.nombres)
           : `Hola ${e.nombres}: recibimos una solicitud para restablecer tu clave. Si no la hiciste, ignora este mensaje. El enlace vence en 72 horas y solo puede usarse una vez.`,
         enlace: urlPortal(`/activar?token=${encodeURIComponent(e.token)}`),
         textoEnlace: activacion ? "Crear mi clave" : "Restablecer mi clave",

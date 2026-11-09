@@ -16,13 +16,31 @@ import {
   type ParametrosTaller,
   resolverParametrosTaller,
 } from "@pis/domain";
-import { and, asc, count, eq, gte, lte } from "drizzle-orm";
+import { and, asc, count, eq, gte, lte, ne, sql } from "drizzle-orm";
 
 /**
  * Lecturas de la configuración del taller (P16). `leerParametrosTaller` y
  * `feriadosActivos` son el punto de entrada para los demás cortes del
  * módulo (crear taller, asistencia, pagos…): nadie lee esas tablas a mano.
  */
+
+/**
+ * Especialidad con el mismo nombre (sin distinguir mayúsculas), con el mismo
+ * criterio que el índice único `lower(nombre)`: la comparación la hace Postgres.
+ */
+export async function buscarEspecialidadPorNombre(
+  tx: DbExecutor,
+  nombre: string,
+  exceptoId?: string,
+): Promise<{ id: string; nombre: string; activa: boolean } | null> {
+  const mismoNombre = sql`lower(${especialidades.nombre}) = lower(${nombre})`;
+  const filas = await tx
+    .select({ id: especialidades.id, nombre: especialidades.nombre, activa: especialidades.activa })
+    .from(especialidades)
+    .where(exceptoId ? and(mismoNombre, ne(especialidades.id, exceptoId)) : mismoNombre)
+    .limit(1);
+  return filas[0] ?? null;
+}
 
 /** Parámetros vigentes: lo guardado en BD sobre los valores por defecto del dominio. */
 export async function leerParametrosTaller(tx: DbExecutor = db): Promise<ParametrosTaller> {
@@ -92,7 +110,7 @@ export async function leerConfigTaller(tx: DbExecutor = db): Promise<ConfigTalle
         clave,
         etiqueta: def.etiqueta,
         origen: def.origen,
-        porConfirmar: def.porConfirmar,
+        decision: def.decision,
         tipo: typeof porDefecto === "boolean" ? ("SI_NO" as const) : ("NUMERO" as const),
         valor: parametros[clave],
         porDefecto,

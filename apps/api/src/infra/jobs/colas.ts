@@ -3,6 +3,8 @@ import { enqueue } from "./pg-boss.client.js";
 /** Colas del sistema (pg-boss sobre Postgres, sin Redis — Lean). */
 export const COLA_CORREOS = "correos";
 export const COLA_RECORDATORIOS = "recordatorios";
+/** Taller de Tesis: cambios de estado por fecha (spec v1.0 §6). */
+export const COLA_ESTADOS_TALLER = "estados-taller";
 
 /**
  * Correo a encolar (HU-0058/0061/0062). Los destinatarios del expediente se

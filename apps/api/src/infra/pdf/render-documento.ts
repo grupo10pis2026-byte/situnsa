@@ -1,4 +1,4 @@
-import type { DocumentoRenderizado, Segmento } from "@pis/domain";
+import type { DocumentoRenderizado, Segmento, TablaDocumento } from "@pis/domain";
 import { PDFDocument, type PDFFont, type PDFPage, rgb, StandardFonts } from "pdf-lib";
 
 /**
@@ -18,6 +18,8 @@ const AMARILLO = rgb(1, 0.93, 0.35);
 
 export interface MetaPdf {
   codigo: string;
+  /** Etiqueta del código en el pie (por defecto "Expediente"). */
+  referencia?: string;
   versionPlantilla: string;
   generadoEn: Date;
 }
@@ -178,6 +180,68 @@ function bloque(
   }
 }
 
+/**
+ * Tabla con bordes: encabezado en negrita sobre gris claro, celdas con salto
+ * de línea y filas que pasan de página repitiendo el encabezado.
+ */
+function tabla(
+  lienzo: Lienzo,
+  t: TablaDocumento,
+  f: { font: PDFFont; bold: PDFFont; cod: (texto: string) => string },
+): void {
+  const TAM = 8.5;
+  const ALTO = TAM * 1.35;
+  const PAD = 4;
+  const total = t.columnas.reduce((n, c) => n + c.peso, 0) || 1;
+  const anchos = t.columnas.map((c) => (ANCHO_UTIL * c.peso) / total);
+  const lineasDe = (texto: string, font: PDFFont, ancho: number, pendiente = false) =>
+    lineas(aPalabras([{ texto: f.cod(texto || "—"), pendiente }]), font, TAM, ancho - PAD * 2);
+
+  const fila = (celdas: Array<{ texto: string; pendiente?: boolean }>, encabezado: boolean) => {
+    const font = encabezado ? f.bold : f.font;
+    const partes = celdas.map((c, i) => lineasDe(c.texto, font, anchos[i] ?? 0, c.pendiente));
+    const alto = Math.max(...partes.map((l) => l.length), 1) * ALTO + PAD * 2;
+    return { partes, alto, font, encabezado };
+  };
+  const dibujar = (r: ReturnType<typeof fila>) => {
+    let x = MARGEN;
+    const yTop = lienzo.y;
+    r.partes.forEach((ls, i) => {
+      const w = anchos[i] ?? 0;
+      lienzo.page.drawRectangle({
+        x,
+        y: yTop - r.alto,
+        width: w,
+        height: r.alto,
+        borderColor: GRIS,
+        borderWidth: 0.5,
+        ...(r.encabezado ? { color: rgb(0.93, 0.94, 0.96) } : {}),
+      });
+      ls.forEach((l, j) => {
+        dibujarLinea(lienzo.page, l, x + PAD, yTop - PAD - TAM - j * ALTO, r.font, TAM);
+      });
+      x += w;
+    });
+    lienzo.y -= r.alto;
+  };
+
+  const cabecera = fila(
+    t.columnas.map((c) => ({ texto: c.titulo })),
+    true,
+  );
+  lienzo.asegurar(cabecera.alto + 30);
+  dibujar(cabecera);
+  for (const celdas of t.filas) {
+    const r = fila([...celdas], false);
+    if (lienzo.y - r.alto < MARGEN + 24) {
+      lienzo.asegurar(lienzo.y);
+      dibujar(cabecera);
+    }
+    dibujar(r);
+  }
+  lienzo.y -= 14;
+}
+
 /** Sanea el texto de los segmentos para la codificación de la fuente. */
 function sanear(segmentos: readonly Segmento[], cod: (t: string) => string): Segmento[] {
   return segmentos.map((s) => ({ texto: cod(s.texto), pendiente: s.pendiente }));
@@ -198,7 +262,7 @@ export async function renderizarPdf(doc: DocumentoRenderizado, meta: MetaPdf): P
   const fecha = meta.generadoEn.toLocaleDateString("es-PE", { timeZone: "America/Lima" });
   const pie = (): void => {
     const texto = cod(
-      `Formato generado por SITUNSA · Expediente ${meta.codigo} · Plantilla ${meta.versionPlantilla} · ${fecha}`,
+      `Formato generado por SITUNSA · ${meta.referencia ?? "Expediente"} ${meta.codigo} · Plantilla ${meta.versionPlantilla} · ${fecha}`,
     );
     lienzo.page.drawLine({
       start: { x: MARGEN, y: MARGEN - 8 },
@@ -257,6 +321,7 @@ export async function renderizarPdf(doc: DocumentoRenderizado, meta: MetaPdf): P
       bloque(lienzo, sanear(p, cod), { font: serif, tam: 12 });
       lienzo.y -= 10;
     }
+    if (doc.tabla) tabla(lienzo, doc.tabla, { font: sans, bold: sansBold, cod });
     if (doc.firmas.length > 0) {
       lienzo.asegurar(110);
       lienzo.y -= 60;

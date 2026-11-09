@@ -1,9 +1,16 @@
 import { db, expedientes, subetapas, usuarios } from "@pis/db";
 import { evaluarPlazo } from "@pis/domain";
 import { and, eq, inArray, isNotNull, isNull } from "drizzle-orm";
+import { procesoDiarioTaller } from "../../modules/talleres/use-cases/estados-taller.job.js";
 import { enviarCorreo, urlPortal } from "../mail/correo.service.js";
 import { renderizarCorreo } from "../mail/plantilla-correo.js";
-import { COLA_CORREOS, COLA_RECORDATORIOS, type CorreoPayload, enqueueCorreo } from "./colas.js";
+import {
+  COLA_CORREOS,
+  COLA_ESTADOS_TALLER,
+  COLA_RECORDATORIOS,
+  type CorreoPayload,
+  enqueueCorreo,
+} from "./colas.js";
 import { getBoss } from "./pg-boss.client.js";
 
 let registrados = false;
@@ -25,13 +32,30 @@ export async function iniciarWorkers(): Promise<void> {
   // cola inexistente = "Queue not found"). createQueue es idempotente.
   await boss.createQueue(COLA_CORREOS);
   await boss.createQueue(COLA_RECORDATORIOS);
-  await boss.work<CorreoPayload>(COLA_CORREOS, async (jobs) => {
-    // Un error aquí hace que pg-boss reintente el job (retryLimit al encolar).
-    for (const job of jobs) await procesarCorreo(job.data);
-  });
+  await boss.createQueue(COLA_ESTADOS_TALLER);
+  // 4 workers de un correo cada uno, cada segundo (pg-boss 10 no tiene
+  // concurrencia local: se registra work() varias veces). Con un solo worker
+  // cada 2 s, una ráfaga de avisos retrasaba los enlaces de acceso. Un correo
+  // por job: si falla, se reintenta solo ese (un lote se reintentaría entero).
+  for (let i = 0; i < 4; i++) {
+    await boss.work<CorreoPayload>(COLA_CORREOS, { pollingIntervalSeconds: 1 }, async (jobs) => {
+      // Un error aquí hace que pg-boss reintente el job (retryLimit al encolar).
+      for (const job of jobs) await procesarCorreo(job.data);
+    });
+  }
   await boss.work(COLA_RECORDATORIOS, async () => {
     await revisarPlazos();
   });
+  await boss.work(COLA_ESTADOS_TALLER, async () => {
+    await procesoDiarioTaller();
+  });
+  try {
+    await boss.schedule(COLA_ESTADOS_TALLER, "10 0 * * *", undefined, { tz: "America/Lima" });
+    // Al arrancar también: si el servidor estuvo apagado a medianoche.
+    await procesoDiarioTaller({ avisosPrevios: false });
+  } catch (err) {
+    console.error("[workers] no se pudo programar los estados del taller", err);
+  }
   try {
     await boss.schedule(COLA_RECORDATORIOS, "0 7 * * 1-5", undefined, { tz: "America/Lima" });
   } catch (err) {
