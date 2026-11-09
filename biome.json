@@ -7,7 +7,14 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["**", "!legacy-code", "!**/dist", "!**/routeTree.gen.ts", "!pnpm-lock.yaml"]
+    "includes": [
+      "**",
+      "!legacy-code",
+      "!**/dist",
+      "!**/routeTree.gen.ts",
+      "!pnpm-lock.yaml",
+      "!docs/pruebas"
+    ]
   },
   "formatter": {
     "enabled": true,

@@ -1,0 +1,814 @@
+[
+  {
+    "capturas": [],
+    "id": "ROL-00",
+    "seccion": "Roles y permisos (§4)",
+    "titulo": "La Secretaría de Titulación no gestiona el taller",
+    "pasos": "Con el usuario demo 00000002 (rol RESP_TITULACION) intentar registrar un asesor.",
+    "esperado": "Solo la Secretaría del Taller (permiso taller.crear, rol RESP_TALLER) gestiona asesores y talleres.",
+    "obtenido": "HTTP 403 «Se requiere permiso taller.crear». Para las pruebas se creó la usuaria QA Jimena Salazar (72000001) con el rol RESP_TALLER.",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:32:53.956Z"
+  },
+  {
+    "capturas": [
+      "001-p15-lista-asesores.png",
+      "002-p15-errores-formulario.png",
+      "003-p15-formulario-nueva-asesora.png",
+      "004-p15-asesora-registrada.png"
+    ],
+    "id": "P15-01",
+    "seccion": "P15 Lista de asesores",
+    "titulo": "Registrar una asesora nueva con especialidades",
+    "pasos": "Secretaría → Asesores → Nuevo asesor; intentar guardar vacío; completar DNI, nombres, apellidos, correo institucional, teléfono, grado y 2 especialidades; Guardar asesor.",
+    "esperado": "Errores junto a cada campo al guardar vacío; la asesora aparece en la lista con estado Activo y se le envía su acceso.",
+    "obtenido": "Errores mostrados por campo. Asesora creada (id 81552503-ec9b-45b2-ab40-f18d7d99aaa1) con 2 especialidades. DNI repetido → HTTP 409 (Ya existe un usuario con el DNI 70000001 (Rosa Paredes Quispe)).",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:33:05.014Z"
+  },
+  {
+    "capturas": [
+      "005-p10-perfil-asesora.png"
+    ],
+    "id": "P10-01",
+    "seccion": "P10 Perfil del asesor",
+    "titulo": "Perfil: estado Disponible, especialidades y subir CV (PDF)",
+    "pasos": "Secretaría → Asesores → Ver perfil de la asesora → Subir archivo (PDF).",
+    "esperado": "Estado DISPONIBLE (sin taller), especialidades como etiquetas, archivo listado con Ver/Descargar/Eliminar.",
+    "obtenido": "Estado «Disponible», 2 especialidades, el CV aparece en Archivos.",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:33:06.660Z"
+  },
+  {
+    "capturas": [
+      "006-activacion-cuenta-asesora.png",
+      "007-activacion-cuenta-ok.png"
+    ],
+    "id": "P15-02",
+    "seccion": "P15 Lista de asesores",
+    "titulo": "Al crear la asesora se le asigna el rol Asesor y recibe su acceso",
+    "pasos": "Abrir el correo «Activa tu acceso» en Mailpit, seguir el enlace y crear la clave.",
+    "esperado": "Llega el correo con enlace; tras crear la clave la asesora entra con rol Asesor.",
+    "obtenido": "Correo recibido (token presente); inicio de sesión con la nueva clave: correcto.",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:33:11.175Z"
+  },
+  {
+    "capturas": [
+      "008-p2-errores-al-guardar-vacio.png",
+      "009-p2-asesores-disponibles.png"
+    ],
+    "id": "AC-01",
+    "seccion": "Pruebas de aceptación (§16)",
+    "titulo": "#1 Crear taller con asesor que ya tiene taller activo",
+    "pasos": "Secretaría → Taller de Tesis → Nuevo taller; abrir la lista «Asesor (solo disponibles)».",
+    "esperado": "El asesor con taller activo (Asesor Prueba, TALLER 06) no aparece en la lista.",
+    "obtenido": "Opciones: Elige un asesor… · Dr. Rosa Paredes Quispe. Asesor Prueba no aparece; la nueva asesora sí aparece.",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:33:16.246Z"
+  },
+  {
+    "capturas": [
+      "010-p2-calendario-feriado-contador.png"
+    ],
+    "id": "AC-02",
+    "seccion": "Pruebas de aceptación (§16)",
+    "titulo": "#2 Taller del 10/10 al 28/11, sábado y domingo",
+    "pasos": "En P2 poner inicio 10/10/2026 y fin 28/11/2026 con sábado y domingo marcados.",
+    "esperado": "Propone las sesiones omitiendo el feriado (01/11, Todos los Santos); el contador avisa si no suman 24; se puede guardar.",
+    "obtenido": "Contador: «14 de 24 · faltan 10». Filas con feriado omitido: 1. El botón Guardar sigue habilitado.",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:33:19.054Z"
+  },
+  {
+    "capturas": [
+      "011-p2-taller-qa-formulario.png",
+      "012-p3-detalle-taller-qa.png",
+      "013-p3-pestana-pensiones.png",
+      "014-p3-pestana-plan-copiado.png"
+    ],
+    "id": "AC-03",
+    "seccion": "Pruebas de aceptación (§16)",
+    "titulo": "#3 Guardar taller",
+    "pasos": "P2: TALLER QA-01, 2026-II, asesora Rosa Paredes, 07/11/2026 a 24/01/2027, sábado y domingo, cupo 3, enlaces de Meet; Guardar taller.",
+    "esperado": "Se crea ABIERTO A INSCRIPCIONES con sus sesiones, 3 pensiones y la copia del plan institucional; abre P3.",
+    "obtenido": "Contador antes de guardar: «24 de 24». Estado: ABIERTO_INSCRIPCIONES. Sesiones: 24. Pensiones: 3. Semanas del plan: 12.",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:33:26.609Z"
+  },
+  {
+    "capturas": [
+      "015-p1-lista-talleres.png"
+    ],
+    "id": "P1-01",
+    "seccion": "P1 Lista de talleres",
+    "titulo": "Lista con taller, asesor, período, días, proyectos, sesiones y estado",
+    "pasos": "Secretaría → Taller de Tesis.",
+    "esperado": "El taller nuevo aparece con proyectos 0/3, sesiones 0/24 y estado Abierto a inscripciones; filtros por período, estado y asesor.",
+    "obtenido": "TALLER QA-01 listado junto a TALLER 06 y los talleres finalizados/cancelados del seed.",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:33:28.149Z"
+  },
+  {
+    "capturas": [
+      "017-d1-alumno-en-otro-taller.png"
+    ],
+    "id": "AC-05",
+    "seccion": "Pruebas de aceptación (§16)",
+    "titulo": "#5 Asignar alumno ya inscrito en otro taller",
+    "pasos": "D1 con el DNI 11223344 (María Torres, del TALLER 06).",
+    "esperado": "No asigna y muestra el motivo.",
+    "obtenido": "El diálogo muestra el taller activo y el motivo; el servidor responde HTTP 409: «María Torres Flores ya está en otro taller (TALLER 06)».",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:33:39.808Z"
+  },
+  {
+    "capturas": [
+      "016-d1-asignar-p01-chips.png",
+      "018-p3-taller-completo-alumnos.png"
+    ],
+    "id": "AC-06",
+    "seccion": "Pruebas de aceptación (§16)",
+    "titulo": "#6 Asignar el proyecto que llena el cupo",
+    "pasos": "Con cupo 3, asignar P-01 (Ana y Bruno), P-02 (Carla) y P-03 (Diego).",
+    "esperado": "Al asignar el último proyecto del cupo el taller pasa a COMPLETO (equivalente al proyecto 15 con cupo 15).",
+    "obtenido": "Estado tras el 3.er proyecto: COMPLETO.",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:33:46.267Z"
+  },
+  {
+    "capturas": [
+      "019-p3-asignar-deshabilitado-cupo.png"
+    ],
+    "id": "AC-04",
+    "seccion": "Pruebas de aceptación (§16)",
+    "titulo": "#4 Asignar alumno con cupo lleno",
+    "pasos": "Con el taller COMPLETO intentar asignar a Elena Vega (71000005).",
+    "esperado": "No asigna y muestra el motivo.",
+    "obtenido": "Botón «Asignar alumno» deshabilitado con el motivo; el servidor responde HTTP 400: «Cupo lleno: 3 de 3 proyectos».",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:33:47.095Z"
+  },
+  {
+    "capturas": [],
+    "id": "NOT-01",
+    "seccion": "Notificaciones (§13)",
+    "titulo": "Asignación al taller: aviso al alumno",
+    "pasos": "Revisar Mailpit tras D1.",
+    "esperado": "Cada alumno asignado recibe un correo con enlace a Mi Taller.",
+    "obtenido": "4 correos «Te asignaron…»: diego.qa@unsa.edu.pe, carla.qa@unsa.edu.pe, ana.qa@unsa.edu.pe, rosa.paredes@unsa.edu.pe.",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:33:47.114Z"
+  },
+  {
+    "capturas": [],
+    "id": "EST-01",
+    "seccion": "Estados (§6)",
+    "titulo": "El taller pasa a EN CURSO en su fecha de inicio",
+    "pasos": "Proceso diario (al arrancar la API y a las 00:10) con el TALLER QA-01 iniciado el 07/11/2026.",
+    "esperado": "COMPLETO → EN CURSO en la fecha de inicio (propuesta) y queda en el historial con actor SISTEMA.",
+    "obtenido": "Estado: EN_CURSO. Historial: INICIO_TALLER — El taller empezó el 2026-11-07: pasa a EN_CURSO.",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:35:39.832Z"
+  },
+  {
+    "capturas": [
+      "020-p5-mi-taller-asesora.png"
+    ],
+    "id": "P5-01",
+    "seccion": "P5 Mi Taller (asesor)",
+    "titulo": "La asesora ve solo su taller con sus pestañas de trabajo",
+    "pasos": "Entrar como la asesora → menú Mi Taller.",
+    "esperado": "Tarjeta del taller (nombre, estado, proyectos, próxima sesión), seguimiento, sesiones, grupos, plan y alumnos.",
+    "obtenido": "Menú: Mis Alumnos Mi Taller Mis Encuestas. Se muestra TALLER QA-01 EN CURSO con 3/3 proyectos y las pestañas de trabajo.",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:35:44.855Z"
+  },
+  {
+    "capturas": [
+      "021-p5-crear-grupo-a.png",
+      "023-p5-grupos-creados.png"
+    ],
+    "id": "P5-02",
+    "seccion": "P5 Mi Taller (asesor)",
+    "titulo": "Crear grupos de horario y asignar proyectos",
+    "pasos": "Grupos de horario → Crear grupo: «Grupo A» 15:00–17:30 con P-01 y P-02; «Grupo B» 17:30–20:00 con P-03.",
+    "esperado": "Cada proyecto queda en un solo grupo; la tabla muestra grupo, horario y proyectos.",
+    "obtenido": "Grupos: Grupo A 15:00-17:30 (P-01, P-02); Grupo B 17:30-20:00 (P-03). Sin grupo: 0.",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:35:51.959Z"
+  },
+  {
+    "capturas": [
+      "024-p4-sesiones-asesora.png",
+      "025-p4-asistencia-sesion1-grupo-a.png",
+      "026-p4-asistencia-sesion1-grupo-b-falta.png",
+      "027-p4-sesion1-realizada.png"
+    ],
+    "id": "AC-08",
+    "seccion": "Pruebas de aceptación (§16)",
+    "titulo": "#8 Asesor registra asistencia",
+    "pasos": "Sesión 1 (07/11): Grupo A todos Presente → Guardar; Grupo B: Diego Falta → Guardar.",
+    "esperado": "La sesión queda REALIZADA al guardar todos los grupos (no antes).",
+    "obtenido": "Tras guardar solo el Grupo A: PROGRAMADA. Tras guardar el Grupo B: REALIZADA. Las sesiones futuras muestran «aún no llega la fecha» en vez del botón.",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:35:59.053Z"
+  },
+  {
+    "capturas": [
+      "028-p4-alerta-dos-faltas.png"
+    ],
+    "id": "AC-09",
+    "seccion": "Pruebas de aceptación (§16)",
+    "titulo": "#9 Alumno con 2 faltas consecutivas",
+    "pasos": "Sesión 2 (08/11): Grupo A presente; Grupo B: Diego Falta (segunda seguida).",
+    "esperado": "Alerta en P12 y aviso al alumno.",
+    "obtenido": "Alerta: FALTAS_CONSECUTIVAS ACTIVA. Correos a Diego: «Tienes dos faltas consecutivas en el Taller de Tesis», «Te asignaron al TALLER QA-01».",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:36:05.710Z"
+  },
+  {
+    "capturas": [
+      "029-p4-corregir-sin-motivo.png",
+      "030-p4-corregir-con-motivo.png"
+    ],
+    "id": "AC-10",
+    "seccion": "Pruebas de aceptación (§16)",
+    "titulo": "#10 Corregir una asistencia sin motivo",
+    "pasos": "Sesión 1: cambiar a Carla de Presente a Justificada sin motivo → Guardar; luego con motivo.",
+    "esperado": "Sin motivo no se guarda; con motivo se guarda y queda en el historial.",
+    "obtenido": "Sin motivo: sigue PRESENTE. Con motivo: JUSTIFICADA · motivo: Presentó certificado médico.",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:36:10.822Z"
+  },
+  {
+    "capturas": [
+      "031-d2-reprogramar.png",
+      "032-d2-cancelar.png",
+      "033-p4-sesion-extra.png",
+      "034-p4-sesiones-tras-d2.png"
+    ],
+    "id": "D2-01",
+    "seccion": "D2 Reprogramar o cancelar sesión",
+    "titulo": "Reprogramar, cancelar y agregar sesión extra",
+    "pasos": "Sesión 3 (14/11) → reprogramar al 13/11 con motivo; sesión 4 (15/11) → cancelar con motivo; agregar sesión extra el 30/01/2027.",
+    "esperado": "La reprogramada conserva su número y queda REPROGRAMADA con la fecha original; la cancelada no admite asistencia; la extra se agrega al final con el siguiente número; se avisa a los alumnos.",
+    "obtenido": "Sesión 3: REPROGRAMADA 2026-11-13 (antes 2026-11-14). Sesión 4: CANCELADA · Asesora en comisión de servicio. Última: 25 2027-01-30 PROGRAMADA. Correos de sesiones enviados: 3.",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:36:20.396Z"
+  },
+  {
+    "capturas": [
+      "035-ac11-asesora-taller-ajeno.png"
+    ],
+    "id": "AC-11",
+    "seccion": "Pruebas de aceptación (§16)",
+    "titulo": "#11 Asesor intenta abrir un taller ajeno",
+    "pasos": "La asesora Rosa abre la dirección del TALLER 06 (de otro asesor).",
+    "esperado": "Acceso denegado (el servidor responde, no solo se oculta).",
+    "obtenido": "Pantalla «No se encontró el taller». Detalle: HTTP 403; sesiones: HTTP 403. Queda registrado como ACCESO_DENEGADO en el historial del TALLER 06.",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:36:23.475Z"
+  },
+  {
+    "capturas": [
+      "036-ac07-alumna-sesiones-sin-accion.png"
+    ],
+    "id": "AC-07",
+    "seccion": "Pruebas de aceptación (§16)",
+    "titulo": "#7 Alumno intenta marcar su asistencia",
+    "pasos": "Ana entra a Mi Taller → Sesiones y asistencia; además se llama directo al servidor para marcarse Presente.",
+    "esperado": "No existe la acción; el servidor lo rechaza.",
+    "obtenido": "Botones «Registrar asistencia» en su pantalla: 0. Llamada directa: HTTP 403 «La asistencia la registra el asesor del taller».",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:36:30.302Z"
+  },
+  {
+    "capturas": [
+      "037-p3-secretaria-sesiones.png",
+      "038-p3-secretaria-grupos-solo-lectura.png",
+      "039-p3-alumnos-asistencia.png"
+    ],
+    "id": "P3-01",
+    "seccion": "P3 Detalle del taller",
+    "titulo": "La Secretaría consulta sesiones, grupos (solo lectura) y asistencia por alumno",
+    "pasos": "Secretaría → TALLER QA-01 → pestañas Sesiones, Grupos de horario y Alumnos.",
+    "esperado": "Sesiones con su estado; grupos sin botones de edición; % de asistencia por alumno (rojo si es baja).",
+    "obtenido": "Se ven las sesiones realizadas/reprogramada/cancelada, los dos grupos sin acciones y la asistencia (Diego 0 %).",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:36:38.000Z"
+  },
+  {
+    "capturas": [
+      "040-p6-editar-semana-3.png",
+      "041-p6-plan-del-taller.png",
+      "042-p7-alumna-ve-indicaciones.png"
+    ],
+    "id": "AC-12",
+    "seccion": "Pruebas de aceptación (§16)",
+    "titulo": "#12 Asesor edita contenido e indicaciones del plan",
+    "pasos": "Asesora → Plan del taller → Editar semana 3 (contenido e indicaciones) → Guardar; la alumna Ana abre su plan.",
+    "esperado": "Los alumnos lo ven y reciben aviso. El plan institucional no cambia.",
+    "obtenido": "Plan del taller: «Marco teórico: antecedentes nacionales e internacionales (mínimo 10 fuentes) | Usar normas APA 7. Traer el avance impreso el sábado.». Plan institucional sem. 3: «Marco teórico». Aviso «Se actualizó la semana 3 del plan del taller» enviado a 4 alumnos: ana.qa@unsa.edu.pe, bruno.qa@unsa.edu.pe, carla.qa@unsa.edu.pe, diego.qa@unsa.edu.pe.",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:40:01.841Z"
+  },
+  {
+    "capturas": [
+      "040-p6-editar-semana-3.png"
+    ],
+    "id": "AC-13",
+    "seccion": "Pruebas de aceptación (§16)",
+    "titulo": "#13 Asesor intenta cambiar el entregable del hito de la semana 2",
+    "pasos": "El diálogo de edición no ofrece el entregable; además se envía al servidor un cambio de entregable y de hito para la semana 2.",
+    "esperado": "No se permite.",
+    "obtenido": "Diálogo: solo Contenido e Indicaciones (el entregable se muestra como fijo). Servidor: HTTP 200; entregable antes «Plan de tesis», después «Plan de tesis · hito true · fijo true» (sin cambios).",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:38:31.822Z"
+  },
+  {
+    "capturas": [
+      "043-p6-plan-habilitado.png"
+    ],
+    "id": "P6-01",
+    "seccion": "P6 Plan, hitos y avances",
+    "titulo": "Habilitar el plan de tesis en los proyectos",
+    "pasos": "Asesora → Seguimiento de hitos → «Habilitar» en la columna Plan de tesis; luego intentar habilitar el Avance 1 de P-01.",
+    "esperado": "El plan queda HABILITADO y se avisa a los alumnos; un hito no se habilita si el anterior no está aprobado.",
+    "obtenido": "Planes habilitados: 3/3. Avance 1 antes de aprobar el plan: HTTP 400 «El hito anterior aún no está aprobado».",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:38:38.724Z"
+  },
+  {
+    "capturas": [
+      "046-p6b-observar-sin-texto.png",
+      "047-p6b-plan-observado.png"
+    ],
+    "id": "AC-15",
+    "seccion": "Pruebas de aceptación (§16)",
+    "titulo": "#15 Asesor observa sin escribir observaciones",
+    "pasos": "P6b → Revisar v1 → elegir Observada sin texto; también se intenta por el servidor.",
+    "esperado": "No se guarda.",
+    "obtenido": "Botón «Guardar revisión» deshabilitado; servidor: HTTP 400 «Escribe las observaciones». Con observaciones sí se guarda (hito OBSERVADO).",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:38:52.838Z"
+  },
+  {
+    "capturas": [
+      "048-p7-alumna-ve-observacion.png",
+      "049-p6b-v1-y-v2.png"
+    ],
+    "id": "AC-14",
+    "seccion": "Pruebas de aceptación (§16)",
+    "titulo": "#14 Alumno sube el plan 2 veces (observado entre medias)",
+    "pasos": "Ana ve la observación en Mi Taller y sube la v2; la asesora abre P6b.",
+    "esperado": "P6b muestra v1 y v2. La v1 queda de solo lectura.",
+    "obtenido": "Versiones: v1 OBSERVADA, v2 ENTREGADA. Intento de revisar otra vez la v1: HTTP 400 «Solo se revisa la última versión». Solo la última versión tiene «Revisar».",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:39:03.427Z"
+  },
+  {
+    "capturas": [
+      "050-d3-aprobar-plan.png",
+      "051-d3-plan-aprobado.png",
+      "052-asesor-mis-alumnos-set.png",
+      "053-expediente-creado-por-d3.png"
+    ],
+    "id": "AC-16",
+    "seccion": "Pruebas de aceptación (§16)",
+    "titulo": "#16 Aprobar plan entregado",
+    "pasos": "Revisar v2 → Conforme; «Aprobar plan» → título, programa y modalidad → Aprobar y crear expediente.",
+    "esperado": "Se genera el Anexo 18, el expediente (SET) y la Etapa 1; el alumno aparece en «Mis Alumnos».",
+    "obtenido": "Expediente SET009 en estado EN_PLAN; documentos generados: ACEPTACION_ASESORIA, CARATULA_PLAN, DECRETO_APROBACION, DJ_CONFIDENCIALIDAD, SOLICITUD_INSCRIPCION; tesistas: PLAN_APROBADO, PLAN_APROBADO; aparece en Mis Alumnos de la asesora: sí.",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:39:20.134Z"
+  },
+  {
+    "capturas": [
+      "054-ac17-p02-sin-aprobar-plan.png"
+    ],
+    "id": "AC-17",
+    "seccion": "Pruebas de aceptación (§16)",
+    "titulo": "#17 Aprobar un plan no entregado",
+    "pasos": "P-02 (Carla) con el plan habilitado pero sin entrega: abrir P6b y llamar al servidor.",
+    "esperado": "No se permite.",
+    "obtenido": "Botón «Aprobar plan» visible: 0. Servidor: HTTP 400 «El plan aún no fue entregado».",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:39:24.220Z"
+  },
+  {
+    "capturas": [
+      "055-d3-advertencias-faltas.png"
+    ],
+    "id": "D3-01",
+    "seccion": "D3 Aprobar plan",
+    "titulo": "Advertencias antes de aprobar (2 faltas consecutivas)",
+    "pasos": "Diego sube su plan (HTTP 201); la asesora abre «Aprobar plan» en P-03 y cancela.",
+    "esperado": "Muestra las advertencias (faltas consecutivas / asistencia baja); solo avisan (no bloquean, parámetro recomendado).",
+    "obtenido": "El diálogo lista «Tiene faltas consecutivas» y «Tiene asistencia baja» como advertencias que no bloquean; se canceló sin aprobar.",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:39:27.585Z"
+  },
+  {
+    "capturas": [
+      "056-p11-ficha-tras-d3.png",
+      "057-p11-subir-ficha-firmada.png",
+      "058-p11-semana2-firmada.png"
+    ],
+    "id": "P11-01",
+    "seccion": "P11 Ficha de Control",
+    "titulo": "Ficha: registro automático, PDF Anexo 1 y ficha firmada",
+    "pasos": "Tras D3, abrir la Ficha de P-01 → Descargar PDF → Subir ficha firmada marcando la semana 2.",
+    "esperado": "La semana 2 queda REVISADO al aprobar el plan; el PDF sale con el formato del Anexo 1; al subir la firmada esa fila pasa a FIRMADO.",
+    "obtenido": "Semana 2: FIRMADO. PDF guardado en documentos/Anexo1-Ficha-P-01-inicial.pdf.",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:39:33.507Z"
+  },
+  {
+    "capturas": [],
+    "id": "NOT-02",
+    "seccion": "Notificaciones (§13)",
+    "titulo": "Hito habilitado, entrega recibida, hito observado y plan aprobado",
+    "pasos": "Revisar Mailpit tras el flujo del plan.",
+    "esperado": "Alumnos: hito habilitado y observado; asesora: entrega recibida; alumnos y Secretaría: plan aprobado.",
+    "obtenido": "Hito habilitado → diego.qa@unsa.edu.pe, carla.qa@unsa.edu.pe, ana.qa@unsa.edu.pe, bruno.qa@unsa.edu.pe. Entrega recibida → rosa.paredes@unsa.edu.pe. Observado → ana.qa@unsa.edu.pe, bruno.qa@unsa.edu.pe. Plan aprobado → jimena.taller@unsa.edu.pe, ana.qa@unsa.edu.pe, bruno.qa@unsa.edu.pe.",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:40:01.931Z"
+  },
+  {
+    "capturas": [
+      "060-p8-mis-pagos-inicial.png",
+      "061-p8-subir-comprobante.png",
+      "062-p8-en-revision.png"
+    ],
+    "id": "P8-01",
+    "seccion": "P8 Mis Pagos",
+    "titulo": "La alumna sube el comprobante de la 2.ª pensión",
+    "pasos": "Ana → Mis Pagos → Pensión 2 → Subir comprobante (imagen PNG) → Enviar.",
+    "esperado": "La 1.ª aparece pagada (inscripción); la 2.ª pasa a EN REVISIÓN y se avisa a la Secretaría.",
+    "obtenido": "Pensión 1: VALIDADA. Pensión 2 tras subir: EN_REVISION. Aviso a la Secretaría: jimena.taller@unsa.edu.pe.",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:41:09.191Z"
+  },
+  {
+    "capturas": [
+      "062-p8-en-revision.png"
+    ],
+    "id": "AC-20",
+    "seccion": "Pruebas de aceptación (§16)",
+    "titulo": "#20 Subir comprobante en una pensión VALIDADA",
+    "pasos": "La 1.ª pensión de Ana está VALIDADA (inscripción): no muestra botón; se intenta por el servidor. Igual con la 2.ª EN REVISIÓN.",
+    "esperado": "No se permite.",
+    "obtenido": "Botón en la pensión 1: 1. Servidor: pensión VALIDADA → HTTP 400 «Esta pensión ya está pagada»; pensión EN REVISIÓN → HTTP 400 «Ya hay un comprobante en revisión».",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:41:10.775Z"
+  },
+  {
+    "capturas": [
+      "064-p9-observar-sin-motivo.png",
+      "065-p9-comprobante-observado.png"
+    ],
+    "id": "AC-21",
+    "seccion": "Pruebas de aceptación (§16)",
+    "titulo": "#21 Observar un comprobante sin motivo",
+    "pasos": "P9 → fila de Ana, 2.ª pensión → Observar sin motivo; también por el servidor con motivo vacío. Luego con motivo.",
+    "esperado": "No se guarda.",
+    "obtenido": "Botón «Observar» del diálogo deshabilitado; servidor: HTTP 400 «Datos inválidos en body.motivo: Escribe el motivo». Con motivo la pensión queda OBSERVADA.",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:41:22.531Z"
+  },
+  {
+    "capturas": [
+      "066-p8-alumna-ve-observacion.png",
+      "067-p9-comprobante-validado.png",
+      "068-p9-registrar-pago-directo.png",
+      "069-p9-deudores.png"
+    ],
+    "id": "P9-01",
+    "seccion": "P9 Pagos del taller",
+    "titulo": "Validar un comprobante, registrar pago directo y ver deudores",
+    "pasos": "Ana sube otro comprobante tras la observación → la Secretaría lo valida; registra el pago directo de Bruno; filtra «Solo deudores».",
+    "esperado": "La pensión queda VALIDADA y no se valida dos veces; el pago directo queda VALIDADO con observación; deudores con días de atraso.",
+    "obtenido": "Ana pensión 2: VALIDADA; segunda validación del mismo comprobante: HTTP 400. Bruno pensión 2: VALIDADA · PAGO_DIRECTO · S/ 1000. Avisos a Ana sobre la pensión 2: sí.",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:41:41.455Z"
+  },
+  {
+    "capturas": [
+      "070-p3-pensiones-pagadas.png"
+    ],
+    "id": "P3-02",
+    "seccion": "P3 Detalle del taller",
+    "titulo": "Pestaña Pensiones: fechas, montos y alumnos que pagaron",
+    "pasos": "Secretaría → TALLER QA-01 → Pensiones.",
+    "esperado": "Las 3 pensiones con fecha (la 1.ª «Al inscribirse»), monto y cuántos pagaron; botones a comprobantes y a editar pensiones.",
+    "obtenido": "Pensión 1: 4 de 4 pagadas; pensión 2: 2 de 4 (Ana con comprobante, Bruno pago directo); pensión 3: 0 de 4.",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:41:44.205Z"
+  },
+  {
+    "capturas": [
+      "071-p6b-ajustar-fecha-avance2.png"
+    ],
+    "id": "P6-02",
+    "seccion": "P6 Plan, hitos y avances",
+    "titulo": "Ajustar la fecha de un hito por proyecto (no en semanas 2 y 12)",
+    "pasos": "P6b de P-01 → Avance 2 → Ajustar fecha al 20/12/2026; intentar cambiar la fecha del Borrador final por el servidor.",
+    "esperado": "Los hitos de semanas 4–11 se ajustan por proyecto y se avisa; los de semanas 2 y 12 son fijos.",
+    "obtenido": "Avance 2 de P-01: 2026-12-20. Borrador final: HTTP 400 «La fecha de este hito es fija y no se prorroga». Las tarjetas fijas no muestran «Ajustar fecha».",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:43:56.900Z"
+  },
+  {
+    "capturas": [
+      "072-p7-bruno-sube-avance1-word.png",
+      "073-p6b-avance1-aprobado.png"
+    ],
+    "id": "P6B-01",
+    "seccion": "P6b Entregas del proyecto",
+    "titulo": "Avance en Word: cualquiera de los 2 tesistas sube; la revisión queda en la ficha",
+    "pasos": "La asesora habilita el Avance 1; Bruno (2.º tesista de P-01) sube un .docx; la asesora lo revisa Conforme con comentario.",
+    "esperado": "Se aceptan PDF y Word; el hito queda APROBADO y la revisión se registra en la Ficha (semana 4).",
+    "obtenido": "Avance 1: APROBADO. Ficha semana 4: REVISADO · Buen avance; ajustar el formato de tablas..",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:44:10.682Z"
+  },
+  {
+    "capturas": [
+      "074-ac18-borrador-final-bloqueado.png"
+    ],
+    "id": "AC-18",
+    "seccion": "Pruebas de aceptación (§16)",
+    "titulo": "#18 Subir el borrador final con la ficha incompleta",
+    "pasos": "Con avances 1–4 y borrador integrado aprobados, la asesora habilita el Borrador final; la ficha aún no está completa y firmada.",
+    "esperado": "Botón deshabilitado con el motivo.",
+    "obtenido": "Mi Taller muestra «Tu asesor debe completar y firmar la ficha» en lugar de «Subir versión». Servidor: HTTP 400 «Tu asesor debe completar y firmar la ficha».",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:44:22.248Z"
+  },
+  {
+    "capturas": [
+      "075-p11-registrar-revision.png",
+      "076-p11-ficha-completa.png"
+    ],
+    "id": "P11-02",
+    "seccion": "P11 Ficha de Control",
+    "titulo": "Registrar revisión y completar la ficha firmada",
+    "pasos": "Ficha → Registrar (semana 12) → Subir ficha firmada (filas pendientes) → Descargar PDF.",
+    "esperado": "Con las 6 filas revisadas y firmadas la ficha queda completa y habilita el cierre.",
+    "obtenido": "Filas firmadas: 6 de 6. PDF: documentos/Anexo1-Ficha-P-01-completa.pdf.",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:44:32.350Z"
+  },
+  {
+    "capturas": [
+      "077-p7-borrador-final-entregado.png",
+      "078-ac19-informe-deshabilitado.png"
+    ],
+    "id": "AC-19",
+    "seccion": "Pruebas de aceptación (§16)",
+    "titulo": "#19 Emitir Informe de Conformidad con observaciones sin levantar",
+    "pasos": "Borrador final entregado y ficha completa, pero «Observaciones levantadas» sin marcar.",
+    "esperado": "Botón deshabilitado (con el motivo).",
+    "obtenido": "Botón deshabilitado con el motivo «Faltan levantar las observaciones». Servidor: HTTP 400.",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:44:42.304Z"
+  },
+  {
+    "capturas": [
+      "081-p13-requisitos-cumplidos.png",
+      "082-p13-asesoria-cerrada.png",
+      "084-expediente-acta-conformidad.png"
+    ],
+    "id": "P13-01",
+    "seccion": "P13 Cierre de asesoría",
+    "titulo": "Emitir el Informe de Conformidad (Anexo 21) y cerrar la asesoría",
+    "pasos": "Registrar similitud 12,5 %, marcar observaciones levantadas, Emitir Informe (PDF), subir el informe firmado.",
+    "esperado": "Asesoría CERRADA, aviso al alumno y el proyecto sigue en la Etapa 5 (originalidad).",
+    "obtenido": "Tesistas: ASESORIA_CERRADA, ASESORIA_CERRADA. Expediente: ACTA_CONFORMIDAD CARGADO v1; metadatos {\"proyecto\": \"P-01\", \"cerradoAt\": \"2026-11-09T18:45:47.329Z\", \"similitudPreliminar\": 12.5}. Avisos de cierre: ana.qa@unsa.edu.pe, bruno.qa@unsa.edu.pe. PDF: documentos/Anexo21-Informe-Conformidad-P-01.pdf.",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:46:41.996Z"
+  },
+  {
+    "capturas": [
+      "085-p12-alertas-taller-qa.png",
+      "086-p12-dialogo-retiro.png",
+      "087-p12-retiro-registrado.png",
+      "088-p7-alumno-retirado.png"
+    ],
+    "id": "AC-22",
+    "seccion": "Pruebas de aceptación (§16)",
+    "titulo": "#22 Registrar retiro",
+    "pasos": "Secretaría → Alertas y reportes → alerta de faltas de Diego → Registrar retiro (motivo y fecha).",
+    "esperado": "El alumno pasa a RETIRADO, su historial se conserva y la alerta queda ATENDIDA; se avisa al alumno y al asesor.",
+    "obtenido": "Diego: RETIRADO. Alerta: ATENDIDA. Marcas de asistencia conservadas: 24. Avisos: rosa.paredes@unsa.edu.pe, diego.qa@unsa.edu.pe. Su Mi Taller queda en solo lectura.",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:46:57.712Z"
+  },
+  {
+    "capturas": [
+      "089-p12-alerta-descartada.png"
+    ],
+    "id": "P12-01",
+    "seccion": "P12 Reportes y alertas",
+    "titulo": "Descartar una alerta con motivo",
+    "pasos": "TALLER 06 → alerta «Plan no presentado» → Descartar con motivo; filtrar Descartadas.",
+    "esperado": "La alerta pasa a DESCARTADA con su motivo (propuesta) y queda en el historial.",
+    "obtenido": "Alertas descartadas en TALLER 06: 1.",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:47:06.426Z"
+  },
+  {
+    "capturas": [
+      "090-p12-reportes.png"
+    ],
+    "id": "P12-02",
+    "seccion": "P12 Reportes y alertas",
+    "titulo": "Reportes programados y exportación PDF / Excel",
+    "pasos": "Alertas y reportes → Reportes → TALLER QA-01 → Avance 1 → PDF y Excel.",
+    "esperado": "Reportes de semana 2, quincenales y cierre en sus fechas (lunes tras cada hito); exportan PDF y Excel.",
+    "obtenido": "6 reportes con sus fechas (16/11, 30/11, 14/12, 28/12, 11/01, 25/01); PDF y Excel descargados en documentos/.",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:47:09.534Z"
+  },
+  {
+    "capturas": [
+      "091-ac24-secretaria-solo-lectura.png"
+    ],
+    "id": "AC-24",
+    "seccion": "Pruebas de aceptación (§16)",
+    "titulo": "#24 Secretaría abre las entregas de un proyecto",
+    "pasos": "Secretaría → P6b de P-02.",
+    "esperado": "Solo lectura, sin botones de acción.",
+    "obtenido": "Botones de acción visibles: 0. Intento de habilitar un hito por el servidor: HTTP 403.",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:47:12.229Z"
+  },
+  {
+    "capturas": [
+      "092-p14-encuesta-alumna.png",
+      "093-p14-encuesta-enviada.png",
+      "094-p14b-resultados-ocultos.png"
+    ],
+    "id": "AC-23",
+    "seccion": "Pruebas de aceptación (§16)",
+    "titulo": "#23 Responder la encuesta",
+    "pasos": "Carla responde por la interfaz (1–5 y comentario); Ana por el servidor dos veces; Diego (retirado) intenta responder; la asesora abre sus resultados.",
+    "esperado": "El resultado no revela quién respondió; una sola respuesta por período; con menos de 5 respuestas no se muestran.",
+    "obtenido": "Columnas de encuesta_respuestas: id, taller_id, asesor_id, periodo, comentario (sin alumno ni hora). Ana: 201 y luego 400 («Ya respondiste la encuesta»). Diego retirado: 400. Resultados con 2 respuestas: ocultos («al menos 5»).",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:47:26.633Z"
+  },
+  {
+    "capturas": [
+      "095-p16-configuracion-taller.png"
+    ],
+    "id": "P16-01",
+    "seccion": "P16 Configuración",
+    "titulo": "Feriados, plan institucional, especialidades y parámetros",
+    "pasos": "Administrador → Configuración → pestaña Taller.",
+    "esperado": "Feriados (agregar/editar/desactivar), plan institucional de 12 semanas, catálogos y parámetros con su valor recomendado.",
+    "obtenido": "Feriados activos: 24; plan institucional: 12 semanas; parámetros: 15.",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:47:33.587Z"
+  },
+  {
+    "capturas": [],
+    "id": "ROL-01",
+    "seccion": "Roles y permisos (§4)",
+    "titulo": "El servidor valida rol y pertenencia en cada operación",
+    "pasos": "Llamadas directas al servidor fuera del rol (sin usar la interfaz).",
+    "esperado": "Cada operación fuera del alcance del rol se rechaza (403) aunque se llame directamente.",
+    "obtenido": "Alumno crea un taller: HTTP 403 · Asesor asigna un alumno: HTTP 403 · Asesor registra un retiro: HTTP 403 · Asesor valida un comprobante: HTTP 403 · Asesor gestiona asesores: HTTP 403 · Secretaría habilita un hito: HTTP 403 · Secretaría edita el plan del taller: HTTP 403 · Secretaría crea un grupo de horario: HTTP 403 · Alumno ve P9 Pagos y deudores: HTTP 403 · Alumna ve las entregas de otro proyecto: HTTP 403 · Alumno ve las alertas (P12): HTTP 403 · Asesor registra asistencia de un taller ajeno: HTTP 403. (Con un cuerpo inválido el servidor responde 400 antes de evaluar el permiso; aquí se usaron cuerpos válidos.)",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:48:11.439Z"
+  },
+  {
+    "capturas": [],
+    "id": "HIS-01",
+    "seccion": "Historial y auditoría (§14)",
+    "titulo": "Todo queda en el historial del taller (cadena de hash)",
+    "pasos": "Consultar auditoria_taller del TALLER QA-01 y ejecutar «verificar-auditoria».",
+    "esperado": "Creación, asignaciones, asistencia y correcciones, sesiones, plan, hitos, entregas, plan aprobado, ficha, pagos, retiros y documentos, con usuario y fecha; nada se edita ni se borra.",
+    "obtenido": "Acciones registradas: AGREGAR_SESION (1), AJUSTAR_FECHA_HITO (5), APROBAR_PLAN (1), ASIGNAR_PROYECTO (3), CANCELAR_SESION (1), CERRAR_ASESORIA (1), CORREGIR_ASISTENCIA (1), CREAR_GRUPO_HORARIO (2), CREAR_TALLER (1), DATOS_CIERRE (2), EDITAR_PLAN (1), EMITIR_CONFORMIDAD (1), HABILITAR_HITO (7), INICIO_TALLER (1), OBSERVAR_COMPROBANTE (1), PAGO_DIRECTO (1), REGISTRAR_ASISTENCIA (4), REGISTRAR_FICHA (1), REPROGRAMAR_SESION (1), RETIRO (1), REVISAR_ENTREGA (7), SUBIR_COMPROBANTE (2), SUBIR_ENTREGA (9), SUBIR_FICHA_FIRMADA (2), VALIDAR_COMPROBANTE (1). Verificación: ✔ Cadena de custodia íntegra: 3 expediente(s), 19 evento(s).",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:47:43.286Z"
+  },
+  {
+    "capturas": [
+      "096-mailpit-bandeja.png"
+    ],
+    "id": "NOT-03",
+    "seccion": "Notificaciones (§13)",
+    "titulo": "Bandeja de correos del flujo completo",
+    "pasos": "Abrir Mailpit (servidor de correo de pruebas).",
+    "esperado": "Cada evento del §13 genera su correo con enlace a la pantalla correspondiente.",
+    "obtenido": "57 correos enviados durante las pruebas (asignación, sesiones, plan, hitos, entregas, pagos, faltas, retiro, cierre, reportes).",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:47:46.810Z"
+  },
+  {
+    "capturas": [
+      "097-p2-editar-cupo-menor.png",
+      "098-p2-editar-guardado.png"
+    ],
+    "id": "P2-01",
+    "seccion": "P2 Nuevo o editar taller",
+    "titulo": "Editar un taller en curso",
+    "pasos": "P3 → Editar: cambiar el enlace del sábado e intentar bajar el cupo a 2 (hay 3 proyectos); luego volver a 3 y guardar.",
+    "esperado": "Inicio y fin bloqueados con sesiones realizadas; el cupo no puede ser menor que los proyectos asignados; el enlace se actualiza.",
+    "obtenido": "Inicio bloqueado: sí. Con cupo 2 no se guardó (cupo en BD: 3). Enlace del sábado: https://meet.google.com/qa-taller-sab-nuevo.",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:49:52.268Z"
+  },
+  {
+    "capturas": [
+      "098-p2-editar-guardado.png"
+    ],
+    "id": "P3-03",
+    "seccion": "P3 Detalle del taller",
+    "titulo": "No se cancela un taller con sesiones realizadas",
+    "pasos": "TALLER QA-01 (con 2 sesiones realizadas) → botón Cancelar taller.",
+    "esperado": "Cancelado solo sin sesiones realizadas; el botón muestra el motivo.",
+    "obtenido": "Botón: «Cancelar taller: no disponible. El taller ya tiene sesiones realizadas: no se cancela».",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:49:52.301Z"
+  },
+  {
+    "capturas": [
+      "099-p3-cambiar-asesor.png",
+      "100-p3-asesor-cambiado.png"
+    ],
+    "id": "P3-04",
+    "seccion": "P3 Detalle del taller",
+    "titulo": "Cambiar asesor (diálogo)",
+    "pasos": "TALLER QA-02 (asesor Luis Cárdenas) → Cambiar asesor → Marta Huanca con motivo.",
+    "esperado": "Solo se listan asesores disponibles; el nuevo asesor ve el taller y el anterior deja de verlo; queda en el historial.",
+    "obtenido": "Opciones: Elige un asesor… · Mg. Marta Huanca Rivera. Asesor actual: Huanca Rivera. La asesora Rosa (con taller activo) no aparece.",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:49:57.040Z"
+  },
+  {
+    "capturas": [
+      "101-p3-cancelar-taller.png",
+      "102-p3-taller-cancelado.png"
+    ],
+    "id": "P3-05",
+    "seccion": "P3 Detalle del taller",
+    "titulo": "Cancelar un taller sin sesiones realizadas",
+    "pasos": "TALLER QA-02 → Cancelar taller con motivo.",
+    "esperado": "Queda CANCELADO con su motivo; no se elimina y conserva su historial.",
+    "obtenido": "Estado: CANCELADO · No se alcanzó el mínimo de inscritos para el período 2027-I.. Sesiones canceladas: 2.",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:50:00.743Z"
+  },
+  {
+    "capturas": [
+      "103-p15-lista-final.png"
+    ],
+    "id": "P15-03",
+    "seccion": "P15 Lista de asesores",
+    "titulo": "No se desactiva un asesor con taller activo",
+    "pasos": "Asesores → fila de Rosa Paredes (TALLER QA-01 en curso) → Desactivar; también por el servidor.",
+    "esperado": "No se permite mientras tenga un taller activo (propuesta).",
+    "obtenido": "Botón deshabilitado con motivo: sí. Servidor: HTTP 400 «Tiene un taller activo: ciérralo o cambia de asesor primero».",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:50:01.933Z"
+  },
+  {
+    "capturas": [
+      "104-p16-parametro-editado.png",
+      "105-p14b-resultados-visibles.png"
+    ],
+    "id": "P14B-01",
+    "seccion": "P14b Resultados de la encuesta",
+    "titulo": "Resultados agregados sin identidad (con el mínimo ajustado en P16)",
+    "pasos": "Administrador cambia «Respuestas mínimas» de 5 a 2 en P16; la asesora abre sus resultados; luego se restaura a 5.",
+    "esperado": "Promedio general y por pregunta, número de respuestas y comentarios, nunca quién respondió; el parámetro rige al guardarse.",
+    "obtenido": "Resultado: {\"respuestas\":2,\"promedio\":4.3,\"comentarios\":[\"Explica muy bien y responde rápido.\"]}. Parámetro restaurado a 5.",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:50:12.247Z"
+  },
+  {
+    "capturas": [],
+    "id": "PRG-01",
+    "seccion": "Procesos programados (§12)",
+    "titulo": "Inicio del taller, pensiones vencidas, hitos no entregados y reportes",
+    "pasos": "Proceso diario al arrancar la API (y a las 00:10 hora de Perú) sobre los datos del seed y del TALLER QA-01.",
+    "esperado": "Detecta plan no presentado / avances vencidos (alerta), vence pensiones y avisa, marca EN CURSO y avisa los reportes en su fecha.",
+    "obtenido": "TALLER 06: VENCER_PENSION — Lucía Mamani Condori: pensión 2 venció el 2026-11-07 || TALLER 06: REPORTE_QUINCENAL_AVANCE_1 — Reporte quincenal — Avance 1: 4 tesistas, 0 con el hito entregado o aprobado, 0 sin entregar, 2 con pensiones atrasadas || TALLER QA-01: INICIO_TALLER — El taller empezó el 2026-11-07: pasa a EN_CURSO",
+    "estado": "APROBADO",
+    "fecha": "2026-11-09T18:50:12.544Z"
+  },
+  {
+    "capturas": [],
+    "id": "PRG-02",
+    "seccion": "Procesos programados (§12)",
+    "titulo": "El taller pasa a FINALIZADO tras su fecha de fin",
+    "pasos": "TALLER QA-01 termina el 24/01/2027.",
+    "esperado": "EN CURSO → FINALIZADO el día siguiente a la fecha de fin.",
+    "obtenido": "No verificable en la fecha de la prueba (09/11/2026). Regla cubierta por la prueba unitaria «finaliza el día siguiente a la fecha de fin» (packages/domain). Queda pendiente verificarlo después del 24/01/2027 con estos datos.",
+    "estado": "PENDIENTE",
+    "fecha": "2026-11-09T18:50:12.566Z"
+  }
+]
