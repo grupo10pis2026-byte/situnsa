@@ -361,13 +361,13 @@ export async function seedDemo(db: Db): Promise<void> {
   await generarSeguimiento(db, SET007_ID, (etapa, orden) => {
     if (etapa <= 2)
       return {
-        estado: "FINALIZADO",
+        estado: "FINALIZADO" as const,
         inicio: new Date("2026-06-02T09:00:00-05:00"),
         fin: new Date("2026-07-10T09:00:00-05:00"),
       };
     if (etapa === 3 && orden <= 3) {
       return {
-        estado: "FINALIZADO",
+        estado: "FINALIZADO" as const,
         inicio: new Date("2026-08-01T09:00:00-05:00"),
         fin: new Date("2026-08-20T09:00:00-05:00"),
       };
@@ -413,9 +413,26 @@ export async function seedDemo(db: Db): Promise<void> {
   const tall = await db.select({ id: talleres.id }).from(talleres);
   if (tall.length === 0) {
     await db.insert(talleres).values([
-      { nombre: "TALLER 04", asesorId: ASESOR_ID, periodo: "2025-II", inscritos: 32 },
-      { nombre: "TALLER DE TESIS 05", asesorId: ASESOR_ID, periodo: "2025-II", inscritos: 34 },
-      { nombre: "TALLER 07", asesorId: ASESOR_ID, periodo: "2026-I", inscritos: 24 },
+      // Un asesor lleva un solo taller vigente (spec §3): el vigente es TALLER 06.
+      {
+        nombre: "TALLER 04",
+        asesorId: ASESOR_ID,
+        periodo: "2025-II",
+        estado: "FINALIZADO" as const,
+      },
+      {
+        nombre: "TALLER DE TESIS 05",
+        asesorId: ASESOR_ID,
+        periodo: "2025-II",
+        estado: "FINALIZADO" as const,
+      },
+      {
+        nombre: "TALLER 07",
+        asesorId: ASESOR_ID,
+        periodo: "2026-I",
+        estado: "CANCELADO" as const,
+        motivoCancelacion: "Sin inscritos suficientes (dato de demostración)",
+      },
     ]);
   }
 

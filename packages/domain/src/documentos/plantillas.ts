@@ -253,6 +253,17 @@ export interface DocumentoRenderizado {
   readonly firmas: ReadonlyArray<readonly Segmento[]>;
   /** Etiquetas sin dato (campos pendientes del documento). */
   readonly pendientes: readonly string[];
+  /** Tabla opcional tras los párrafos (fichas y reportes del taller). */
+  readonly tabla?: TablaDocumento;
+}
+
+export interface TablaDocumento {
+  /** Encabezados y ancho relativo de cada columna (se reparten el ancho útil). */
+  readonly columnas: ReadonlyArray<{ readonly titulo: string; readonly peso: number }>;
+  /** Celdas; una celda "pendiente" se resalta como las etiquetas sin dato. */
+  readonly filas: ReadonlyArray<
+    ReadonlyArray<{ readonly texto: string; readonly pendiente?: boolean }>
+  >;
 }
 
 /** Inserta los datos en la plantilla y conserva las etiquetas pendientes. */

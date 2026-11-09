@@ -28,6 +28,7 @@ import {
   puedeCancelarTaller,
   puedeEmitirConformidad,
   puedeHabilitarHito,
+  puedeReabrirHito,
   puedeRegistrarAsistencia,
   puedeRevisarEntrega,
   puedeSubirComprobante,
@@ -39,9 +40,11 @@ import {
   tocaAvisoPension,
   validarArchivo,
   validarCambioAsistencia,
+  validarGrupoHorario,
   validarObservacionComprobante,
   validarPuntajes,
   validarRegistroFicha,
+  validarSesionNueva,
 } from "../src/taller/reglas.js";
 
 const R = (
@@ -212,6 +215,14 @@ describe("hitos y entregas (§9 P6, P6b, P7)", () => {
     expect(assertTransicionHito("OBSERVADO", "NO_ENTREGADO").ok).toBe(true);
   });
 
+  it("habilitar nueva entrega: solo no entregado, no fijo y con fecha futura", () => {
+    expect(puedeReabrirHito("AVANCE_1", "NO_ENTREGADO", "2026-11-01", "2026-10-20").ok).toBe(true);
+    expect(puedeReabrirHito("PLAN", "NO_ENTREGADO", "2026-11-01", "2026-10-20").ok).toBe(false);
+    expect(puedeReabrirHito("AVANCE_1", "OBSERVADO", "2026-11-01", "2026-10-20").ok).toBe(false);
+    expect(puedeReabrirHito("AVANCE_1", "NO_ENTREGADO", "2026-10-20", "2026-10-20").ok).toBe(false);
+    expect(assertTransicionHito("NO_ENTREGADO", "HABILITADO").ok).toBe(true);
+  });
+
   it("archivos: formato y tamaño", () => {
     expect(
       validarArchivo({ mime: "application/pdf", bytes: 1024 }, ["application/pdf"], 5).ok,
@@ -327,5 +338,42 @@ describe("encuestas y parámetros", () => {
   it("sesión: REPROGRAMADA conserva el camino a REALIZADA", () => {
     expect(assertTransicionSesion("REPROGRAMADA", "REALIZADA").ok).toBe(true);
     expect(assertTransicionSesion("CANCELADA", "REALIZADA").ok).toBe(false);
+  });
+});
+
+describe("grupos de horario y sesiones (P5, D2)", () => {
+  const dias = [
+    { horaInicio: "15:00", horaFin: "20:00" },
+    { horaInicio: "08:00", horaFin: "13:00" },
+  ];
+  it("el horario del grupo cae dentro del bloque de un día", () => {
+    expect(
+      validarGrupoHorario({ nombre: "Grupo 1", horaInicio: "15:00", horaFin: "17:30" }, dias).ok,
+    ).toBe(true);
+    const r = validarGrupoHorario(
+      { nombre: "Grupo 1", horaInicio: "14:00", horaFin: "16:00" },
+      dias,
+    );
+    expect(!r.ok && r.error.errores[0]?.campo).toBe("horario");
+    expect(
+      validarGrupoHorario({ nombre: " ", horaInicio: "15:00", horaFin: "16:00" }, dias).ok,
+    ).toBe(false);
+  });
+  it("reprogramar o agregar exige fecha, horario y motivo", () => {
+    expect(
+      validarSesionNueva({
+        fecha: "2026-11-21",
+        horaInicio: "15:00",
+        horaFin: "20:00",
+        motivo: "Feriado regional",
+      }).ok,
+    ).toBe(true);
+    const r = validarSesionNueva({
+      fecha: "2026-11-21",
+      horaInicio: "15:00",
+      horaFin: "20:00",
+      motivo: "",
+    });
+    expect(!r.ok && r.error.errores.map((e) => e.campo)).toEqual(["motivo"]);
   });
 });

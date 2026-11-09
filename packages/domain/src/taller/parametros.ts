@@ -5,7 +5,8 @@ import { fail, ok, type Result } from "../shared/result.js";
  * Parámetros del Módulo Taller de Tesis (spec v1.0 §0 y §16 P16).
  *
  * Toda regla marcada "(POR CONFIRMAR)" en la especificación se implementa
- * como parámetro con un valor por defecto, nunca como código fijo. Los
+ * como parámetro con un valor recomendado (ver `decision`), nunca como código
+ * fijo; la Unidad puede cambiarlo en P16 sin desplegar. Los
  * valores vigentes viven en la tabla `parametros_taller`; este objeto es el
  * respaldo cuando una clave no existe y la fuente del seed.
  */
@@ -51,7 +52,7 @@ export const PARAMETROS_TALLER_DEFECTO: Readonly<ParametrosTaller> = Object.free
   faltasConsecutivasParaRetiro: 2,
   umbralAsistenciaBaja: 70,
   diasAvisoPension: 3,
-  maxMbEntrega: 5,
+  maxMbEntrega: 20,
   maxMbComprobante: 5,
   aceptarEntregaFueraDePlazo: false,
   advertenciasPlanBloquean: false,
@@ -67,8 +68,11 @@ export interface DefinicionParametroTaller {
   etiqueta: string;
   /** Regla de la especificación que lo origina. */
   origen: string;
-  /** La especificación lo marca "(POR CONFIRMAR)" o "(propuesta)". */
-  porConfirmar: boolean;
+  /**
+   * Por qué se usa el valor por defecto (decisión recomendada para lo que la
+   * especificación dejó "POR CONFIRMAR"). Sigue siendo editable en P16.
+   */
+  decision: string;
   /** Solo numéricos: rango permitido (enteros). */
   min?: number;
   max?: number;
@@ -82,7 +86,7 @@ export const DEFINICION_PARAMETROS_TALLER: Readonly<
   cupoProyectos: {
     etiqueta: "Cupo de proyectos por taller",
     origen: "§3 (la guía del asesor dice 12)",
-    porConfirmar: true,
+    decision: "Se usa 15 (spec v1.0 §3); prevalece sobre la guía del asesor (12).",
     min: 1,
     max: 60,
     unidad: "proyectos",
@@ -90,7 +94,7 @@ export const DEFINICION_PARAMETROS_TALLER: Readonly<
   numeroSesiones: {
     etiqueta: "Sesiones por taller al crearlo",
     origen: "§3",
-    porConfirmar: false,
+    decision: "24 sesiones: 12 semanas de sábado y domingo (§3).",
     min: 1,
     max: 52,
     unidad: "sesiones",
@@ -98,7 +102,7 @@ export const DEFINICION_PARAMETROS_TALLER: Readonly<
   montoPension: {
     etiqueta: "Monto de cada pensión",
     origen: "§3",
-    porConfirmar: false,
+    decision: "Monto vigente de la Unidad; cada taller puede ajustarlo al crearse.",
     min: 1,
     max: 100_000,
     unidad: "soles",
@@ -106,17 +110,17 @@ export const DEFINICION_PARAMETROS_TALLER: Readonly<
   justificadaCuentaComoAsistencia: {
     etiqueta: "La falta justificada cuenta como asistencia",
     origen: "§5",
-    porConfirmar: true,
+    decision: "Sí: una inasistencia justificada no castiga el porcentaje.",
   },
   justificadaInterrumpeRacha: {
     etiqueta: "La falta justificada corta la racha de faltas seguidas",
     origen: "§5",
-    porConfirmar: true,
+    decision: "Sí: una justificada corta la racha de faltas seguidas.",
   },
   faltasConsecutivasParaRetiro: {
     etiqueta: "Faltas seguidas que generan la alerta de retiro",
     origen: "§3",
-    porConfirmar: false,
+    decision: "2 faltas seguidas generan la alerta de retiro (§3).",
     min: 1,
     max: 10,
     unidad: "faltas",
@@ -124,7 +128,7 @@ export const DEFINICION_PARAMETROS_TALLER: Readonly<
   umbralAsistenciaBaja: {
     etiqueta: "Asistencia baja por debajo de",
     origen: "§9 P3 y P16",
-    porConfirmar: true,
+    decision: "70 %: asistencia mínima habitual en la UNSA.",
     min: 0,
     max: 100,
     unidad: "%",
@@ -132,7 +136,7 @@ export const DEFINICION_PARAMETROS_TALLER: Readonly<
   diasAvisoPension: {
     etiqueta: "Aviso de pensión con anticipación de",
     origen: "§9 P8 y P16",
-    porConfirmar: true,
+    decision: "3 días: da tiempo de pagar sin avisos de más.",
     min: 0,
     max: 60,
     unidad: "días",
@@ -140,7 +144,7 @@ export const DEFINICION_PARAMETROS_TALLER: Readonly<
   maxMbEntrega: {
     etiqueta: "Tamaño máximo de una entrega",
     origen: "§15",
-    porConfirmar: true,
+    decision: "20 MB: una tesis en Word con figuras suele pasar de 5 MB.",
     min: 1,
     max: 50,
     unidad: "MB",
@@ -148,7 +152,7 @@ export const DEFINICION_PARAMETROS_TALLER: Readonly<
   maxMbComprobante: {
     etiqueta: "Tamaño máximo de un comprobante",
     origen: "§9 P8",
-    porConfirmar: false,
+    decision: "5 MB alcanza para una foto o PDF del voucher (§9 P8).",
     min: 1,
     max: 20,
     unidad: "MB",
@@ -156,22 +160,23 @@ export const DEFINICION_PARAMETROS_TALLER: Readonly<
   aceptarEntregaFueraDePlazo: {
     etiqueta: "Aceptar entregas con el plazo vencido",
     origen: "§9 P6",
-    porConfirmar: true,
+    decision:
+      "No: el hito vencido queda NO ENTREGADO y el asesor puede habilitar una nueva entrega.",
   },
   advertenciasPlanBloquean: {
     etiqueta: "Las advertencias impiden aprobar el plan",
     origen: "§10 D3",
-    porConfirmar: true,
+    decision: "No: el asesor ve las advertencias y decide; la Secretaría gestiona el retiro.",
   },
   retiroLiberaCupo: {
     etiqueta: "Un retiro libera el cupo del proyecto",
     origen: "§9 P12",
-    porConfirmar: true,
+    decision: "No: con el taller en curso ya no entran alumnos nuevos.",
   },
   minimoRespuestasEncuesta: {
     etiqueta: "Respuestas mínimas para mostrar una encuesta",
     origen: "§9 P14b (propuesta)",
-    porConfirmar: true,
+    decision: "5 respuestas: con menos se podría identificar a quien respondió.",
     min: 1,
     max: 100,
     unidad: "respuestas",
@@ -179,7 +184,8 @@ export const DEFINICION_PARAMETROS_TALLER: Readonly<
   calendarioIncompletoBloquea: {
     etiqueta: "Impedir guardar un taller si las sesiones no suman el total",
     origen: "§9 P2",
-    porConfirmar: true,
+    decision:
+      "No: el contador avisa y la Secretaría decide (los feriados pueden dejar menos sesiones).",
   },
 });
 

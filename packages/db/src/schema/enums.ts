@@ -73,68 +73,37 @@ export const estadoSubetapaEnum = pgEnum("estado_subetapa", [
 export type EstadoSubetapa = "NO_INICIADO" | "EN_CURSO" | "FINALIZADO";
 
 /**
- * Estados del taller. v1.0 (spec §6): ABIERTO_INSCRIPCIONES → COMPLETO →
- * EN_CURSO → FINALIZADO, y CANCELADO. ACTIVO y CERRADO son del modelo
- * anterior: se conservan hasta que el corte 3.3 migre los datos (Postgres no
- * permite quitar valores de un enum sin recrearlo).
+ * Estados del taller (spec v1.0 §6): ABIERTO_INSCRIPCIONES → COMPLETO →
+ * EN_CURSO → FINALIZADO, y CANCELADO. La migración 0015 convirtió los
+ * estados del modelo anterior (ACTIVO → abierto o en curso, CERRADO →
+ * FINALIZADO) y los retiró del tipo.
  */
 export const estadoTallerEnum = pgEnum("estado_taller", [
-  "ACTIVO",
-  "CERRADO",
-  "CANCELADO",
   "ABIERTO_INSCRIPCIONES",
   "COMPLETO",
   "EN_CURSO",
   "FINALIZADO",
+  "CANCELADO",
 ]);
 
 export type EstadoTaller =
-  | "ACTIVO"
-  | "CERRADO"
-  | "CANCELADO"
   | "ABIERTO_INSCRIPCIONES"
   | "COMPLETO"
   | "EN_CURSO"
-  | "FINALIZADO";
+  | "FINALIZADO"
+  | "CANCELADO";
 
-export const estadoGrupoEnum = pgEnum("estado_grupo", ["PLANIFICADO", "ACTIVO", "CONCLUIDO"]);
-
-export type EstadoGrupo = "PLANIFICADO" | "ACTIVO" | "CONCLUIDO";
-
-export const estadoCuotaEnum = pgEnum("estado_cuota", [
-  "PENDIENTE",
-  "EN_REVISION",
-  "VALIDADO",
-  "OBSERVADO",
-  "PAGADA",
-  "VENCIDA",
-  "EXONERADA",
-]);
-
-export type EstadoCuota =
-  | "PENDIENTE"
-  | "EN_REVISION"
-  | "VALIDADO"
-  | "OBSERVADO"
-  | "PAGADA"
-  | "VENCIDA"
-  | "EXONERADA";
-
-/**
- * Sesiones del taller P4 (RF-0202 a RF-0205). v1.0 agrega REPROGRAMADA;
- * ABIERTA (ventana de automarcado) queda obsoleta: en v1.0 marca el asesor.
- */
+/** Sesiones del taller P4 (spec v1.0 §6). La asistencia la registra el asesor. */
 export const estadoSesionEnum = pgEnum("estado_sesion", [
   "PROGRAMADA",
-  "ABIERTA",
+  "REPROGRAMADA",
   "REALIZADA",
   "CANCELADA",
-  "REPROGRAMADA",
 ]);
 
-export type EstadoSesion = "PROGRAMADA" | "ABIERTA" | "REALIZADA" | "CANCELADA" | "REPROGRAMADA";
+export type EstadoSesion = "PROGRAMADA" | "REPROGRAMADA" | "REALIZADA" | "CANCELADA";
 
-/** Asistencia por alumno (PENDIENTE solo con ventana abierta). */
+/** Asistencia por alumno: PENDIENTE al asignar; la marca el asesor. */
 export const estadoAsistenciaEnum = pgEnum("estado_asistencia", [
   "PENDIENTE",
   "PRESENTE",
@@ -144,16 +113,7 @@ export const estadoAsistenciaEnum = pgEnum("estado_asistencia", [
 
 export type EstadoAsistencia = "PENDIENTE" | "PRESENTE" | "FALTA" | "JUSTIFICADA";
 
-/** Cumplimiento de fase por alumno P6 (observada exige comentario). */
-export const estadoCumplimientoEnum = pgEnum("estado_cumplimiento", [
-  "PENDIENTE",
-  "CUMPLIDA",
-  "OBSERVADA",
-]);
-
-export type EstadoCumplimiento = "PENDIENTE" | "CUMPLIDA" | "OBSERVADA";
-
-/** Entregas de avances P6/P7 (se conserva el historial de versiones). */
+/** Estado de una versión entregada de un hito (P6b): nunca cambia tras revisarse. */
 export const estadoEntregaEnum = pgEnum("estado_entrega", ["ENTREGADA", "CONFORME", "OBSERVADA"]);
 
 export type EstadoEntrega = "ENTREGADA" | "CONFORME" | "OBSERVADA";

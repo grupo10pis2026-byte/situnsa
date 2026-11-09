@@ -24,6 +24,7 @@ import {
   estadoRegistroFichaEnum,
   estadoTesistaTallerEnum,
   medioPensionEnum,
+  modalidadEnum,
   tipoAlertaTallerEnum,
   tipoHitoEnum,
 } from "./enums.js";
@@ -166,6 +167,9 @@ export const proyectosTaller = pgTable(
     codigo: varchar("codigo", { length: 8 }).notNull(),
     grupoHorarioId: uuid("grupo_horario_id").references(() => gruposHorario.id),
     titulo: text("titulo"),
+    /** Programa (segunda especialidad) y modalidad: los pide el expediente al aprobar el plan. */
+    programa: varchar("programa", { length: 160 }),
+    modalidad: modalidadEnum("modalidad").notNull().default("TESIS"),
     /** Nulo hasta aprobar el plan (D3 crea el SET). */
     expedienteId: uuid("expediente_id").references(() => expedientes.id),
     ...creado,
@@ -186,6 +190,8 @@ export const proyectoTesistas = pgTable(
     alumnoId: uuid("alumno_id")
       .notNull()
       .references(() => usuarios.id),
+    /** 1 = titular, 2 = segundo tesista (orden estable en pantallas y documentos). */
+    orden: integer("orden").notNull().default(1),
     estado: estadoTesistaTallerEnum("estado").notNull().default("EN_TALLER"),
     ...creado,
   },
@@ -376,6 +382,8 @@ export const pensionesAlumno = pgTable(
       .references(() => usuarios.id),
     estado: estadoPensionEnum("estado").notNull().default("PENDIENTE"),
     medio: medioPensionEnum("medio"),
+    /** Monto cobrado al validarse (un cambio posterior del taller no lo altera). */
+    montoPagado: integer("monto_pagado"),
     observacion: text("observacion"),
     validadaPor: uuid("validada_por").references(() => usuarios.id),
     validadaAt: timestamp("validada_at", { withTimezone: true }),

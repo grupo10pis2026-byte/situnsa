@@ -168,6 +168,36 @@ export function estadoPorCupo(
   return actual;
 }
 
+/**
+ * §6 (propuesta) Un taller abierto o completo pasa a EN_CURSO en su fecha
+ * de inicio. Lo aplica el proceso diario; devuelve el mismo estado si no toca.
+ */
+export function estadoPorFechaInicio(
+  estado: EstadoTallerCurso,
+  inicio: string | null,
+  hoy: string,
+): EstadoTallerCurso {
+  if (
+    (estado === "ABIERTO_INSCRIPCIONES" || estado === "COMPLETO") &&
+    inicio !== null &&
+    inicio <= hoy
+  )
+    return "EN_CURSO";
+  return estado;
+}
+
+/**
+ * §8 paso 13 (propuesta): un taller EN_CURSO pasa a FINALIZADO el día
+ * siguiente a su fecha de fin. Lo aplica el proceso diario.
+ */
+export function estadoPorFechaFin(
+  estado: EstadoTallerCurso,
+  fin: string | null,
+  hoy: string,
+): EstadoTallerCurso {
+  return estado === "EN_CURSO" && fin !== null && hoy > fin ? "FINALIZADO" : estado;
+}
+
 /** §6 CANCELADO: manual, con motivo, solo sin sesiones realizadas. */
 export function puedeCancelarTaller(
   estado: EstadoTallerCurso,
@@ -221,6 +251,22 @@ export function puedeAjustarFechaHito(tipo: TipoHito): Result<true, DomainError>
   return esHitoFijo(tipo)
     ? negar("VALIDACION_FALLIDA", "La fecha de este hito es fija y no se prorroga")
     : ok(true);
+}
+
+/** §9 P6b "Habilitar nueva entrega": reabre un hito no entregado con otra fecha. */
+export function puedeReabrirHito(
+  tipo: TipoHito,
+  estado: EstadoHito,
+  nuevaFecha: string,
+  hoy: string,
+): Result<true, DomainError> {
+  if (estado !== "NO_ENTREGADO")
+    return negar("TRANSICION_INVALIDA", "Solo se reabre un hito no entregado");
+  const fija = puedeAjustarFechaHito(tipo);
+  if (!fija.ok) return fija;
+  if (nuevaFecha <= hoy)
+    return negar("VALIDACION_FALLIDA", "La nueva fecha límite debe ser posterior a hoy");
+  return ok(true);
 }
 
 export interface ContextoSubida {
@@ -458,4 +504,95 @@ export function promedioPuntaje(valores: readonly number[]): number | null {
 /** Código correlativo por taller: P-01, P-02… */
 export function codigoProyecto(correlativo: number): string {
   return `P-${String(correlativo).padStart(2, "0")}`;
+}
+
+/** Siguiente código libre del taller (el mayor existente + 1; nunca se reutiliza). */
+export function siguienteCodigoProyecto(existentes: readonly string[]): string {
+  const max = existentes.reduce((m, c) => {
+    const n = Number(/^P-(\d+)$/.exec(c)?.[1] ?? 0);
+    return Number.isFinite(n) && n > m ? n : m;
+  }, 0);
+  return codigoProyecto(max + 1);
+}
+
+/** §10 D1: DNI del alumno (8 dígitos) y del segundo tesista (opcional, distinto). */
+export function validarDnisProyecto(
+  dni1: string,
+  dni2: string | null | undefined,
+): Result<
+  { dni1: string; dni2: string | null },
+  DomainError & { errores: Array<{ campo: string; mensaje: string }> }
+> {
+  const errores: Array<{ campo: string; mensaje: string }> = [];
+  const a = dni1.trim();
+  const b = (dni2 ?? "").trim();
+  if (!/^\d{8}$/.test(a)) errores.push({ campo: "dni1", mensaje: "El DNI tiene 8 dígitos" });
+  if (b !== "" && !/^\d{8}$/.test(b))
+    errores.push({ campo: "dni2", mensaje: "El DNI tiene 8 dígitos" });
+  else if (b !== "" && b === a)
+    errores.push({ campo: "dni2", mensaje: "El segundo tesista debe ser otra persona" });
+  if (errores.length > 0)
+    return fail(
+      Object.assign(new DomainError("VALIDACION_FALLIDA", errores[0]?.mensaje ?? ""), { errores }),
+    );
+  return ok({ dni1: a, dni2: b === "" ? null : b });
+}
+
+// ── Grupos de horario (§9 P5) y sesiones (§10 D2) ──────────────────────
+
+const HORA_HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+/** Nombre y horario del grupo, dentro del bloque de algún día del taller. */
+export function validarGrupoHorario(
+  input: { nombre: string; horaInicio: string; horaFin: string },
+  diasTaller: ReadonlyArray<{ horaInicio: string; horaFin: string }>,
+): Result<
+  { nombre: string; horaInicio: string; horaFin: string },
+  DomainError & { errores: Array<{ campo: string; mensaje: string }> }
+> {
+  const errores: Array<{ campo: string; mensaje: string }> = [];
+  const nombre = input.nombre.replace(/\s+/g, " ").trim();
+  if (nombre.length < 2) errores.push({ campo: "nombre", mensaje: "Escribe el nombre del grupo" });
+  if (nombre.length > 80)
+    errores.push({ campo: "nombre", mensaje: "El nombre es demasiado largo" });
+  if (!HORA_HHMM.test(input.horaInicio) || !HORA_HHMM.test(input.horaFin))
+    errores.push({ campo: "horario", mensaje: "Escribe la hora con el formato HH:MM" });
+  else if (input.horaFin <= input.horaInicio)
+    errores.push({ campo: "horario", mensaje: "La hora de fin debe ser posterior a la de inicio" });
+  else if (
+    diasTaller.length > 0 &&
+    !diasTaller.some((d) => input.horaInicio >= d.horaInicio && input.horaFin <= d.horaFin)
+  )
+    errores.push({
+      campo: "horario",
+      mensaje: "El horario debe estar dentro del bloque de algún día del taller",
+    });
+  if (errores.length > 0)
+    return fail(
+      Object.assign(new DomainError("VALIDACION_FALLIDA", errores[0]?.mensaje ?? ""), { errores }),
+    );
+  return ok({ nombre, horaInicio: input.horaInicio, horaFin: input.horaFin });
+}
+
+/** §10 D2 y "Agregar sesión extra": fecha, horario y motivo obligatorios. */
+export function validarSesionNueva(input: {
+  fecha: string;
+  horaInicio: string;
+  horaFin: string;
+  motivo: string;
+}): Result<true, DomainError & { errores: Array<{ campo: string; mensaje: string }> }> {
+  const errores: Array<{ campo: string; mensaje: string }> = [];
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.fecha))
+    errores.push({ campo: "fecha", mensaje: "Elige la fecha" });
+  if (!HORA_HHMM.test(input.horaInicio) || !HORA_HHMM.test(input.horaFin))
+    errores.push({ campo: "hora", mensaje: "Escribe la hora con el formato HH:MM" });
+  else if (input.horaFin <= input.horaInicio)
+    errores.push({ campo: "hora", mensaje: "La hora de fin debe ser posterior a la de inicio" });
+  if (input.motivo.trim().length < 3)
+    errores.push({ campo: "motivo", mensaje: "Escribe el motivo" });
+  if (errores.length > 0)
+    return fail(
+      Object.assign(new DomainError("VALIDACION_FALLIDA", errores[0]?.mensaje ?? ""), { errores }),
+    );
+  return ok(true);
 }

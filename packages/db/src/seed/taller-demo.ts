@@ -2,22 +2,51 @@ import { createHash } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { generarSesiones, hashTransicion } from "@pis/domain";
-import { and, desc, eq } from "drizzle-orm";
-import type { Db } from "../client.js";
-import { cronogramaPensiones, grupoMiembros, gruposTaller } from "../schema/grupos-pagos.js";
 import {
-  auditoriaTaller,
-  tallerAsistencias,
-  tallerAvances,
-  tallerCumplimiento,
-  tallerFases,
-  tallerPases,
-  tallerSesiones,
-} from "../schema/taller-operativa.js";
-import { talleres } from "../schema/talleres.js";
+  FICHA_SEMANAS,
+  fechaHito,
+  fechaPensionPorDefecto,
+  finSugerido,
+  HITOS_TALLER,
+  hashTransicion,
+  marcasHitoSemana,
+  proponerSesiones,
+  sumarDias,
+} from "@pis/domain";
+import { desc, eq } from "drizzle-orm";
+import type { Db } from "../client.js";
+import { auditoriaTaller, tallerAsistencias, tallerSesiones } from "../schema/taller-operativa.js";
+import {
+  alertasTaller,
+  asistenciaGrupos,
+  comprobantesPension,
+  entregasHito,
+  feriados,
+  fichaRegistros,
+  gruposHorario,
+  hitosProyecto,
+  pensionesAlumno,
+  pensionesTaller,
+  planInstitucional,
+  planTaller,
+  proyectosTaller,
+  proyectoTesistas,
+} from "../schema/taller-v1.js";
+import { tallerDias, talleres } from "../schema/talleres.js";
 import { usuarios } from "../schema/usuarios.js";
 import { ADMIN_ID, ASESOR_ID } from "./demo.js";
+
+/**
+ * Flujo demo del Taller de Tesis con el modelo v1.0 (idempotente, SOLO
+ * dev/e2e). TALLER 06 empezó hace tres semanas (fechas relativas a hoy en
+ * Lima: el demo no envejece):
+ * - P-01 María y Jorge (Grupo 1): plan entregado, listo para aprobar (D3).
+ * - P-02 Carlos (Grupo 1): plan v1 observado y v2 corregida por revisar.
+ * - P-03 Lucía (Grupo 2): no presentó el plan y tiene 2 faltas seguidas
+ *   (dos alertas activas para P12).
+ * Pensiones: la 2.ª de María en revisión, la de Carlos observada y la de
+ * Jorge validada. El DNI 12345678 queda libre para probar D1.
+ */
 
 export const JORGE_ID = "aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaa1";
 const TALLER06 = "TALLER 06";
@@ -29,8 +58,8 @@ function docsBase(): string {
   return join(raiz, "var", "data", "titulacion-docs");
 }
 
-/** Comprobante demo: PDF mínimo válido de una página. */
-function pdfDemo(titulo: string): Uint8Array {
+/** PDF mínimo válido de una página (entregas y comprobantes del demo). */
+export function pdfDemo(titulo: string): Uint8Array {
   const texto = `BT /F1 12 Tf 50 750 Td (${titulo}) Tj ET`;
   const objs = [
     "<< /Type /Catalog /Pages 2 0 R >>",
@@ -52,24 +81,21 @@ function pdfDemo(titulo: string): Uint8Array {
   return new TextEncoder().encode(out);
 }
 
-/** Guarda un comprobante como lo haría SubirComprobanteUseCase. */
-async function guardarComprobante(
-  tallerId: string,
-  cuotaId: string,
-  nroCuota: number,
-  titulo: string,
-): Promise<{ ruta: string; sha256: string; fecha: Date }> {
+async function guardarPdf(carpeta: string, subcarpeta: string, nombre: string, titulo: string) {
   const bytes = pdfDemo(titulo);
-  const sha256 = createHash("sha256").update(bytes).digest("hex");
-  const nombre = `cuota_${nroCuota}_${cuotaId.slice(0, 8)}.pdf`;
-  const dir = join(docsBase(), tallerId, "comprobantes");
+  const dir = join(docsBase(), carpeta, subcarpeta);
   await mkdir(dir, { recursive: true });
   const ruta = join(dir, nombre);
   await writeFile(ruta, bytes);
-  return { ruta, sha256, fecha: new Date() };
+  return {
+    ruta,
+    sha256: createHash("sha256").update(bytes).digest("hex"),
+    nombreOriginal: nombre,
+    mime: "application/pdf",
+    bytes: bytes.byteLength,
+  };
 }
 
-/** Hoy en Lima (AAAA-MM-DD). Las fechas del demo son relativas: el seed no se pudre. */
 function hoyLima(): string {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Lima",
@@ -79,545 +105,372 @@ function hoyLima(): string {
   }).format(new Date());
 }
 
-function sumarDias(base: string, dias: number): string {
-  const d = new Date(`${base}T12:00:00-05:00`).getTime() + dias * 86_400_000;
-  return hoyLimaDesde(new Date(d));
-}
-
-function hoyLimaDesde(d: Date): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Lima",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(d);
-}
-
-/** Próximo sábado (inclusive) en Lima: inicio del TALLER 06. */
-function proximoSabado(): string {
+/** Sábado de hace tres semanas: hoy cae en la semana 4 del curso. */
+function inicioDemo(): string {
   const hoy = hoyLima();
-  const dow = new Date(`${hoy}T12:00:00-05:00`).getUTCDay();
-  return sumarDias(hoy, (6 - dow + 7) % 7);
+  const dow = new Date(`${hoy}T12:00:00Z`).getUTCDay(); // 0 domingo … 6 sábado
+  const sabadoActual = sumarDias(hoy, -((dow + 1) % 7));
+  return sumarDias(sabadoActual, -21);
 }
 
-async function auditarTaller(
-  db: Db,
-  input: { tallerId: string; accion: string; detalle: string },
-): Promise<void> {
+async function auditar(db: Db, tallerId: string, accion: string, detalle: string): Promise<void> {
   const prev = await db
     .select({ hash: auditoriaTaller.hash })
     .from(auditoriaTaller)
-    .where(eq(auditoriaTaller.tallerId, input.tallerId))
+    .where(eq(auditoriaTaller.tallerId, tallerId))
     .orderBy(desc(auditoriaTaller.createdAt))
     .limit(1);
   const hashPrevio = prev[0]?.hash ?? null;
   const timestamp = new Date().toISOString();
+  const hash = hashTransicion({
+    hashPrevio,
+    expedienteId: tallerId,
+    actor: "00000001",
+    nuevoEstado: accion,
+    timestamp,
+  });
   await db.insert(auditoriaTaller).values({
-    tallerId: input.tallerId,
+    tallerId,
     actorId: ADMIN_ID,
     actorDni: "00000001",
-    accion: input.accion,
-    detalle: input.detalle,
+    accion,
+    detalle,
     hashPrevio,
-    hash: hashTransicion({
-      hashPrevio,
-      expedienteId: input.tallerId,
-      actor: "00000001",
-      nuevoEstado: input.accion,
-      timestamp,
-    }),
+    hash,
     createdAt: new Date(timestamp),
   });
 }
 
-/** ¿El usuario ya está en otro taller ACTIVO? (un taller activo por alumno). */
-async function tallerActivoDe(db: Db, usuarioId: string): Promise<string | null> {
-  const mem = await db
-    .select({ grupoId: grupoMiembros.grupoId })
-    .from(grupoMiembros)
-    .where(eq(grupoMiembros.usuarioId, usuarioId));
-  if (mem.length === 0) return null;
-  for (const m of mem) {
-    const g = await db
-      .select({ tallerId: gruposTaller.tallerId })
-      .from(gruposTaller)
-      .where(eq(gruposTaller.id, m.grupoId))
-      .limit(1);
-    const t = g[0];
-    if (!t) continue;
-    const est = await db
-      .select({ estado: talleres.estado })
-      .from(talleres)
-      .where(eq(talleres.id, t.tallerId))
-      .limit(1);
-    if (est[0]?.estado === "ACTIVO") return t.tallerId;
-  }
-  return null;
+async function idPorDni(db: Db, dni: string): Promise<string> {
+  const [u] = await db.select({ id: usuarios.id }).from(usuarios).where(eq(usuarios.dni, dni));
+  if (!u) throw new Error(`Seed taller: falta el usuario ${dni}`);
+  return u.id;
 }
 
-/**
- * Flujo demo del taller (idempotente, SOLO dev/e2e): TALLER 06 con 12
- * sesiones (sáb/dom 09:00), Grupo A (María, Carlos) y Grupo B (Lucía,
- * Jorge), cronograma de 4 cuotas, 3 fases con cumplimiento, un avance
- * solicitado y el pase de María. Fechas relativas a hoy (Lima).
- */
+const DIAS = [
+  { dia: 6, horaInicio: "15:00", horaFin: "20:00" },
+  { dia: 7, horaInicio: "08:00", horaFin: "13:00" },
+];
+
+const PROYECTOS = [
+  {
+    codigo: "P-01",
+    titulo: "Gestión de pensiones en talleres de tesis con trazabilidad",
+    dnis: ["11223344", "44556677"],
+    grupo: "Grupo 1",
+  },
+  {
+    codigo: "P-02",
+    titulo: "Prevención de riesgos ergonómicos en oficinas administrativas",
+    dnis: ["22334455"],
+    grupo: "Grupo 1",
+  },
+  {
+    codigo: "P-03",
+    titulo: "Seguridad de la información en una entidad pública regional",
+    dnis: ["33445566"],
+    grupo: "Grupo 2",
+  },
+] as const;
+
 export async function seedTallerFlujo(db: Db): Promise<void> {
-  // ---- Taller + sesiones ----
-  const taller = (
-    await db
-      .select({ id: talleres.id })
-      .from(talleres)
-      .where(eq(talleres.nombre, TALLER06))
-      .limit(1)
-  )[0];
-  let tallerId = taller?.id;
-  let inicio = "";
-  if (!tallerId) {
-    inicio = proximoSabado();
-    const sesiones = generarSesiones({
+  const [existe] = await db
+    .select({ id: talleres.id })
+    .from(talleres)
+    .where(eq(talleres.nombre, TALLER06))
+    .limit(1);
+  if (existe) {
+    console.log(`Seed ${TALLER06}: ya existe`);
+    return;
+  }
+  const hoy = hoyLima();
+  const inicio = inicioDemo();
+  const fin = finSugerido(inicio);
+  const activos = await db.select().from(feriados).where(eq(feriados.activo, true));
+  const cal = proponerSesiones({
+    inicio,
+    fin,
+    dias: DIAS,
+    feriados: new Map(activos.map((f) => [f.fecha, f.nombre])),
+    objetivo: 24,
+  });
+  if (!cal.ok) throw new Error(`Seed ${TALLER06}: ${cal.error.message}`);
+
+  const [t] = await db
+    .insert(talleres)
+    .values({
+      nombre: TALLER06,
+      periodo: "2026-II",
+      asesorId: ASESOR_ID,
+      estado: "EN_CURSO",
       fechaInicio: inicio,
-      dias: [6, 7],
-      horaInicio: "09:00",
-      horaFin: "11:00",
-      total: 12,
-    });
-    if (!sesiones.ok) throw new Error(`Seed TALLER 06: ${sesiones.error.message}`);
-    const ins = await db
-      .insert(talleres)
-      .values({
-        nombre: TALLER06,
-        periodo: "2026-II",
-        asesorId: ASESOR_ID,
-        fechaInicio: inicio,
-        diasSesion: "6,7",
-        horaInicio: "09:00",
-        horaFin: "11:00",
-        cupoMax: 30,
-        enlace: "https://meet.google.com/abc-defg-hij",
-        inscritos: 0,
-      })
-      .returning({ id: talleres.id });
-    tallerId = ins[0]?.id;
-    if (!tallerId) throw new Error("Seed TALLER 06: no se pudo crear");
-    await db.insert(tallerSesiones).values(
-      sesiones.value.map(
-        (s: { nro: number; fecha: string; horaInicio: string; horaFin: string }) => ({
-          tallerId: tallerId as string,
-          nro: s.nro,
-          fecha: s.fecha,
-          horaInicio: s.horaInicio,
-          horaFin: s.horaFin,
-        }),
-      ),
+      fechaFin: fin,
+      numeroSesiones: 24,
+      cupoProyectos: 15,
+      enlaceSabado: "https://meet.google.com/abc-defg-hij",
+      enlaceDomingo: "https://meet.google.com/xyz-uvwx-rst",
+      creadoPor: ADMIN_ID,
+    })
+    .returning({ id: talleres.id });
+  if (!t) throw new Error(`Seed ${TALLER06}: no se pudo crear`);
+  const tallerId = t.id;
+  await db.insert(tallerDias).values(DIAS.map((d) => ({ tallerId, ...d })));
+
+  // Plan del taller (copia del institucional) y pensiones (§3).
+  const plan = await db.select().from(planInstitucional);
+  if (plan.length > 0)
+    await db.insert(planTaller).values(
+      plan.map((s) => ({
+        tallerId,
+        semana: s.semana,
+        contenido: s.contenido,
+        entregable: s.entregable,
+        indicaciones: s.semana === 2 ? "Revisar el formato del Anexo 17 antes del domingo" : null,
+        esHito: marcasHitoSemana(s.semana).esHito,
+        fijo: marcasHitoSemana(s.semana).fijo,
+      })),
     );
-    await auditarTaller(db, {
-      tallerId,
-      accion: "CREAR_TALLER",
-      detalle: `Taller «${TALLER06}» con ${sesiones.value.length} sesiones`,
-    });
-  }
-  if (!tallerId) throw new Error("Seed TALLER 06: sin id de taller");
-  const t0 = (
-    await db
-      .select({ fechaInicio: talleres.fechaInicio })
-      .from(talleres)
-      .where(eq(talleres.id, tallerId))
-      .limit(1)
-  )[0];
-  inicio = t0?.fechaInicio ?? proximoSabado();
+  const pensiones = await db
+    .insert(pensionesTaller)
+    .values([
+      { tallerId, numero: 1, semana: null, fecha: null, monto: 1000 },
+      { tallerId, numero: 2, semana: 4, fecha: fechaPensionPorDefecto(inicio, 4), monto: 1000 },
+      { tallerId, numero: 3, semana: 8, fecha: fechaPensionPorDefecto(inicio, 8), monto: 1000 },
+    ])
+    .returning({ id: pensionesTaller.id, numero: pensionesTaller.numero });
+
+  // Grupos de horario (los crea el asesor dentro del bloque del sábado).
+  const grupos = await db
+    .insert(gruposHorario)
+    .values([
+      { tallerId, nombre: "Grupo 1", horaInicio: "15:00", horaFin: "17:30", creadoPor: ASESOR_ID },
+      { tallerId, nombre: "Grupo 2", horaInicio: "17:30", horaFin: "20:00", creadoPor: ASESOR_ID },
+    ])
+    .returning({ id: gruposHorario.id, nombre: gruposHorario.nombre });
+  const grupoId = (n: string) => grupos.find((g) => g.nombre === n)?.id ?? null;
+
+  // Sesiones: las pasadas, realizadas (la asistencia la registró el asesor).
   const sesiones = await db
-    .select({ id: tallerSesiones.id, nro: tallerSesiones.nro, fecha: tallerSesiones.fecha })
-    .from(tallerSesiones)
-    .where(eq(tallerSesiones.tallerId, tallerId));
-
-  // ---- Grupos ----
-  const grupos: Record<string, string> = {};
-  for (const nombre of ["Grupo A", "Grupo B"]) {
-    const g = (
-      await db
-        .select({ id: gruposTaller.id })
-        .from(gruposTaller)
-        .where(and(eq(gruposTaller.tallerId, tallerId), eq(gruposTaller.nombre, nombre)))
-        .limit(1)
-    )[0];
-    if (g) {
-      grupos[nombre] = g.id;
-      continue;
-    }
-    const ins = await db
-      .insert(gruposTaller)
-      .values({ tallerId, nombre, asesorId: ASESOR_ID, estado: "ACTIVO" })
-      .returning({ id: gruposTaller.id });
-    if (!ins[0]) throw new Error(`Seed ${nombre}: no se pudo crear`);
-    grupos[nombre] = ins[0].id;
-  }
-
-  // ---- Miembros + asistencias ----
-  const dnis: Record<string, string[]> = {
-    "Grupo A": ["11223344", "22334455"],
-    "Grupo B": ["33445566", "44556677"],
-  };
-  for (const [grupoNombre, grupoId] of Object.entries(grupos)) {
-    for (const dni of dnis[grupoNombre] ?? []) {
-      const u = (
-        await db.select({ id: usuarios.id }).from(usuarios).where(eq(usuarios.dni, dni)).limit(1)
-      )[0];
-      if (!u) continue;
-      const otro = await tallerActivoDe(db, u.id);
-      if (otro && otro !== tallerId) continue;
-      await db.insert(grupoMiembros).values({ grupoId, usuarioId: u.id }).onConflictDoNothing();
-      if (sesiones.length > 0) {
-        await db
-          .insert(tallerAsistencias)
-          .values(sesiones.map((s) => ({ sesionId: s.id, usuarioId: u.id })))
-          .onConflictDoNothing();
-      }
-      await auditarTaller(db, {
+    .insert(tallerSesiones)
+    .values(
+      cal.value.sesiones.map((s) => ({
         tallerId,
-        accion: "ASIGNAR_ALUMNO",
-        detalle: `DNI ${dni} al grupo ${grupoId}`,
+        nro: s.nro,
+        fecha: s.fecha,
+        horaInicio: s.horaInicio,
+        horaFin: s.horaFin,
+        estado: s.fecha < hoy ? ("REALIZADA" as const) : ("PROGRAMADA" as const),
+      })),
+    )
+    .returning({ id: tallerSesiones.id, nro: tallerSesiones.nro, estado: tallerSesiones.estado });
+  const realizadas = sesiones.filter((s) => s.estado === "REALIZADA").sort((a, b) => a.nro - b.nro);
+  for (const s of realizadas)
+    for (const g of grupos)
+      await db.insert(asistenciaGrupos).values({
+        sesionId: s.id,
+        grupoHorarioId: g.id,
+        guardadoPor: ASESOR_ID,
       });
-    }
-  }
-  const conteo = await db
-    .select({ usuarioId: grupoMiembros.usuarioId })
-    .from(grupoMiembros)
-    .innerJoin(gruposTaller, eq(gruposTaller.id, grupoMiembros.grupoId))
-    .where(eq(gruposTaller.tallerId, tallerId));
-  await db
-    .update(talleres)
-    .set({ inscritos: new Set(conteo.map((c) => c.usuarioId)).size })
-    .where(eq(talleres.id, tallerId));
 
-  // ---- Sesiones con estados variados: 1 realizada, 2 abierta, 3 cancelada ----
-  const porNro = new Map(sesiones.map((s) => [s.nro, s]));
-  const uid = async (dni: string): Promise<string | null> => {
-    const u = (
-      await db.select({ id: usuarios.id }).from(usuarios).where(eq(usuarios.dni, dni)).limit(1)
-    )[0];
-    return u?.id ?? null;
-  };
-  const s1 = porNro.get(1);
-  if (s1) {
-    const actual = (
-      await db
-        .select({ estado: tallerSesiones.estado })
-        .from(tallerSesiones)
-        .where(eq(tallerSesiones.id, s1.id))
-        .limit(1)
-    )[0];
-    if (actual?.estado === "PROGRAMADA") {
-      await db
-        .update(tallerSesiones)
-        .set({ estado: "REALIZADA" })
-        .where(eq(tallerSesiones.id, s1.id));
-      const marcas: Array<{
-        dni: string;
-        estado: "PRESENTE" | "FALTA" | "JUSTIFICADA";
-        motivo: string | null;
-      }> = [
-        { dni: "11223344", estado: "PRESENTE", motivo: null },
-        { dni: "22334455", estado: "PRESENTE", motivo: null },
-        { dni: "33445566", estado: "FALTA", motivo: null },
-        { dni: "44556677", estado: "JUSTIFICADA", motivo: "Cita médica familiar" },
-      ];
-      for (const m of marcas) {
-        const id = await uid(m.dni);
-        if (!id) continue;
-        await db
-          .insert(tallerAsistencias)
-          .values({
-            sesionId: s1.id,
-            usuarioId: id,
-            estado: m.estado,
-            marcadaAt: m.estado === "FALTA" ? null : new Date(`${s1.fecha}T09:35:00-05:00`),
-            motivo: m.motivo,
-            actualizadaPor: m.estado === "JUSTIFICADA" ? ASESOR_ID : null,
-          })
-          .onConflictDoUpdate({
-            target: [tallerAsistencias.sesionId, tallerAsistencias.usuarioId],
-            set: {
-              estado: m.estado,
-              marcadaAt: m.estado === "FALTA" ? null : new Date(`${s1.fecha}T09:35:00-05:00`),
-              motivo: m.motivo,
-              actualizadaPor: m.estado === "JUSTIFICADA" ? ASESOR_ID : null,
-            },
-          });
-      }
-      await auditarTaller(db, { tallerId, accion: "ABRIR_ASISTENCIA", detalle: `Sesión ${s1.id}` });
-      await auditarTaller(db, {
+  const alumnoIds: Record<string, string> = {};
+  for (const p of PROYECTOS) for (const dni of p.dnis) alumnoIds[dni] = await idPorDni(db, dni);
+
+  for (const p of PROYECTOS) {
+    const [proyecto] = await db
+      .insert(proyectosTaller)
+      .values({
         tallerId,
-        accion: "CERRAR_ASISTENCIA",
-        detalle: `Sesión ${s1.id}`,
-      });
-    }
-  }
-  const s2 = porNro.get(2);
-  if (s2) {
-    const actual = (
+        codigo: p.codigo,
+        titulo: p.titulo,
+        programa: "SEGUNDA ESPECIALIDAD EN INGENIERÍA DE SISTEMAS",
+        grupoHorarioId: grupoId(p.grupo),
+        creadoPor: ADMIN_ID,
+      })
+      .returning({ id: proyectosTaller.id });
+    if (!proyecto) continue;
+    for (const [i, dni] of p.dnis.entries()) {
+      const alumnoId = alumnoIds[dni] as string;
       await db
-        .select({ estado: tallerSesiones.estado })
-        .from(tallerSesiones)
-        .where(eq(tallerSesiones.id, s2.id))
-        .limit(1)
-    )[0];
-    if (actual?.estado === "PROGRAMADA") {
-      await db
-        .update(tallerSesiones)
-        .set({ estado: "ABIERTA" })
-        .where(eq(tallerSesiones.id, s2.id));
-      await auditarTaller(db, { tallerId, accion: "ABRIR_ASISTENCIA", detalle: `Sesión ${s2.id}` });
-    }
-  }
-  const s3 = porNro.get(3);
-  if (s3) {
-    const actual = (
-      await db
-        .select({ estado: tallerSesiones.estado })
-        .from(tallerSesiones)
-        .where(eq(tallerSesiones.id, s3.id))
-        .limit(1)
-    )[0];
-    if (actual?.estado === "PROGRAMADA") {
-      await db
-        .update(tallerSesiones)
-        .set({ estado: "CANCELADA", motivo: "Feriado local" })
-        .where(eq(tallerSesiones.id, s3.id));
-      await auditarTaller(db, { tallerId, accion: "CANCELAR_SESION", detalle: `Sesión ${s3.id}` });
-    }
-  }
-
-  // ---- Pensiones: 4 cuotas de S/150 por miembro ----
-  const primerVto = sumarDias(inicio, 28);
-  for (const grupoId of Object.values(grupos)) {
-    const previas = await db
-      .select({ id: cronogramaPensiones.id })
-      .from(cronogramaPensiones)
-      .where(eq(cronogramaPensiones.grupoId, grupoId))
-      .limit(1);
-    if (previas.length > 0) continue;
-    const miembros = await db
-      .select({ usuarioId: grupoMiembros.usuarioId })
-      .from(grupoMiembros)
-      .where(eq(grupoMiembros.grupoId, grupoId));
-    const base = new Date(`${primerVto}T00:00:00`);
-    for (const m of miembros) {
-      for (let n = 1; n <= 4; n++) {
-        const vto = new Date(base);
-        vto.setMonth(vto.getMonth() + (n - 1));
-        await db.insert(cronogramaPensiones).values({
-          grupoId,
-          usuarioId: m.usuarioId,
-          nroCuota: n,
-          monto: 150,
-          vencimiento: vto.toISOString().slice(0, 10),
-          estado: "PENDIENTE",
+        .insert(proyectoTesistas)
+        .values({ proyectoId: proyecto.id, alumnoId, orden: i + 1, creadoPor: ADMIN_ID });
+      // Asistencia: PENDIENTE en las futuras; en las realizadas, la marca del asesor.
+      for (const s of sesiones) {
+        const k = realizadas.findIndex((r) => r.id === s.id);
+        let estado: "PENDIENTE" | "PRESENTE" | "FALTA" | "JUSTIFICADA" = "PENDIENTE";
+        if (k >= 0) {
+          const ultimas = k >= realizadas.length - 2;
+          estado =
+            dni === "33445566" && ultimas
+              ? "FALTA"
+              : dni === "44556677" && k === 1
+                ? "JUSTIFICADA"
+                : "PRESENTE";
+        }
+        await db.insert(tallerAsistencias).values({
+          sesionId: s.id,
+          usuarioId: alumnoId,
+          estado,
+          ...(estado !== "PENDIENTE" ? { marcadaAt: new Date(), registradaPor: ASESOR_ID } : {}),
+          ...(estado === "JUSTIFICADA" ? { motivo: "Certificado médico" } : {}),
         });
       }
+      // Pensiones: la 1.ª validada al inscribirse; la 2.ª según el caso del demo.
+      for (const pt of pensiones) {
+        const base = { pensionTallerId: pt.id, alumnoId, creadoPor: ADMIN_ID };
+        if (pt.numero === 1) {
+          await db.insert(pensionesAlumno).values({
+            ...base,
+            estado: "VALIDADA",
+            medio: "INSCRIPCION",
+            validadaPor: ADMIN_ID,
+            validadaAt: new Date(),
+          });
+          continue;
+        }
+        const caso =
+          pt.numero === 2
+            ? dni === "11223344"
+              ? "EN_REVISION"
+              : dni === "22334455"
+                ? "OBSERVADA"
+                : dni === "44556677"
+                  ? "VALIDADA"
+                  : "PENDIENTE"
+            : "PENDIENTE";
+        const [pa] = await db
+          .insert(pensionesAlumno)
+          .values({
+            ...base,
+            estado: caso,
+            ...(caso === "VALIDADA"
+              ? { medio: "COMPROBANTE" as const, validadaPor: ADMIN_ID, validadaAt: new Date() }
+              : {}),
+            ...(caso === "OBSERVADA" ? { observacion: "El voucher no se lee completo" } : {}),
+          })
+          .returning({ id: pensionesAlumno.id });
+        if (pa && caso !== "PENDIENTE") {
+          const archivo = await guardarPdf(
+            tallerId,
+            "comprobantes",
+            `pension_${pt.numero}_${dni}.pdf`,
+            `Voucher pension ${pt.numero} DNI ${dni}`,
+          );
+          await db.insert(comprobantesPension).values({
+            pensionAlumnoId: pa.id,
+            ...archivo,
+            estado:
+              caso === "VALIDADA" ? "VALIDADO" : caso === "OBSERVADA" ? "OBSERVADO" : "EN_REVISION",
+            ...(caso === "OBSERVADA" ? { motivo: "El voucher no se lee completo" } : {}),
+            ...(caso === "VALIDADA" ? { validadoPor: ADMIN_ID, validadoAt: new Date() } : {}),
+            creadoPor: alumnoId,
+          });
+        }
+      }
     }
-  }
 
-  // ---- Cuotas con estados variados (P8/P9 con ejemplos reales) ----
-  async function cuotaDe(
-    grupoId: string,
-    dni: string,
-    nro: number,
-  ): Promise<{ id: string; estado: string } | null> {
-    const u = (
-      await db.select({ id: usuarios.id }).from(usuarios).where(eq(usuarios.dni, dni)).limit(1)
-    )[0];
-    if (!u) return null;
-    const c = (
-      await db
-        .select({ id: cronogramaPensiones.id, estado: cronogramaPensiones.estado })
-        .from(cronogramaPensiones)
-        .where(
-          and(
-            eq(cronogramaPensiones.grupoId, grupoId),
-            eq(cronogramaPensiones.usuarioId, u.id),
-            eq(cronogramaPensiones.nroCuota, nro),
-          ),
-        )
-        .limit(1)
-    )[0];
-    return c ?? null;
-  }
-  // Carlos, cuota 1 vencida (sigue PENDIENTE → deudor con atraso).
-  const carlos1 = await cuotaDe(grupos["Grupo A"] ?? "", "22334455", 1);
-  if (carlos1 && carlos1.estado === "PENDIENTE") {
-    await db
-      .update(cronogramaPensiones)
-      .set({ vencimiento: sumarDias(hoyLima(), -12) })
-      .where(eq(cronogramaPensiones.id, carlos1.id));
-  }
-  // María, cuota 1 validada con comprobante.
-  const maria1 = await cuotaDe(grupos["Grupo A"] ?? "", "11223344", 1);
-  if (maria1 && maria1.estado === "PENDIENTE") {
-    const comp = await guardarComprobante(tallerId, maria1.id, 1, "Comprobante María T. cuota 1");
-    await db
-      .update(cronogramaPensiones)
-      .set({
-        estado: "VALIDADO",
-        comprobanteRuta: comp.ruta,
-        comprobanteSha256: comp.sha256,
-        comprobanteFecha: comp.fecha,
-        motivo: null,
-      })
-      .where(eq(cronogramaPensiones.id, maria1.id));
-    await auditarTaller(db, {
-      tallerId,
-      accion: "SUBIR_COMPROBANTE",
-      detalle: "Cuota 1 en revisión",
-    });
-    await auditarTaller(db, { tallerId, accion: "VALIDAR_COMPROBANTE", detalle: "Cuota 1 pagada" });
-  }
-  // Lucía, cuota 1 observada con comprobante y motivo.
-  const lucia1 = await cuotaDe(grupos["Grupo B"] ?? "", "33445566", 1);
-  if (lucia1 && lucia1.estado === "PENDIENTE") {
-    const comp = await guardarComprobante(tallerId, lucia1.id, 1, "Comprobante Lucía M. cuota 1");
-    await db
-      .update(cronogramaPensiones)
-      .set({
-        estado: "OBSERVADO",
-        comprobanteRuta: comp.ruta,
-        comprobanteSha256: comp.sha256,
-        comprobanteFecha: comp.fecha,
-        motivo: "La imagen no se lee",
-      })
-      .where(eq(cronogramaPensiones.id, lucia1.id));
-    await auditarTaller(db, {
-      tallerId,
-      accion: "SUBIR_COMPROBANTE",
-      detalle: "Cuota 1 en revisión",
-    });
-    await auditarTaller(db, {
-      tallerId,
-      accion: "OBSERVAR_COMPROBANTE",
-      detalle: "Cuota 1 observada",
-    });
-  }
-  // Jorge, cuota 2 en revisión con comprobante.
-  const jorge2 = await cuotaDe(grupos["Grupo B"] ?? "", "44556677", 2);
-  if (jorge2 && jorge2.estado === "PENDIENTE") {
-    const comp = await guardarComprobante(tallerId, jorge2.id, 2, "Comprobante Jorge R. cuota 2");
-    await db
-      .update(cronogramaPensiones)
-      .set({
-        estado: "EN_REVISION",
-        comprobanteRuta: comp.ruta,
-        comprobanteSha256: comp.sha256,
-        comprobanteFecha: comp.fecha,
-        motivo: null,
-      })
-      .where(eq(cronogramaPensiones.id, jorge2.id));
-    await auditarTaller(db, {
-      tallerId,
-      accion: "SUBIR_COMPROBANTE",
-      detalle: "Cuota 2 en revisión",
-    });
-  }
-  // ---- Fases + cumplimiento ----
-  const fases = await db
-    .select({ id: tallerFases.id, orden: tallerFases.orden })
-    .from(tallerFases)
-    .where(eq(tallerFases.tallerId, tallerId))
-    .orderBy(tallerFases.orden);
-  if (fases.length === 0) {
-    const defs = [
-      { nombre: "Planteamiento del problema", fechaRef: sumarDias(inicio, 14) },
-      { nombre: "Marco teórico", fechaRef: sumarDias(inicio, 42) },
-      { nombre: "Metodología", fechaRef: sumarDias(inicio, 56) },
-    ];
-    let orden = 0;
-    for (const d of defs) {
-      orden += 1;
-      const ins = await db
-        .insert(tallerFases)
-        .values({ tallerId, nombre: d.nombre, descripcion: null, fechaRef: d.fechaRef, orden })
-        .returning({ id: tallerFases.id });
-      if (ins[0]) fases.push({ id: ins[0].id, orden });
-      await auditarTaller(db, { tallerId, accion: "CREAR_FASE", detalle: `Fase «${d.nombre}»` });
+    // Hitos (§3) y ficha de control (6 filas) del proyecto.
+    for (const h of HITOS_TALLER) {
+      const fechaLimite = fechaHito(inicio, h.semana);
+      const titular = alumnoIds[p.dnis[0]] as string;
+      let estado: "NO_HABILITADO" | "HABILITADO" | "ENTREGADO" | "OBSERVADO" | "NO_ENTREGADO" =
+        "NO_HABILITADO";
+      if (h.tipo === "PLAN") estado = p.codigo === "P-03" ? "NO_ENTREGADO" : "ENTREGADO";
+      const [hito] = await db
+        .insert(hitosProyecto)
+        .values({
+          proyectoId: proyecto.id,
+          tipo: h.tipo,
+          semana: h.semana,
+          fechaLimite,
+          estado,
+          ...(h.tipo === "PLAN" ? { habilitadoPor: ASESOR_ID, habilitadoAt: new Date() } : {}),
+        })
+        .returning({ id: hitosProyecto.id });
+      if (hito && h.tipo === "PLAN" && p.codigo !== "P-03") {
+        const archivo = await guardarPdf(
+          proyecto.id,
+          "entregas",
+          `plan_${p.codigo}_v1.pdf`,
+          `Plan de tesis ${p.codigo} v1`,
+        );
+        await db.insert(entregasHito).values({
+          hitoId: hito.id,
+          version: 1,
+          ...archivo,
+          comentario: "Primera versión del plan",
+          entregadaPor: titular,
+          estado: p.codigo === "P-02" ? "OBSERVADA" : "ENTREGADA",
+          ...(p.codigo === "P-02"
+            ? {
+                observaciones: "Delimitar mejor el problema y actualizar las referencias",
+                revisadaPor: ASESOR_ID,
+                revisadaAt: new Date(),
+              }
+            : {}),
+        });
+        // P-02 ya levantó la observación: la v2 espera la revisión del asesor.
+        if (p.codigo === "P-02") {
+          const v2 = await guardarPdf(
+            proyecto.id,
+            "entregas",
+            `plan_${p.codigo}_v2.pdf`,
+            `Plan de tesis ${p.codigo} v2`,
+          );
+          await db.insert(entregasHito).values({
+            hitoId: hito.id,
+            version: 2,
+            ...v2,
+            comentario: "Versión corregida según las observaciones",
+            entregadaPor: titular,
+            estado: "ENTREGADA",
+          });
+        }
+      }
+    }
+    for (const f of FICHA_SEMANAS) {
+      const revisada = p.codigo === "P-02" && f.semana === 2;
+      await db.insert(fichaRegistros).values({
+        proyectoId: proyecto.id,
+        semana: f.semana,
+        avanceRevisado: f.avanceRevisado,
+        estado: revisada ? "REVISADO" : "SIN_REVISION",
+        ...(revisada
+          ? {
+              fecha: sumarDias(inicio, 8),
+              observacionesAcuerdos: "Delimitar mejor el problema y actualizar las referencias",
+              revisadoPor: ASESOR_ID,
+            }
+          : {}),
+      });
+    }
+
+    if (p.codigo === "P-03") {
+      const lucia = alumnoIds["33445566"] as string;
+      await db.insert(alertasTaller).values([
+        {
+          tipo: "PLAN_NO_PRESENTADO",
+          tallerId,
+          proyectoId: proyecto.id,
+          alumnoId: lucia,
+          claveDedupe: `PLAN:${proyecto.id}`,
+        },
+        {
+          tipo: "FALTAS_CONSECUTIVAS",
+          tallerId,
+          proyectoId: proyecto.id,
+          alumnoId: lucia,
+          claveDedupe: `FALTAS:${lucia}:${realizadas.at(-1)?.id ?? "x"}`,
+        },
+      ]);
     }
   }
-  async function marcar(
-    tid: string,
-    dni: string,
-    orden: number,
-    estado: "CUMPLIDA" | "OBSERVADA",
-    comentario: string | null,
-  ): Promise<void> {
-    const fase = fases.find((f) => f.orden === orden);
-    const u = (
-      await db.select({ id: usuarios.id }).from(usuarios).where(eq(usuarios.dni, dni)).limit(1)
-    )[0];
-    if (!fase || !u) return;
-    await db
-      .insert(tallerCumplimiento)
-      .values({ faseId: fase.id, usuarioId: u.id, estado, comentario })
-      .onConflictDoUpdate({
-        target: [tallerCumplimiento.faseId, tallerCumplimiento.usuarioId],
-        set: { estado, comentario },
-      });
-    await auditarTaller(db, {
-      tallerId: tid,
-      accion: "MARCAR_CUMPLIMIENTO",
-      detalle: `Fase ${fase.id}, DNI ${dni} → ${estado}`,
-    });
-  }
-  await marcar(tallerId, "11223344", 1, "CUMPLIDA", null);
-  await marcar(tallerId, "11223344", 2, "CUMPLIDA", null);
-  await marcar(tallerId, "11223344", 3, "CUMPLIDA", null);
-  await marcar(tallerId, "22334455", 1, "CUMPLIDA", null);
-  await marcar(
+  await auditar(
+    db,
     tallerId,
-    "22334455",
-    2,
-    "OBSERVADA",
-    "Precisar el marco teórico y corregir las citas",
+    "CREAR_TALLER",
+    `Taller «${TALLER06}» (demo) con ${sesiones.length} sesiones y 3 proyectos`,
   );
-
-  // ---- Avance solicitado ----
-  const avances = await db
-    .select({ id: tallerAvances.id })
-    .from(tallerAvances)
-    .where(eq(tallerAvances.tallerId, tallerId))
-    .limit(1);
-  if (avances.length === 0) {
-    await db.insert(tallerAvances).values({
-      tallerId,
-      sesionId: null,
-      descripcion: "Planteamiento del problema",
-      plazo: sumarDias(inicio, 40),
-      solicitadoPor: ASESOR_ID,
-    });
-    await auditarTaller(db, {
-      tallerId,
-      accion: "SOLICITAR_AVANCE",
-      detalle: `Plazo ${sumarDias(inicio, 40)}: Planteamiento del problema`,
-    });
-  }
-
-  // ---- Pase de María (fases completas) ----
-  const maria = (
-    await db.select({ id: usuarios.id }).from(usuarios).where(eq(usuarios.dni, "11223344")).limit(1)
-  )[0];
-  if (maria) {
-    const pase = await db
-      .select({ id: tallerPases.id })
-      .from(tallerPases)
-      .where(and(eq(tallerPases.tallerId, tallerId), eq(tallerPases.usuarioId, maria.id)))
-      .limit(1);
-    if (pase.length === 0) {
-      await db
-        .insert(tallerPases)
-        .values({ tallerId, usuarioId: maria.id, validadoPor: ASESOR_ID });
-      await auditarTaller(db, {
-        tallerId,
-        accion: "VALIDAR_PASE",
-        detalle: "DNI 11223344 pasa a Plan de tesis",
-      });
-    }
-  }
-
-  console.log(`Seed TALLER 06 OK. Inicio ${inicio}, grupos A/B, fases, avance y pase.`);
+  console.log(
+    `Seed ${TALLER06} OK. Inicio ${inicio}, ${realizadas.length} sesiones realizadas, 3 proyectos.`,
+  );
 }

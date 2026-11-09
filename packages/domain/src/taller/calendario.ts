@@ -227,3 +227,65 @@ export function textoContador(n: number, objetivo: number): string {
   const s = n - objetivo;
   return `${base} · ${s === 1 ? "sobra 1" : `sobran ${s}`}`;
 }
+
+// ── Calendario editado en P2 ───────────────────────────────────────────
+
+export interface SesionEditada {
+  fecha: string;
+  horaInicio: string;
+  horaFin: string;
+}
+
+export interface SesionNumerada extends SesionEditada {
+  nro: number;
+}
+
+const HORA_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+/** Tope de sesiones por taller (RNF-02): 12 semanas con días extra. */
+export const MAX_SESIONES_TALLER = 60;
+
+/**
+ * §9 P2: el calendario que guarda la Secretaría (propuesto y ajustado a
+ * mano con "Cambiar fecha", "Quitar" y "Agregar sesión"). Valida fechas y
+ * horas, impide dos sesiones el mismo día y numera por fecha (1…n).
+ */
+export function normalizarCalendario(
+  sesiones: readonly SesionEditada[],
+): Result<SesionNumerada[], DomainError> {
+  if (sesiones.length === 0)
+    return fail(new DomainError("VALIDACION_FALLIDA", "El calendario no tiene sesiones"));
+  if (sesiones.length > MAX_SESIONES_TALLER)
+    return fail(
+      new DomainError(
+        "VALIDACION_FALLIDA",
+        `El calendario no puede tener más de ${MAX_SESIONES_TALLER} sesiones`,
+      ),
+    );
+  const vistas = new Set<string>();
+  for (const s of sesiones) {
+    if (!esFechaCivilValida(s.fecha))
+      return fail(new DomainError("VALIDACION_FALLIDA", `Fecha de sesión inválida: ${s.fecha}`));
+    if (!HORA_RE.test(s.horaInicio) || !HORA_RE.test(s.horaFin))
+      return fail(new DomainError("VALIDACION_FALLIDA", "Escribe la hora con el formato HH:MM"));
+    if (s.horaFin <= s.horaInicio)
+      return fail(
+        new DomainError("VALIDACION_FALLIDA", `La sesión del ${s.fecha} termina antes de empezar`),
+      );
+    if (vistas.has(s.fecha))
+      return fail(
+        new DomainError("VALIDACION_FALLIDA", `Hay dos sesiones el mismo día (${s.fecha})`),
+      );
+    vistas.add(s.fecha);
+  }
+  return ok(
+    [...sesiones]
+      .sort((a, b) => a.fecha.localeCompare(b.fecha))
+      .map((s, i) => ({
+        nro: i + 1,
+        fecha: s.fecha,
+        horaInicio: s.horaInicio,
+        horaFin: s.horaFin,
+      })),
+  );
+}

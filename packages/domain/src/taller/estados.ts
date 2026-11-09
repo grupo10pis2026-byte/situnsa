@@ -37,6 +37,11 @@ export const ESTADOS_TALLER_VIGENTE: readonly EstadoTallerCurso[] = [
   "EN_CURSO",
 ];
 
+/** ¿El taller está vigente (abierto, completo o en curso)? Admite el valor crudo de la BD. */
+export function esTallerVigente(estado: string): boolean {
+  return (ESTADOS_TALLER_VIGENTE as readonly string[]).includes(estado);
+}
+
 const fsmTaller = crearFsm<EstadoTallerCurso>("Taller", [
   ["ABIERTO_INSCRIPCIONES", "COMPLETO"],
   // Mover un proyecto a otro taller (o un retiro, si libera cupo) reabre.
@@ -100,6 +105,8 @@ const fsmHito = crearFsm<EstadoHito>("Hito", [
   ["OBSERVADO", "ENTREGADO"],
   ["HABILITADO", "NO_ENTREGADO"],
   ["OBSERVADO", "NO_ENTREGADO"],
+  // §9 P6b "Habilitar nueva entrega" (solo hitos no fijos, con nueva fecha).
+  ["NO_ENTREGADO", "HABILITADO"],
 ]);
 export const puedeTransitarHito = fsmHito.puede;
 export const assertTransicionHito = fsmHito.assert;
