@@ -10,7 +10,7 @@ export function EmptyState({
 }: {
   icono?: ReactNode;
   titulo: string;
-  descripcion?: string;
+  descripcion?: string | undefined;
   accion?: ReactNode;
 }) {
   return (

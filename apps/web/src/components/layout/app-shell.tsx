@@ -1,11 +1,13 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
+  AlertTriangle,
   ClipboardCheck,
   FilePlus,
   GraduationCap,
   LayoutList,
   LogOut,
   Menu,
+  MessageSquareHeart,
   PanelLeftClose,
   PanelLeftOpen,
   Settings2,
@@ -30,12 +32,18 @@ function navPorRol(rol: string | undefined): Item[] {
       { to: "/mi-tramite", etiqueta: "Mi Trámite", icono: <LayoutList size={18} /> },
       { to: "/mi-taller", etiqueta: "Mi Taller", icono: <GraduationCap size={18} /> },
       { to: "/mis-pagos", etiqueta: "Mis Pagos", icono: <ClipboardCheck size={18} /> },
+      { to: "/encuesta", etiqueta: "Encuesta", icono: <MessageSquareHeart size={18} /> },
     ];
   }
   if (rol === "ASESOR" || rol === "JURADO") {
     return [
       { to: "/asesor", etiqueta: "Mis Alumnos", icono: <GraduationCap size={18} /> },
-      { to: "/mis-talleres", etiqueta: "Mis Talleres", icono: <LayoutList size={18} /> },
+      { to: "/asesor/taller", etiqueta: "Mi Taller", icono: <LayoutList size={18} /> },
+      {
+        to: "/encuestas-resultados",
+        etiqueta: "Mis Encuestas",
+        icono: <MessageSquareHeart size={18} />,
+      },
     ];
   }
   return [
@@ -44,6 +52,8 @@ function navPorRol(rol: string | undefined): Item[] {
     { to: "/inscripciones", etiqueta: "Validación", icono: <ClipboardCheck size={18} /> },
     { to: "/talleres", etiqueta: "Taller de Tesis", icono: <GraduationCap size={18} /> },
     { to: "/pagos-taller", etiqueta: "Pagos Taller", icono: <ClipboardCheck size={18} /> },
+    { to: "/reportes-taller", etiqueta: "Alertas y Reportes", icono: <AlertTriangle size={18} /> },
+    { to: "/encuestas-resultados", etiqueta: "Encuestas", icono: <MessageSquareHeart size={18} /> },
     { to: "/asesores", etiqueta: "Asesores", icono: <Users size={18} /> },
     // HU-0052: el proceso configurable es solo de administración del sistema.
     ...(rol === "ADMIN_FIPS"

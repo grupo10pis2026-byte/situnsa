@@ -1,385 +1,284 @@
+import { AlertTriangle, BadgeCheck, Clock, Eye, Wallet } from "lucide-react";
 import { useState } from "react";
-import { useCuotas, useGrupos, useProgramarPensiones } from "../api/catalogos.js";
-import { abrirArchivoProtegido } from "../api/expedientes.js";
 import {
-  atrasoTexto,
-  comprobanteUrl,
-  diaMes,
-  fechaCorta,
-  useDeudoresTaller,
-  useObservarComprobante,
-  useTalleres,
-  useValidarComprobante,
-} from "../api/taller.js";
+  ETIQUETA_PENSION,
+  type PensionFilaDTO,
+  useOperarPago,
+  usePagosTaller,
+  verComprobante,
+} from "../api/pagos.js";
+import { fechaCorta } from "../api/taller.js";
 import { AppShell } from "../components/layout/app-shell.js";
 import { Button } from "../components/ui/button.js";
-import { Card, CardEncabezado } from "../components/ui/card.js";
+import { Card } from "../components/ui/card.js";
 import { DataTable } from "../components/ui/data-table.js";
-import { controlClase } from "../components/ui/field.js";
+import { Dialogo } from "../components/ui/dialog.js";
+import { controlClase, Field } from "../components/ui/field.js";
 import { PageHeader } from "../components/ui/page-header.js";
 import { Select } from "../components/ui/select.js";
+import { StatCard } from "../components/ui/stat-card.js";
+import { StatusBadge } from "../components/ui/status-badge.js";
 import { useToast } from "../components/ui/toast.js";
 import { cn } from "../utils/cn.js";
 
-/** P9 Pagos del taller: cronograma, comprobantes y deudores (Secretaría). */
+/**
+ * P9 Pagos y deudores (spec v1.0 §9): la Secretaría del Taller valida u
+ * observa comprobantes (con motivo) o registra un pago directo. Filtros por
+ * taller, estado y solo deudores; los días de atraso se calculan al día.
+ */
+
+type Estado = "" | "PENDIENTE" | "EN_REVISION" | "VALIDADA" | "OBSERVADA" | "VENCIDA";
+type Dialogos = { tipo: "observar" | "pago"; fila: PensionFilaDTO } | null;
+
+function mensaje(e: unknown) {
+  return e instanceof Error ? e.message : "Ocurrió un error";
+}
+
 export function PagosTallerPage() {
-  const talleres = useTalleres({});
   const [tallerId, setTallerId] = useState("");
-  const [periodo, setPeriodo] = useState("");
-  const [tab, setTab] = useState("comprobantes");
-  const grupos = useGrupos();
-  const gruposDelTaller = (grupos.data ?? []).filter((g) => !tallerId || g.tallerId === tallerId);
-  const [grupoId, setGrupoId] = useState("");
-  const grupoSel = grupoId || gruposDelTaller[0]?.id || null;
+  const [estado, setEstado] = useState<Estado>("");
+  const [deudores, setDeudores] = useState(false);
+  const [q, setQ] = useState("");
+  const query = usePagosTaller({
+    ...(tallerId ? { tallerId } : {}),
+    ...(estado ? { estado } : {}),
+    ...(deudores ? { deudores: "true" as const } : {}),
+    ...(q.trim() ? { q: q.trim() } : {}),
+  });
+  const operar = useOperarPago();
+  const toast = useToast();
+  const [dialogo, setDialogo] = useState<Dialogos>(null);
+  const d = query.data;
 
   return (
     <AppShell activo="/pagos-taller">
-      <PageHeader titulo="Pagos del taller" descripcion="Cronograma, comprobantes y deudores" />
-      <Card>
-        <div className="grid grid-cols-1 gap-2 p-4 md:grid-cols-3 md:p-5">
-          <Select label="TALLER" value={tallerId} onChange={setTallerId}>
-            <option value="">Todos</option>
-            {(talleres.data?.items ?? []).map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.nombre}
-              </option>
-            ))}
-          </Select>
-          <label className="block">
-            <span className="mb-1 block text-[11px] font-bold tracking-wider text-grafito-600 uppercase">
-              Período
-            </span>
-            <input
-              aria-label="Filtrar por período"
-              className={cn(controlClase, "h-9")}
-              placeholder="Todos"
-              value={periodo}
-              onChange={(e) => setPeriodo(e.target.value)}
-            />
-          </label>
-          <Select label="GRUPO" value={grupoSel ?? ""} onChange={setGrupoId}>
-            <option value="">Elige un grupo</option>
-            {gruposDelTaller.map((g) => (
-              <option key={g.id} value={g.id}>
-                {g.nombre} · {g.tallerNombre}
-              </option>
-            ))}
-          </Select>
-        </div>
+      <PageHeader
+        titulo="Pagos y deudores"
+        descripcion="Pensiones del Taller de Tesis: valida los comprobantes, registra pagos directos y consulta la deuda."
+      />
+      <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+        <StatCard
+          etiqueta="Por validar"
+          valor={d?.resumen.porValidar ?? "—"}
+          icono={<Clock size={20} />}
+          acento="bg-navy-950"
+        />
+        <StatCard
+          etiqueta="Vencidas"
+          valor={d?.resumen.vencidas ?? "—"}
+          icono={<AlertTriangle size={20} />}
+          acento="bg-red-700"
+        />
+        <StatCard
+          etiqueta="Alumnos con deuda"
+          valor={d?.resumen.deudores ?? "—"}
+          icono={<Wallet size={20} />}
+          acento="bg-dorado-500"
+        />
+        <StatCard
+          etiqueta="Deuda total"
+          valor={d ? `S/ ${d.resumen.deudaTotal.toLocaleString("es-PE")}` : "—"}
+          icono={<BadgeCheck size={20} />}
+          acento="bg-verde-inst-700"
+        />
+      </div>
+      <Card className="mb-4 flex flex-wrap items-end gap-3 p-4">
+        <Select label="Taller" value={tallerId} onChange={setTallerId}>
+          <option value="">Todos</option>
+          {(d?.talleres ?? []).map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.nombre}
+            </option>
+          ))}
+        </Select>
+        <Select label="Estado" value={estado} onChange={(v) => setEstado(v as Estado)}>
+          <option value="">Todos</option>
+          {Object.entries(ETIQUETA_PENSION).map(([k, v]) => (
+            <option key={k} value={k}>
+              {v}
+            </option>
+          ))}
+        </Select>
+        <Field etiqueta="Alumno o DNI">
+          <input className={controlClase} value={q} onChange={(e) => setQ(e.target.value)} />
+        </Field>
+        <label className="flex h-10 items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={deudores}
+            onChange={(e) => setDeudores(e.target.checked)}
+          />
+          Solo deudores
+        </label>
       </Card>
-      <div className="flex flex-wrap gap-2" role="tablist" aria-label="Secciones de pagos">
-        {(
-          [
-            ["cronograma", "Cronograma"],
-            ["comprobantes", "Comprobantes por validar"],
-            ["deudores", "Deudores"],
-          ] as Array<[string, string]>
-        ).map(([v, etiqueta]) => (
-          <Button
-            key={v}
-            tamano="sm"
-            variante={tab === v ? "oscuro" : "contorno"}
-            onClick={() => setTab(v)}
-            type="button"
-          >
-            {etiqueta}
-          </Button>
-        ))}
-      </div>
-      <div className="pt-1">
-        {tab === "cronograma" &&
-          (grupoSel ? (
-            <CronogramaGrupo grupoId={grupoSel} />
-          ) : (
-            <Card>
-              <div className="p-4 text-sm text-grafito-600">
-                Elige un grupo para programar su cronograma.
-              </div>
-            </Card>
-          ))}
-        {tab === "comprobantes" &&
-          (grupoSel ? (
-            <ComprobantesGrupo
-              grupoId={grupoSel}
-              tallerNombre={gruposDelTaller.find((g) => g.id === grupoSel)?.tallerNombre ?? ""}
-            />
-          ) : (
-            <Card>
-              <div className="p-4 text-sm text-grafito-600">
-                Elige un grupo para revisar comprobantes.
-              </div>
-            </Card>
-          ))}
-        {tab === "deudores" && <DeudoresPanel tallerId={tallerId} periodo={periodo} />}
-      </div>
+      <DataTable
+        cargando={query.isPending}
+        vacio="No hay pensiones con estos filtros."
+        filas={d?.items ?? []}
+        columnas={[
+          {
+            encabezado: "Alumno",
+            celda: (f) => (
+              <span>
+                <strong>{f.alumno}</strong>
+                <span className="block text-xs text-grafito-600">
+                  DNI {f.dni} · {f.taller}
+                  {f.proyecto ? ` · ${f.proyecto}` : ""}
+                </span>
+              </span>
+            ),
+          },
+          {
+            encabezado: "Pensión",
+            celda: (f) => <strong className="tabular-nums">{f.numero}.ª</strong>,
+          },
+          {
+            encabezado: "Vence",
+            celda: (f) => (f.fecha ? fechaCorta(f.fecha) : "Al inscribirse"),
+          },
+          { encabezado: "Monto", celda: (f) => `S/ ${f.monto}` },
+          {
+            encabezado: "Estado",
+            celda: (f) => (
+              <span>
+                <StatusBadge estado={f.estado} etiqueta={ETIQUETA_PENSION[f.estado]} />
+                {f.diasAtraso > 0 && (
+                  <span className="mt-0.5 block text-xs font-semibold text-red-700">
+                    {f.diasAtraso} día{f.diasAtraso === 1 ? "" : "s"} de atraso
+                  </span>
+                )}
+                {f.observacion && (
+                  <span className="mt-0.5 block max-w-[220px] text-xs text-grafito-600">
+                    {f.observacion}
+                  </span>
+                )}
+                {f.medio === "PAGO_DIRECTO" && (
+                  <span className="mt-0.5 block text-xs text-grafito-600">Pago directo</span>
+                )}
+              </span>
+            ),
+          },
+          {
+            encabezado: "Acciones",
+            clase: "text-right",
+            celda: (f) => (
+              <span className="flex flex-wrap justify-end gap-1.5">
+                {f.comprobante && (
+                  <Button
+                    tamano="xs"
+                    variante="fantasma"
+                    type="button"
+                    onClick={() =>
+                      f.comprobante &&
+                      verComprobante(f.comprobante).catch((e: unknown) =>
+                        toast(mensaje(e), "error"),
+                      )
+                    }
+                  >
+                    <Eye size={13} />
+                    Comprobante
+                  </Button>
+                )}
+                {f.estado === "EN_REVISION" && f.comprobante && (
+                  <>
+                    <Button
+                      tamano="xs"
+                      variante="exito"
+                      type="button"
+                      disabled={operar.isPending}
+                      onClick={() =>
+                        f.comprobante &&
+                        operar.mutate(
+                          { tipo: "validar", comprobanteId: f.comprobante.id },
+                          {
+                            onSuccess: () => toast("Pago validado", "ok"),
+                            onError: (e) => toast(mensaje(e), "error"),
+                          },
+                        )
+                      }
+                    >
+                      Validar
+                    </Button>
+                    <Button
+                      tamano="xs"
+                      variante="contorno"
+                      type="button"
+                      onClick={() => setDialogo({ tipo: "observar", fila: f })}
+                    >
+                      Observar
+                    </Button>
+                  </>
+                )}
+                {f.estado !== "VALIDADA" && f.estado !== "EN_REVISION" && (
+                  <Button
+                    tamano="xs"
+                    variante="contorno"
+                    type="button"
+                    onClick={() => setDialogo({ tipo: "pago", fila: f })}
+                  >
+                    Registrar pago
+                  </Button>
+                )}
+              </span>
+            ),
+          },
+        ]}
+      />
+      {dialogo && <DialogoPago d={dialogo} onCerrar={() => setDialogo(null)} />}
     </AppShell>
   );
 }
 
-function CronogramaGrupo({ grupoId }: { grupoId: string }) {
-  const avisar = useToast();
-  const grupos = useGrupos();
-  const cuotas = useCuotas(grupoId);
-  const programar = useProgramarPensiones();
-  const [nro, setNro] = useState("");
-  const [monto, setMonto] = useState("");
-  const [vencimiento, setVencimiento] = useState("");
-  const grupo = (grupos.data ?? []).find((g) => g.id === grupoId);
-  const filas = cuotas.data ?? [];
-
-  async function onProgramar(): Promise<void> {
-    try {
-      const r = await programar.mutateAsync({
-        grupoId,
-        nroCuotas: Number(nro),
-        monto: Number(monto),
-        primerVencimiento: vencimiento,
-      });
-      setNro("");
-      setMonto("");
-      setVencimiento("");
-      avisar(`Cronograma: ${r.cuotas} cuotas para ${r.miembros} miembros`);
-    } catch (e) {
-      avisar(e instanceof Error ? e.message : "No se pudo programar", "error");
-    }
-  }
-
+function DialogoPago({ d, onCerrar }: { d: NonNullable<Dialogos>; onCerrar: () => void }) {
+  const operar = useOperarPago();
+  const toast = useToast();
+  const [texto, setTexto] = useState("");
+  const observar = d.tipo === "observar";
   return (
-    <div className="space-y-3">
-      <Card>
-        <CardEncabezado
-          titulo={`Cronograma · ${grupo?.nombre ?? ""}`}
-          descripcion="Todos los miembros comparten el calendario; el cumplimiento se controla por alumno."
-        />
-        <div className="flex flex-wrap gap-2 p-4">
-          <input
-            aria-label="Número de cuotas"
-            type="number"
-            min={1}
-            max={24}
-            className={cn(controlClase, "h-9 max-w-28")}
-            placeholder="Cuotas"
-            value={nro}
-            onChange={(e) => setNro(e.target.value)}
+    <Dialogo
+      abierto
+      onAbierto={(v) => !v && onCerrar()}
+      titulo={observar ? "Observar comprobante" : "Registrar pago directo"}
+      descripcion={`${d.fila.alumno} · pensión ${d.fila.numero} · S/ ${d.fila.monto}`}
+    >
+      <form
+        className="space-y-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const op =
+            observar && d.fila.comprobante
+              ? { tipo: "observar" as const, comprobanteId: d.fila.comprobante.id, motivo: texto }
+              : {
+                  tipo: "pagoDirecto" as const,
+                  pensionId: d.fila.id,
+                  observacion: texto.trim() || null,
+                };
+          operar.mutate(op, {
+            onSuccess: () => {
+              toast(observar ? "Comprobante observado" : "Pago registrado", "ok");
+              onCerrar();
+            },
+            onError: (err) => toast(mensaje(err), "error"),
+          });
+        }}
+      >
+        <Field etiqueta={observar ? "Motivo (se envía al alumno)" : "Observación (opcional)"}>
+          <textarea
+            className={cn(controlClase, "min-h-24")}
+            value={texto}
+            onChange={(e) => setTexto(e.target.value)}
+            required={observar}
           />
-          <input
-            aria-label="Monto por cuota S/"
-            type="number"
-            min={1}
-            className={cn(controlClase, "h-9 max-w-28")}
-            placeholder="S/"
-            value={monto}
-            onChange={(e) => setMonto(e.target.value)}
-          />
-          <input
-            aria-label="Primer vencimiento"
-            type="date"
-            className={cn(controlClase, "h-9 max-w-44")}
-            value={vencimiento}
-            onChange={(e) => setVencimiento(e.target.value)}
-          />
-          <Button
-            tamano="sm"
-            variante="oscuro"
-            disabled={programar.isPending}
-            onClick={() => void onProgramar()}
-            type="button"
-          >
-            Programar
+        </Field>
+        <div className="flex justify-end gap-2">
+          <Button variante="contorno" type="button" onClick={onCerrar}>
+            Cancelar
+          </Button>
+          <Button type="submit" disabled={operar.isPending || (observar && texto.trim() === "")}>
+            {observar ? "Observar" : "Registrar pago"}
           </Button>
         </div>
-      </Card>
-      <Card>
-        <CardEncabezado titulo="Cuotas del grupo" />
-        <div className="p-4">
-          <DataTable
-            cargando={cuotas.isPending}
-            vacio="Sin cronograma: programa las pensiones primero."
-            columnas={[
-              { encabezado: "Tesista", celda: (c) => `${c.nombres} · ${c.usuarioDni}` },
-              { encabezado: "Cuota", celda: (c) => `N° ${c.nroCuota}` },
-              { encabezado: "Monto", celda: (c) => `S/ ${c.monto}` },
-              { encabezado: "Vence", celda: (c) => fechaCorta(c.vencimiento) },
-            ]}
-            filas={filas}
-          />
-        </div>
-      </Card>
-    </div>
-  );
-}
-
-function DeudoresPanel({ tallerId, periodo }: { tallerId: string; periodo: string }) {
-  const deudores = useDeudoresTaller(tallerId || undefined, periodo.trim() || undefined);
-  const items = deudores.data?.items ?? [];
-  const filas = items
-    .flatMap((d) =>
-      d.cuotas.map((c) => ({
-        id: `${d.usuarioId}|${c.nroCuota}`,
-        nombres: d.nombres,
-        tallerNombre: d.tallerNombre,
-        nroCuota: c.nroCuota,
-        monto: c.monto,
-        vencimiento: c.vencimiento,
-      })),
-    )
-    .sort((a, b) => b.vencimiento.localeCompare(a.vencimiento));
-  const nDeudores = new Set(items.map((d) => d.usuarioId)).size;
-
-  return (
-    <Card>
-      <CardEncabezado
-        titulo="Deudores"
-        accion={
-          <span className="inline-flex items-center rounded-full border border-red-300 bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-800">
-            {nDeudores === 1 ? "1 deudor" : `${nDeudores} deudores`}
-          </span>
-        }
-      />
-      <div className="p-4">
-        <DataTable
-          cargando={deudores.isPending}
-          vacio="Sin deudores con estos filtros."
-          columnas={[
-            { encabezado: "Alumno", celda: (f) => f.nombres },
-            { encabezado: "Taller", celda: (f) => f.tallerNombre },
-            { encabezado: "Cuota", celda: (f) => f.nroCuota },
-            { encabezado: "Monto", celda: (f) => `S/ ${f.monto.toFixed(2)}` },
-            { encabezado: "Atraso", celda: (f) => atrasoTexto(f.vencimiento) },
-          ]}
-          filas={filas}
-        />
-        <p className="mt-2 text-xs text-grafito-600">
-          Alumnos con cuotas vencidas. Usa los filtros de taller y período para acotar la lista.
-        </p>
-      </div>
-    </Card>
-  );
-}
-
-function ComprobantesGrupo({ grupoId, tallerNombre }: { grupoId: string; tallerNombre: string }) {
-  const avisar = useToast();
-  const cuotas = useCuotas(grupoId);
-  const validar = useValidarComprobante();
-  const observar = useObservarComprobante();
-  const [obsDe, setObsDe] = useState<string | null>(null);
-  const [motivo, setMotivo] = useState("");
-  const filas = (cuotas.data ?? []).filter((c) => c.estado === "EN_REVISION");
-
-  async function onVer(cuotaId: string): Promise<void> {
-    try {
-      await abrirArchivoProtegido(comprobanteUrl(cuotaId));
-    } catch (e) {
-      avisar(e instanceof Error ? e.message : "No se pudo abrir", "error");
-    }
-  }
-
-  async function onValidar(cuotaId: string): Promise<void> {
-    try {
-      await validar.mutateAsync(cuotaId);
-      avisar("Comprobante validado: la cuota queda pagada");
-    } catch (e) {
-      avisar(e instanceof Error ? e.message : "No se pudo validar", "error");
-    }
-  }
-
-  async function onObservar(cuotaId: string): Promise<void> {
-    if (motivo.trim().length < 5) {
-      avisar("El motivo es obligatorio (mínimo 5 letras)", "error");
-      return;
-    }
-    try {
-      await observar.mutateAsync({ cuotaId, motivo: motivo.trim() });
-      setObsDe(null);
-      setMotivo("");
-      avisar("Comprobante observado: vuelve al alumno");
-    } catch (e) {
-      avisar(e instanceof Error ? e.message : "No se pudo observar", "error");
-    }
-  }
-
-  return (
-    <Card>
-      <CardEncabezado titulo="Comprobantes por validar" />
-      <div className="p-4">
-        <DataTable
-          cargando={cuotas.isPending}
-          vacio="Sin comprobantes en revisión en este grupo."
-          columnas={[
-            { encabezado: "Alumno", celda: (f) => f.nombres },
-            { encabezado: "Taller", celda: (f) => f.tallerNombre },
-            { encabezado: "Cuota", celda: (f) => f.nroCuota },
-            {
-              encabezado: "Archivo",
-              celda: (f) => (
-                <button
-                  className="text-sm text-grafito-700 underline"
-                  onClick={() => void onVer(f.id)}
-                  type="button"
-                >
-                  Ver archivo
-                </button>
-              ),
-            },
-            {
-              encabezado: "Fecha",
-              celda: (f) => (f.comprobanteFecha ? diaMes(f.comprobanteFecha) : "—"),
-            },
-            {
-              encabezado: "Acciones",
-              celda: (f) => (
-                <span className="flex flex-wrap items-center gap-1">
-                  <Button
-                    tamano="sm"
-                    variante="exito"
-                    disabled={validar.isPending}
-                    onClick={() => void onValidar(f.id)}
-                    type="button"
-                  >
-                    Validar
-                  </Button>
-                  <Button
-                    tamano="sm"
-                    variante="contorno"
-                    onClick={() => {
-                      setObsDe(obsDe === f.id ? null : f.id);
-                      setMotivo("");
-                    }}
-                    type="button"
-                  >
-                    Observar
-                  </Button>
-                  {obsDe === f.id && (
-                    <span className="flex items-center gap-1">
-                      <input
-                        aria-label={`Motivo para ${f.nombres} cuota ${f.nroCuota}`}
-                        className={cn(controlClase, "h-8 max-w-44")}
-                        placeholder="Motivo…"
-                        value={motivo}
-                        onChange={(e) => setMotivo(e.target.value)}
-                      />
-                      <Button
-                        tamano="xs"
-                        variante="oscuro"
-                        disabled={observar.isPending}
-                        onClick={() => void onObservar(f.id)}
-                        type="button"
-                      >
-                        Confirmar
-                      </Button>
-                    </span>
-                  )}
-                </span>
-              ),
-            },
-          ]}
-          filas={filas.map((f) => ({ ...f, tallerNombre }))}
-        />
-        <p className="mt-2 text-xs text-grafito-600">
-          Observar pide un motivo. Al validar, la cuota queda pagada, se actualiza Deudores y se
-          avisa al alumno.
-        </p>
-      </div>
-    </Card>
+      </form>
+    </Dialogo>
   );
 }

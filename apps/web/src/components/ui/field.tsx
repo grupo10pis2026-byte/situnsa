@@ -15,8 +15,8 @@ export function Field({
 }: {
   etiqueta: string;
   htmlFor?: string;
-  ayuda?: string;
-  error?: string;
+  ayuda?: string | undefined;
+  error?: string | undefined;
   children: ReactNode;
   className?: string;
 }) {

@@ -1,220 +1,204 @@
-import { abrirArchivoProtegido } from "../api/expedientes.js";
-import { useSession } from "../api/session.js";
+import { Link } from "@tanstack/react-router";
 import {
-  diaMes,
-  entregaUrl,
-  fechaCorta,
-  type TallerSesionDTO,
-  useAlumnos,
-  useAsistencia,
-  useAvances,
-  useMarcarAsistencia,
-  useSesiones,
-  useSubirEntrega,
-  useTalleres,
-} from "../api/taller.js";
+  AlertTriangle,
+  CalendarDays,
+  ExternalLink,
+  MessageSquareHeart,
+  Wallet,
+} from "lucide-react";
+import { useState } from "react";
+import { useMiTaller } from "../api/mi-taller.js";
+import { fechaLarga } from "../api/taller.js";
+import { CierreProyecto, FichaProyecto } from "../components/domain/taller-ficha.js";
+import { EntregasProyecto, PlanTallerCard } from "../components/domain/taller-hitos.js";
 import { AppShell } from "../components/layout/app-shell.js";
-import { Button } from "../components/ui/button.js";
-import { Card } from "../components/ui/card.js";
+import { botonClases } from "../components/ui/button.js";
+import { Card, CardEncabezado } from "../components/ui/card.js";
 import { DataTable } from "../components/ui/data-table.js";
 import { EmptyState } from "../components/ui/empty-state.js";
+import { PageHeader } from "../components/ui/page-header.js";
 import { StatusBadge } from "../components/ui/status-badge.js";
-import { useToast } from "../components/ui/toast.js";
+import { Tab, TabPanel, Tabs, TabsLista } from "../components/ui/tabs.js";
 
-const ESTADO_PROSA: Record<string, string> = {
-  PROGRAMADA: "Programada",
-  ABIERTA: "Asistencia abierta",
-  REALIZADA: "Realizada",
-  CANCELADA: "Cancelada",
+/**
+ * P7 Mi Taller (spec v1.0 §9): próxima sesión con su enlace, asistencia con
+ * el aviso rojo, plan del taller, entregas por hito, ficha y pensiones. Un
+ * alumno retirado ve todo en solo lectura.
+ */
+
+const ETIQUETA_MARCA: Record<string, string> = {
+  PRESENTE: "Presente",
+  FALTA: "Falta",
+  JUSTIFICADA: "Justificada",
+  PENDIENTE: "Pendiente",
 };
 
-/** P7 Mi taller (RF-0204, RF-0206, RF-0209): sesiones, asistencia y avances del alumno. */
 export function MiTallerPage() {
-  const talleres = useTalleres({});
-  const items = (talleres.data?.items ?? []).filter((t) => t.estado === "ACTIVO");
-  const actual = items[0] ?? null;
-
+  const q = useMiTaller();
+  const [tab, setTab] = useState("entregas");
+  const d = q.data;
   return (
     <AppShell activo="/mi-taller">
-      {talleres.isPending ? (
-        <output aria-label="Cargando" className="block space-y-2">
-          {[0, 1].map((i) => (
-            <div key={i} className="h-16 animate-pulse rounded-xl bg-white" />
-          ))}
-        </output>
-      ) : !actual ? (
+      <PageHeader
+        titulo="Mi Taller"
+        descripcion={
+          d?.taller
+            ? `${d.taller.nombre}${d.proyecto ? ` · proyecto ${d.proyecto.codigo}` : ""}`
+            : "Taller de Tesis"
+        }
+        insignia={d?.estadoTesista ? <StatusBadge estado={d.estadoTesista} /> : undefined}
+      />
+      {q.isPending ? (
+        <Card className="p-5 text-sm text-grafito-600">Cargando…</Card>
+      ) : !d?.taller || !d.proyecto ? (
         <EmptyState
-          titulo="Aún no estás en un taller activo"
-          descripcion="Cuando Secretaría te asigne a un grupo, aquí verás tus sesiones y avances."
+          titulo="Aún no estás en un taller"
+          descripcion="Cuando validen tu inscripción y te asignen a un taller lo verás aquí."
         />
       ) : (
-        <MiTallerContenido tallerId={actual.id} />
+        <div className="space-y-4">
+          {d.estadoTesista === "RETIRADO" && (
+            <p className="rounded-lg bg-red-50 p-3 text-sm font-semibold text-red-800">
+              Fuiste retirado del taller: tu información queda en solo lectura.
+            </p>
+          )}
+          {d.asistencia.aviso && (
+            <p className="flex items-center gap-2 rounded-lg bg-red-50 p-3 text-sm font-semibold text-red-800">
+              <AlertTriangle size={16} />
+              {d.asistencia.aviso}
+            </p>
+          )}
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card className="p-4">
+              <p className="flex items-center gap-1.5 text-xs font-semibold uppercase text-grafito-600">
+                <CalendarDays size={14} />
+                Próxima sesión
+              </p>
+              {d.proximaSesion ? (
+                <>
+                  <p className="mt-1 font-bold text-navy-950">
+                    Sesión {d.proximaSesion.nro} · {fechaLarga(d.proximaSesion.fecha)}
+                  </p>
+                  <p className="text-sm">
+                    {d.proximaSesion.horaInicio}–{d.proximaSesion.horaFin}
+                    {d.proyecto.grupo ? ` · ${d.proyecto.grupo}` : ""}
+                  </p>
+                  {d.proximaSesion.enlace && (
+                    <a
+                      href={d.proximaSesion.enlace}
+                      target="_blank"
+                      rel="noreferrer"
+                      className={botonClases({ tamano: "sm", className: "mt-2" })}
+                    >
+                      <ExternalLink size={14} />
+                      Entrar a la reunión
+                    </a>
+                  )}
+                </>
+              ) : (
+                <p className="mt-1 text-sm text-grafito-600">No hay sesiones programadas.</p>
+              )}
+            </Card>
+            <Card className="p-4">
+              <p className="text-xs font-semibold uppercase text-grafito-600">Mi asistencia</p>
+              <p className="mt-1 text-3xl font-bold text-navy-950">
+                {d.asistencia.porcentaje === null ? "—" : `${d.asistencia.porcentaje} %`}
+              </p>
+              <p className="text-sm text-grafito-600">
+                {d.asistencia.realizadas} sesiones realizadas
+              </p>
+            </Card>
+            <Card className="p-4">
+              <p className="flex items-center gap-1.5 text-xs font-semibold uppercase text-grafito-600">
+                <Wallet size={14} />
+                Pensiones
+              </p>
+              <p className="mt-1 text-3xl font-bold text-navy-950">
+                {d.pensiones.pagadas} de {d.pensiones.total}
+              </p>
+              {d.pensiones.conDeuda > 0 && (
+                <p className="text-sm font-semibold text-red-700">
+                  Tienes {d.pensiones.conDeuda} con deuda
+                </p>
+              )}
+              <Link to="/mis-pagos" className="text-sm text-navy-800 underline">
+                Ver Mis pagos
+              </Link>
+            </Card>
+          </div>
+          <p className="text-sm text-grafito-600">
+            Asesor: <strong>{d.taller.asesor ?? "—"}</strong>
+            {d.taller.asesorEmail && ` (${d.taller.asesorEmail})`} ·{" "}
+            <Link to="/encuesta" className="inline-flex items-center gap-1 text-navy-800 underline">
+              <MessageSquareHeart size={13} />
+              Encuesta sobre tu asesor
+            </Link>
+          </p>
+          <Tabs value={tab} onValueChange={setTab}>
+            <TabsLista>
+              <Tab value="entregas">Mis entregas</Tab>
+              <Tab value="sesiones">Sesiones y asistencia</Tab>
+              <Tab value="plan">Plan del taller</Tab>
+              <Tab value="ficha">Ficha de control</Tab>
+              <Tab value="cierre">Cierre</Tab>
+            </TabsLista>
+            <TabPanel value="entregas">
+              <EntregasProyecto proyectoId={d.proyecto.id} />
+            </TabPanel>
+            <TabPanel value="sesiones">
+              <Card>
+                <CardEncabezado
+                  titulo="Sesiones"
+                  descripcion="La asistencia la registra tu asesor."
+                />
+                <div className="p-4 md:p-5">
+                  <DataTable
+                    vacio="Sin sesiones."
+                    filas={d.sesiones}
+                    columnas={[
+                      {
+                        encabezado: "N°",
+                        celda: (s) => <strong className="tabular-nums">{s.nro}</strong>,
+                      },
+                      { encabezado: "Fecha", celda: (s) => fechaLarga(s.fecha) },
+                      { encabezado: "Hora", celda: (s) => `${s.horaInicio}–${s.horaFin}` },
+                      {
+                        encabezado: "Sesión",
+                        celda: (s) => (
+                          <span>
+                            <StatusBadge estado={s.estado} />
+                            {s.motivo && s.estado !== "PROGRAMADA" && (
+                              <span className="block text-xs text-grafito-600">{s.motivo}</span>
+                            )}
+                          </span>
+                        ),
+                      },
+                      {
+                        encabezado: "Mi asistencia",
+                        celda: (s) =>
+                          s.marca ? (
+                            <StatusBadge estado={s.marca} etiqueta={ETIQUETA_MARCA[s.marca]} />
+                          ) : (
+                            "—"
+                          ),
+                      },
+                    ]}
+                  />
+                </div>
+              </Card>
+            </TabPanel>
+            <TabPanel value="plan">
+              <PlanTallerCard tallerId={d.taller.id} />
+            </TabPanel>
+            <TabPanel value="ficha">
+              <FichaProyecto proyectoId={d.proyecto.id} />
+            </TabPanel>
+            <TabPanel value="cierre">
+              <CierreProyecto proyectoId={d.proyecto.id} />
+            </TabPanel>
+          </Tabs>
+        </div>
       )}
     </AppShell>
-  );
-}
-
-function MiTallerContenido({ tallerId }: { tallerId: string }) {
-  const { sesion } = useSession();
-  const talleres = useTalleres({});
-  const t = (talleres.data?.items ?? []).find((x) => x.id === tallerId);
-  const sesiones = useSesiones(tallerId);
-  const avances = useAvances(tallerId);
-  const alumnos = useAlumnos(tallerId);
-  const filas = [...(sesiones.data?.items ?? [])].sort((a, b) => a.nro - b.nro);
-  const proxima = filas.find((s) => s.estado === "ABIERTA" || s.estado === "PROGRAMADA") ?? null;
-  const yo = (alumnos.data?.items ?? []).find((a) => a.usuarioDni === sesion?.dni) ?? null;
-
-  return (
-    <div className="space-y-3">
-      {t && (
-        <Card>
-          <div className="flex flex-wrap items-center gap-2 p-4 md:p-5">
-            <div className="min-w-0 flex-1">
-              <p className="text-base font-bold text-navy-950">{t.nombre}</p>
-              <p className="text-sm text-grafito-600">
-                Asesor: {t.asesorNombre ?? "—"} · Próxima sesión:{" "}
-                {proxima ? `${fechaCorta(proxima.fecha)} · ${proxima.horaInicio}` : "—"}
-              </p>
-              <p className="text-sm text-grafito-600">
-                Mi asistencia: {yo !== null ? `${yo.asistenciaPct} %` : "—"}
-              </p>
-            </div>
-            {t.enlace && (
-              <a href={t.enlace} target="_blank" rel="noreferrer">
-                <Button variante="exito" type="button">
-                  Unirme a la sesión
-                </Button>
-              </a>
-            )}
-          </div>
-        </Card>
-      )}
-      <Card>
-        <div className="p-4">
-          <DataTable
-            cargando={sesiones.isPending}
-            vacio="Sin sesiones todavía."
-            columnas={[
-              { encabezado: "Sesión", celda: (f) => f.nro },
-              { encabezado: "Fecha", celda: (f) => fechaCorta(f.fecha) },
-              { encabezado: "Estado", celda: (f) => ESTADO_PROSA[f.estado] ?? f.estado },
-              {
-                encabezado: "Mi asistencia",
-                celda: (f) => <MiAsistenciaCelda tallerId={tallerId} sesion={f} />,
-              },
-            ]}
-            filas={filas.map((f) => ({ ...f, id: f.id }))}
-          />
-        </div>
-      </Card>
-      {(avances.data?.items ?? []).map((a) => (
-        <AvanceSolicitado key={a.id} tallerId={tallerId} avanceId={a.id} />
-      ))}
-    </div>
-  );
-}
-
-function MiAsistenciaCelda({ tallerId, sesion }: { tallerId: string; sesion: TallerSesionDTO }) {
-  const avisar = useToast();
-  const marcar = useMarcarAsistencia(sesion.id, tallerId);
-  const query = useAsistencia(
-    sesion.estado === "ABIERTA" || sesion.estado === "REALIZADA" ? sesion.id : null,
-  );
-  const propia = query.data?.items[0] ?? null;
-
-  if (sesion.estado === "PROGRAMADA" || sesion.estado === "CANCELADA") {
-    return <span className="text-sm text-grafito-600">La asistencia aún no está abierta.</span>;
-  }
-  if (query.isPending) {
-    return <span className="text-sm text-grafito-600">…</span>;
-  }
-  if (!propia || propia.estado === "PENDIENTE") {
-    if (sesion.estado !== "ABIERTA") {
-      return <StatusBadge estado="FALTA" />;
-    }
-    return (
-      <Button
-        variante="exito"
-        tamano="sm"
-        disabled={marcar.isPending}
-        onClick={() =>
-          void marcar
-            .mutateAsync()
-            .then(() => avisar(`Asistencia de la sesión ${sesion.nro} registrada`))
-            .catch((e: unknown) =>
-              avisar(e instanceof Error ? e.message : "No se pudo marcar", "error"),
-            )
-        }
-        type="button"
-      >
-        Marcar asistencia
-      </Button>
-    );
-  }
-  return <StatusBadge estado={propia.estado} />;
-}
-
-function AvanceSolicitado({ tallerId, avanceId }: { tallerId: string; avanceId: string }) {
-  const avisar = useToast();
-  const query = useAvances(tallerId);
-  const subir = useSubirEntrega(avanceId, tallerId);
-  const avance = (query.data?.items ?? []).find((a) => a.id === avanceId);
-  if (!avance) return null;
-  const entregas = avance.entregas;
-
-  async function onArchivo(file: File | undefined): Promise<void> {
-    if (!file) return;
-    try {
-      await subir.mutateAsync(file);
-      avisar("Avance entregado");
-    } catch (e) {
-      avisar(e instanceof Error ? e.message : "No se pudo subir", "error");
-    }
-  }
-
-  async function onDescargar(entregaId: string): Promise<void> {
-    try {
-      await abrirArchivoProtegido(entregaUrl(entregaId));
-    } catch (e) {
-      avisar(e instanceof Error ? e.message : "No se pudo abrir", "error");
-    }
-  }
-
-  return (
-    <Card>
-      <div className="flex flex-wrap items-center gap-2 p-4">
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-bold text-navy-950">Avance solicitado</p>
-          <p className="text-sm text-grafito-600">
-            {avance.descripcion} · plazo {diaMes(avance.plazo)}
-          </p>
-          {entregas.map((e) => (
-            <p key={e.id} className="mt-1 flex flex-wrap items-center gap-1 text-xs">
-              <StatusBadge estado={e.estado} extra={`v${e.version}`} />
-              <button
-                className="font-semibold text-navy-800 underline"
-                onClick={() => void onDescargar(e.id)}
-                type="button"
-              >
-                Ver
-              </button>
-              {e.observacion && <span className="text-grafito-600">· {e.observacion}</span>}
-            </p>
-          ))}
-        </div>
-        <label className="inline-flex cursor-pointer items-center rounded-lg bg-navy-950 px-4 py-2 text-sm font-semibold text-white">
-          Subir archivo
-          <input
-            aria-label={`Archivo para ${avance.descripcion}`}
-            type="file"
-            accept=".pdf,.doc,.docx"
-            className="hidden"
-            disabled={subir.isPending}
-            onChange={(e) => void onArchivo(e.target.files?.[0])}
-          />
-        </label>
-      </div>
-    </Card>
   );
 }

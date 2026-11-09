@@ -487,12 +487,11 @@ function ParametrosCard({
   parametros: ParametroTallerDTO[];
   editar: Editar;
 }) {
-  const porConfirmar = parametros.filter((p) => p.porConfirmar).length;
   return (
     <Card>
       <CardEncabezado
         titulo={<Titulo icono={<SlidersHorizontal size={15} />} texto="Parámetros del taller" />}
-        descripcion={`Reglas que la especificación deja configurables (${porConfirmar} están por confirmar con el cliente). Rigen desde que se guardan.`}
+        descripcion="Reglas que la especificación deja configurables. Cada una trae un valor recomendado con su motivo; los cambios rigen desde que se guardan."
       />
       <div className="p-4 md:p-5">
         <ol className="divide-y divide-slate-200/70 rounded-lg border border-slate-200">
@@ -531,16 +530,12 @@ function ParametroFila({
       <div>
         <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-navy-950">
           {p.etiqueta}
-          {p.porConfirmar && (
-            <span className="rounded-full border border-yellow-300 bg-aviso-100 px-2 py-0.5 text-[11px] font-bold text-aviso-800">
-              Por confirmar
-            </span>
-          )}
         </p>
         <p className="text-xs text-grafito-600">
-          Especificación {p.origen} · Por defecto: {textoValor(p, p.porDefecto)}
+          Especificación {p.origen} · Recomendado: {textoValor(p, p.porDefecto)}
           {distintoDelDefecto ? " · modificado" : ""}
         </p>
+        <p className="text-xs text-grafito-600">{p.decision}</p>
       </div>
       <div>
         {esNumero ? (

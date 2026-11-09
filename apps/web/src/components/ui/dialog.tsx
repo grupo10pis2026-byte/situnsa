@@ -15,7 +15,7 @@ export function Dialogo({
   abierto: boolean;
   onAbierto: (v: boolean) => void;
   titulo: string;
-  descripcion?: string;
+  descripcion?: string | undefined;
   children: ReactNode;
   ancho?: string;
 }) {

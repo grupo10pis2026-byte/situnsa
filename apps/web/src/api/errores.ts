@@ -6,12 +6,37 @@
 export class ApiError extends Error {
   readonly status: number;
   readonly codigo: string | null;
-  constructor(status: number, mensaje: string, codigo: string | null = null) {
+  /** Errores por campo (`error.detalles[].campo`), para mostrarlos junto a cada control. */
+  readonly campos: Record<string, string>;
+  constructor(
+    status: number,
+    mensaje: string,
+    codigo: string | null = null,
+    campos: Record<string, string> = {},
+  ) {
     super(mensaje);
     this.name = "ApiError";
     this.status = status;
     this.codigo = codigo;
+    this.campos = campos;
   }
+}
+
+/** `error.detalles` del sobre → { campo: mensaje } (el primer mensaje de cada campo). */
+function camposDeCuerpo(body: unknown): Record<string, string> {
+  const detalles =
+    typeof body === "object" && body !== null
+      ? (body as { error?: { detalles?: unknown } }).error?.detalles
+      : undefined;
+  const out: Record<string, string> = {};
+  if (!Array.isArray(detalles)) return out;
+  for (const d of detalles) {
+    if (typeof d !== "object" || d === null) continue;
+    const { campo, mensaje } = d as { campo?: unknown; mensaje?: unknown };
+    if (typeof campo === "string" && typeof mensaje === "string" && !(campo in out))
+      out[campo] = mensaje;
+  }
+  return out;
 }
 
 /** Mensaje legible de un cuerpo de error (sobre nuevo o legacy `{message}`). */
@@ -35,6 +60,7 @@ export async function errorDeRespuesta(res: Response, respaldo: string): Promise
     res.status,
     mensajeDeCuerpo(body, respaldo),
     typeof codigo === "string" ? codigo : null,
+    camposDeCuerpo(body),
   );
 }
 

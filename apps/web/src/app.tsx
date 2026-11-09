@@ -12,9 +12,12 @@ import { SessionProvider } from "./api/session.js";
 import { ToastProvider } from "./components/ui/toast.js";
 import { ActivarPage } from "./routes/activar.js";
 import { AdminPage } from "./routes/admin.js";
-import { AgendaPage } from "./routes/agenda.js";
 import { AsesorPage } from "./routes/asesor.js";
+import { AsesorPerfilPage } from "./routes/asesor-perfil.js";
+import { AsesorTallerPage } from "./routes/asesor-taller.js";
+import { AsesoresPage } from "./routes/asesores.js";
 import { ConfiguracionPage } from "./routes/configuracion.js";
+import { EncuestaPage, EncuestasResultadosPage } from "./routes/encuesta.js";
 import { ExpedienteDetallePage } from "./routes/expedientes.$id.js";
 import { NuevoExpedientePage } from "./routes/expedientes-nuevo.js";
 import { HomePage } from "./routes/index.js";
@@ -23,12 +26,13 @@ import { LoginPage } from "./routes/login.js";
 import { MiTallerPage } from "./routes/mi-taller.js";
 import { MiTramitePage } from "./routes/mi-tramite.js";
 import { MisPagosPage } from "./routes/mis-pagos.js";
-import { MisTalleresPage } from "./routes/mis-talleres.js";
 import { PagosTallerPage } from "./routes/pagos-taller.js";
+import { ProyectoEntregasPage } from "./routes/proyecto-entregas.js";
+import { ReportesTallerPage } from "./routes/reportes-taller.js";
 import { RestablecerPage } from "./routes/restablecer.js";
 import { TallerDetallePage } from "./routes/taller-detalle.js";
-import { AsesoresPage, TalleresPage } from "./routes/talleres-asesores.js";
-import { TalleresNuevoPage } from "./routes/talleres-nuevo.js";
+import { TalleresPage } from "./routes/talleres-asesores.js";
+import { TallerEditarPage, TalleresNuevoPage } from "./routes/talleres-nuevo.js";
 
 const rootRoute = createRootRoute();
 
@@ -109,11 +113,29 @@ const asesoresRoute = createRoute({
   beforeLoad: guard("/asesores"),
   component: AsesoresPage,
 });
+const asesorPerfilRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/asesores/$id",
+  beforeLoad: guard("/asesores/x"),
+  component: function AsesorPerfilRouteWrapper() {
+    const { id } = asesorPerfilRoute.useParams();
+    return <AsesorPerfilPage id={id} />;
+  },
+});
 const talleresNuevoRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/talleres/nuevo",
   beforeLoad: guard("/talleres/nuevo"),
   component: TalleresNuevoPage,
+});
+const tallerEditarRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/talleres/$id/editar",
+  beforeLoad: guard("/talleres/x/editar"),
+  component: function TallerEditarRouteWrapper() {
+    const { id } = tallerEditarRoute.useParams();
+    return <TallerEditarPage id={id} />;
+  },
 });
 const tallerDetalleRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -124,26 +146,20 @@ const tallerDetalleRoute = createRoute({
     return <TallerDetallePage id={id} />;
   },
 });
-const misTalleresRoute = createRoute({
+const proyectoEntregasRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/mis-talleres",
-  beforeLoad: guard("/mis-talleres"),
-  component: MisTalleresPage,
-});
-const agendaRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/agenda/$id",
-  beforeLoad: guard("/agenda/x"),
-  component: function AgendaRouteWrapper() {
-    const { id } = agendaRoute.useParams();
-    return <AgendaPage id={id} />;
+  path: "/proyectos/$id/entregas",
+  beforeLoad: guard("/proyectos/x/entregas"),
+  component: function ProyectoEntregasRouteWrapper() {
+    const { id } = proyectoEntregasRoute.useParams();
+    return <ProyectoEntregasPage id={id} />;
   },
 });
-const miTallerRoute = createRoute({
+const pagosTallerRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/mi-taller",
-  beforeLoad: guard("/mi-taller"),
-  component: MiTallerPage,
+  path: "/pagos-taller",
+  beforeLoad: guard("/pagos-taller"),
+  component: PagosTallerPage,
 });
 const misPagosRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -151,11 +167,35 @@ const misPagosRoute = createRoute({
   beforeLoad: guard("/mis-pagos"),
   component: MisPagosPage,
 });
-const pagosTallerRoute = createRoute({
+const reportesTallerRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/pagos-taller",
-  beforeLoad: guard("/pagos-taller"),
-  component: PagosTallerPage,
+  path: "/reportes-taller",
+  beforeLoad: guard("/reportes-taller"),
+  component: ReportesTallerPage,
+});
+const encuestaRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/encuesta",
+  beforeLoad: guard("/encuesta"),
+  component: EncuestaPage,
+});
+const encuestasResultadosRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/encuestas-resultados",
+  beforeLoad: guard("/encuestas-resultados"),
+  component: EncuestasResultadosPage,
+});
+const asesorTallerRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/asesor/taller",
+  beforeLoad: guard("/asesor/taller"),
+  component: AsesorTallerPage,
+});
+const miTallerRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/mi-taller",
+  beforeLoad: guard("/mi-taller"),
+  component: MiTallerPage,
 });
 const routeTree = rootRoute.addChildren([
   indexRoute,
@@ -171,13 +211,18 @@ const routeTree = rootRoute.addChildren([
   inscripcionesRoute,
   talleresRoute,
   asesoresRoute,
+  asesorPerfilRoute,
   talleresNuevoRoute,
+  tallerEditarRoute,
   tallerDetalleRoute,
-  misTalleresRoute,
-  agendaRoute,
-  miTallerRoute,
-  misPagosRoute,
+  proyectoEntregasRoute,
   pagosTallerRoute,
+  misPagosRoute,
+  reportesTallerRoute,
+  encuestaRoute,
+  encuestasResultadosRoute,
+  asesorTallerRoute,
+  miTallerRoute,
 ]);
 
 const router = createRouter({ routeTree });
