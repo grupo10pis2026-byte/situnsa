@@ -44,7 +44,8 @@ export const ParametroTallerDTOSchema = z.object({
   clave: z.string(),
   etiqueta: z.string(),
   origen: z.string(),
-  porConfirmar: z.boolean(),
+  /** Por qué se recomienda el valor por defecto. */
+  decision: z.string(),
   tipo: z.enum(["NUMERO", "SI_NO"]),
   valor: ValorParametroSchema,
   porDefecto: ValorParametroSchema,
