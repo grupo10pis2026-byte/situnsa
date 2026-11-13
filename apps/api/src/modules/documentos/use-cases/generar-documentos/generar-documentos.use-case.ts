@@ -462,10 +462,7 @@ export class GenerarDocumentosUseCase {
             .select({ id: documentos.id, ruta: documentos.ruta })
             .from(documentos)
             .where(
-              and(
-                eq(documentos.expedienteId, expedienteId),
-                inArray(documentos.tipo, tiposSet),
-              ),
+              and(eq(documentos.expedienteId, expedienteId), inArray(documentos.tipo, tiposSet)),
             );
 
           for (const dp of docsPrevios) {

@@ -41,14 +41,12 @@ export class ObservarSolicitudUseCase {
         p.email.trim().toLowerCase(),
       );
 
-      // Calcular fecha límite de subsanación (días hábiles)
-      const diasHabiles = input.diasHabilesSubsanacion ?? 10;
+      // Calcular fecha límite de subsanación (días hábiles reglamentarios: 10 días)
+      const diasHabiles = 10;
       const fechaLimite = calcularLimiteSubsanacion(new Date(), diasHabiles);
 
-      // Construir motivo consolidado
-      const motivoObservacion = [...input.motivosPredefinidos, input.detalleObservacion].join(
-        "\n\n",
-      );
+      // Motivo y detalle de observación
+      const motivoObservacion = input.detalleObservacion.trim();
 
       // Actualizar solicitud
       await tx
@@ -78,7 +76,7 @@ export class ObservarSolicitudUseCase {
         actorDni: actor.dni,
         ip: ip ?? null,
         detalle: `Observada por ${actor.dni}. Plazo: ${diasHabiles} días hábiles`,
-        metadata: { motivosPredefinidos: input.motivosPredefinidos, diasHabiles },
+        metadata: { detalleObservacion: input.detalleObservacion, diasHabiles },
       });
 
       return ok({ token: tokenPlano, sol, correos });
@@ -89,7 +87,7 @@ export class ObservarSolicitudUseCase {
     // Post-commit: correo con enlace de subsanación al tesista
     const enlaceSubsanacion = `${urlPortal()}/subsanar/${r.value.token}`;
     await enqueueCorreo({
-      asunto: `[${r.value.sol.codigo}] Solicitud observada – subsane en ${input.diasHabilesSubsanacion ?? 10} días hábiles`,
+      asunto: `[${r.value.sol.codigo}] Solicitud observada – subsane en 10 días hábiles`,
       titulo: "Tu solicitud requiere subsanación",
       texto:
         `Tu solicitud <strong>${r.value.sol.codigo}</strong> ha sido observada. ` +

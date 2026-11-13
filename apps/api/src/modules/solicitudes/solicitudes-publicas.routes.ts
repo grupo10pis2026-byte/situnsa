@@ -72,10 +72,9 @@ export function registerSolicitudesPublicasRoutes(app: FastifyInstance): void {
       let payload: CrearSolicitudPayload;
       try {
         payload = CrearSolicitudPayloadSchema.parse(JSON.parse(datosJson));
-      } catch {
-        await reply
-          .status(400)
-          .send(errorEnvelope("VALIDACION_FALLIDA", "Datos de solicitud inválidos"));
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Datos de solicitud inválidos";
+        await reply.status(400).send(errorEnvelope("VALIDACION_FALLIDA", msg));
         return;
       }
 

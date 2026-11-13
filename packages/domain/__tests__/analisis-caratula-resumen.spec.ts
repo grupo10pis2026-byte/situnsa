@@ -336,12 +336,7 @@ Firma del solicitante`;
     const textoErroneo = `SEÑOR RECTOR DE LA UNIVERSIDAD
 Yo, María Núñez García, DNI 01234567, solicito optar el título...`;
 
-    const res = analizarDocumentoSubido(
-      "ANEXO_27",
-      [{ numero: 1, texto: textoErroneo }],
-      datos,
-      1,
-    );
+    const res = analizarDocumentoSubido("ANEXO_27", [{ numero: 1, texto: textoErroneo }], datos, 1);
     const hallazgoDecano = res.hallazgos.find((h) => h.tipo === "AUTORIDAD_DESTINO");
     expect(hallazgoDecano).toBeDefined();
     expect(hallazgoDecano?.esperado).toContain("Decano");

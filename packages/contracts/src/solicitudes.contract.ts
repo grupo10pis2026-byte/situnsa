@@ -38,19 +38,23 @@ export const ParticipanteSolicitudInputSchema = z.object({
     .email("Correo electrónico inválido")
     .regex(/@unsa\.edu\.pe$/i, "Debe usar su correo institucional UNSA")
     .max(255),
-  telefono: z.string().trim().max(20).optional(),
+  telefono: z
+    .string()
+    .trim()
+    .refine((val) => !val || /^\d{9}$/.test(val), {
+      message: "El teléfono debe tener exactamente 9 dígitos",
+    })
+    .optional(),
   nacionalidad: z.string().trim().max(64).optional().default("Peruana"),
   ciudad: z.string().trim().max(64).optional(),
   direccion: z.string().trim().max(300).optional(),
   departamento: z.string().trim().max(64).optional(),
   provincia: z.string().trim().max(64).optional(),
-  distrito: z.string().trim().max(64).optional(),
 });
 export type ParticipanteSolicitudInput = z.infer<typeof ParticipanteSolicitudInputSchema>;
 
 export const CrearSolicitudPayloadSchema = z
   .object({
-    via: ViaIngresoSchema,
     modalidad: ModalidadSchema,
     programa: z.string().trim().min(3).max(160),
     titulo: z.string().trim().min(10, "El título debe tener al menos 10 caracteres").max(500),
@@ -80,7 +84,7 @@ export const CrearSolicitudPayloadSchema = z
       return true;
     },
     {
-      message: "El Tesista 01 y el Tesista 02 no pueden tener el mismo DNI",
+      message: "El Participante 1 y el Participante 2 no pueden tener el mismo DNI",
       path: ["participante2", "dni"],
     },
   )
@@ -95,16 +99,14 @@ export const CrearSolicitudPayloadSchema = z
       return true;
     },
     {
-      message: "Cada tesista debe registrar un correo electrónico distinto",
+      message: "Cada participante debe registrar un correo institucional distinto",
       path: ["participante2", "email"],
     },
   );
 export type CrearSolicitudPayload = z.infer<typeof CrearSolicitudPayloadSchema>;
 
 export const ObservarSolicitudSchema = z.object({
-  motivosPredefinidos: z.array(z.string().min(2)).min(1, "Seleccione al menos un motivo"),
   detalleObservacion: z.string().trim().min(5, "Detalle mínimo de 5 caracteres").max(2000),
-  diasHabilesSubsanacion: z.coerce.number().int().min(1).max(30).default(10),
 });
 export type ObservarSolicitudInput = z.infer<typeof ObservarSolicitudSchema>;
 
@@ -146,8 +148,8 @@ export const ActualizarDatosMenoresSchema = z.object({
     .array(
       z.object({
         id: z.string().uuid(),
-        nombres: z.string().trim().min(2).optional(),
-        apellidos: z.string().trim().min(2).optional(),
+        nombres: z.string().trim().min(2, "Nombres mínimos 2 caracteres").max(160).optional(),
+        apellidos: z.string().trim().min(2, "Apellidos mínimos 2 caracteres").max(160).optional(),
         cui: z
           .string()
           .trim()
@@ -155,10 +157,15 @@ export const ActualizarDatosMenoresSchema = z.object({
             message: "El CUI debe tener exactamente 8 dígitos numéricos",
           })
           .optional(),
-        email: z.string().trim().email().optional(),
-        telefono: z.string().trim().optional(),
-        ciudad: z.string().trim().optional(),
-        direccion: z.string().trim().optional(),
+        telefono: z
+          .string()
+          .trim()
+          .refine((val) => !val || /^\d{9}$/.test(val), {
+            message: "El teléfono debe tener exactamente 9 dígitos",
+          })
+          .optional(),
+        ciudad: z.string().trim().max(64).optional(),
+        direccion: z.string().trim().max(300).optional(),
       }),
     )
     .optional(),
@@ -180,6 +187,7 @@ export type SubsanarSolicitudPayload = z.infer<typeof SubsanarSolicitudPayloadSc
 /* ========================================================================== */
 
 export const FiltrosSolicitudesQuerySchema = PaginacionQuerySchema.extend({
+  modalidad: ModalidadSchema.optional(),
   via: ViaIngresoSchema.optional(),
   estado: EstadoSolicitudSchema.optional(),
   programa: z.string().optional(),

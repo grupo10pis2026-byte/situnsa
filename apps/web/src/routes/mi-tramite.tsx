@@ -6,7 +6,6 @@ import {
   FileText,
   Flag,
   Gauge,
-  Info,
   Lock,
   MessageSquare,
   MessageSquareWarning,
@@ -136,13 +135,30 @@ export function MiTramitePage() {
   const observacionesDeEstaEtapa = d.mensajes.filter((m) => {
     const txt = m.texto.toLowerCase();
     const coincideEtapa =
-      (etapaSeleccionada === 1 && (txt.includes("plan") || txt.includes("inscripci") || txt.includes("e1"))) ||
-      (etapaSeleccionada === 2 && (txt.includes("borrador") || txt.includes("anexo") || txt.includes("e2"))) ||
-      (etapaSeleccionada === 3 && (txt.includes("jurado") || txt.includes("dictamen") || txt.includes("e3"))) ||
-      (etapaSeleccionada === 4 && (txt.includes("sustenta") || txt.includes("fecha") || txt.includes("e4"))) ||
-      (etapaSeleccionada === 5 && (txt.includes("similitud") || txt.includes("turnitin") || txt.includes("repositorio") || txt.includes("e5"))) ||
-      (etapaSeleccionada === 6 && (txt.includes("secretar") || txt.includes("consejo") || txt.includes("comisi") || txt.includes("e6"))) ||
-      (etapaSeleccionada === 7 && (txt.includes("título") || txt.includes("titulo") || txt.includes("sunedu") || txt.includes("colaci") || txt.includes("e7")));
+      (etapaSeleccionada === 1 &&
+        (txt.includes("plan") || txt.includes("inscripci") || txt.includes("e1"))) ||
+      (etapaSeleccionada === 2 &&
+        (txt.includes("borrador") || txt.includes("anexo") || txt.includes("e2"))) ||
+      (etapaSeleccionada === 3 &&
+        (txt.includes("jurado") || txt.includes("dictamen") || txt.includes("e3"))) ||
+      (etapaSeleccionada === 4 &&
+        (txt.includes("sustenta") || txt.includes("fecha") || txt.includes("e4"))) ||
+      (etapaSeleccionada === 5 &&
+        (txt.includes("similitud") ||
+          txt.includes("turnitin") ||
+          txt.includes("repositorio") ||
+          txt.includes("e5"))) ||
+      (etapaSeleccionada === 6 &&
+        (txt.includes("secretar") ||
+          txt.includes("consejo") ||
+          txt.includes("comisi") ||
+          txt.includes("e6"))) ||
+      (etapaSeleccionada === 7 &&
+        (txt.includes("título") ||
+          txt.includes("titulo") ||
+          txt.includes("sunedu") ||
+          txt.includes("colaci") ||
+          txt.includes("e7")));
     return (
       coincideEtapa ||
       (d.estado === "OBSERVADO" &&
@@ -426,7 +442,8 @@ export function MiTramitePage() {
                   </h4>
                   <p className="text-xs text-grafito-600">
                     Archivos de tu autoría, solicitudes y declaraciones juradas que debes firmar y
-                    adjuntar en PDF. En caso de recibir observaciones a un documento, se mostrarán directamente en su tarjeta.
+                    adjuntar en PDF. En caso de recibir observaciones a un documento, se mostrarán
+                    directamente en su tarjeta.
                   </p>
                 </div>
               </div>
@@ -461,7 +478,8 @@ export function MiTramitePage() {
                     Observaciones y estado de revisión de la Etapa {etapaSeleccionada}
                   </h4>
                   <p className="text-xs text-grafito-600">
-                    En esta etapa no se requiere que subas documentación personal. El trámite se procesa internamente por el jurado o la facultad.
+                    En esta etapa no se requiere que subas documentación personal. El trámite se
+                    procesa internamente por el jurado o la facultad.
                   </p>
                 </div>
               </div>
@@ -475,9 +493,14 @@ export function MiTramitePage() {
                       className="rounded-xl border border-amber-300 bg-amber-50/80 p-4 text-sm text-amber-950 shadow-xs space-y-2"
                     >
                       <div className="flex items-start gap-2.5">
-                        <MessageSquareWarning size={20} className="text-amber-700 shrink-0 mt-0.5" />
+                        <MessageSquareWarning
+                          size={20}
+                          className="text-amber-700 shrink-0 mt-0.5"
+                        />
                         <div className="flex-1 space-y-1">
-                          <p className="font-bold text-amber-950">Observación emitida por el área / jurado</p>
+                          <p className="font-bold text-amber-950">
+                            Observación emitida por el área / jurado
+                          </p>
                           <p className="rounded-lg bg-white/90 p-3 text-xs text-slate-800 border border-amber-200 leading-relaxed font-medium">
                             {obs.texto}
                           </p>

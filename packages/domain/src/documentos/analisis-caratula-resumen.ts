@@ -997,7 +997,10 @@ export function analizarDocumentoSubido(
     }
 
     // Código de operación / número de recibo o comprobante
-    const matchOperacion = /(?:operaci[oó]n|nro\s*recibo|recibo\s*n[o°]|transacci[oó]n|comprobante|secuencia|referencia|dep[oó]sito)[\s:#№.]*([0-9]{5,14})/iu.exec(textoCompleto);
+    const matchOperacion =
+      /(?:operaci[oó]n|nro\s*recibo|recibo\s*n[o°]|transacci[oó]n|comprobante|secuencia|referencia|dep[oó]sito)[\s:#№.]*([0-9]{5,14})/iu.exec(
+        textoCompleto,
+      );
     if (matchOperacion?.[1]) {
       agregar(
         "BOLETA_OPERACION",
@@ -1013,7 +1016,10 @@ export function analizarDocumentoSubido(
     }
 
     // Entidad recaudadora
-    const tieneEntidad = /(?:banco\s+de\s+la\s+naci[oó]n|caja\s+unsa|banco\s+de\s+cr[eé]dito|bcp|bbva|interbank|scotiabank|yape|plin)/iu.test(textoCompleto);
+    const tieneEntidad =
+      /(?:banco\s+de\s+la\s+naci[oó]n|caja\s+unsa|banco\s+de\s+cr[eé]dito|bcp|bbva|interbank|scotiabank|yape|plin)/iu.test(
+        textoCompleto,
+      );
     if (tieneEntidad) {
       agregar(
         "BOLETA_ENTIDAD",
@@ -1133,7 +1139,11 @@ export function analizarDocumentoSubido(
           "CONFORME",
           `Código Universitario (CUI ${tesista.cui}) verificado en el documento.`,
         );
-      } else if (/\b(?:cui|c\.u\.i|c[oó]digo\s+(?:de\s+alumno|universitario|de\s+estudiante))\b/iu.test(textoCompleto)) {
+      } else if (
+        /\b(?:cui|c\.u\.i|c[oó]digo\s+(?:de\s+alumno|universitario|de\s+estudiante))\b/iu.test(
+          textoCompleto,
+        )
+      ) {
         agregar(
           "CUI_TESISTA",
           "ADVERTENCIA",
@@ -1148,7 +1158,10 @@ export function analizarDocumentoSubido(
 
   // B. Autoridad y Destinatario de solicitudes
   if (tipoDoc.includes("SOLICITUD_INSCRIPCION") || tipoDoc === "ANEXO_17") {
-    const tieneDirector = /(?:director(?:a)?\s+(?:de\s+la\s+)?unidad|unidad\s+de\s+(?:segundas?\s+especialidades|posgrado)|se[nñ]or\s+director)/iu.test(textoCompleto);
+    const tieneDirector =
+      /(?:director(?:a)?\s+(?:de\s+la\s+)?unidad|unidad\s+de\s+(?:segundas?\s+especialidades|posgrado)|se[nñ]or\s+director)/iu.test(
+        textoCompleto,
+      );
     if (tieneDirector) {
       agregar(
         "AUTORIDAD_DESTINO",
@@ -1166,7 +1179,9 @@ export function analizarDocumentoSubido(
       );
     }
   } else if (tipoDoc.includes("ANEXO_27") || tipoDoc.includes("SOLICITUD_TITULACION")) {
-    const tieneDecano = /(?:decano\s+de\s+la\s+facultad|se[nñ]or\s+decano|decanato)/iu.test(textoCompleto);
+    const tieneDecano = /(?:decano\s+de\s+la\s+facultad|se[nñ]or\s+decano|decanato)/iu.test(
+      textoCompleto,
+    );
     if (tieneDecano) {
       agregar(
         "AUTORIDAD_DESTINO",
@@ -1203,7 +1218,10 @@ export function analizarDocumentoSubido(
         agregar("ASESOR", "CONFORME", `Asesor ${datos.asesor.nombre} verificado en el documento.`);
 
         // Grado académico formal del asesor (Dr. / Mg. / Ing.)
-        const tieneGrado = /(?:dr\.|doctor|dra\.|doctora|mg\.|mag[ií]ster|mtro\.|maestr[oí]a|ing\.|ingenier[oa])/iu.test(textoCompleto);
+        const tieneGrado =
+          /(?:dr\.|doctor|dra\.|doctora|mg\.|mag[ií]ster|mtro\.|maestr[oí]a|ing\.|ingenier[oa])/iu.test(
+            textoCompleto,
+          );
         if (tieneGrado) {
           agregar(
             "ASESOR_GRADO",
@@ -1250,7 +1268,10 @@ export function analizarDocumentoSubido(
 
   // D. Terna / Jurado evaluador
   if (tipoDoc === "ANEXO_33" || /\b(?:terna|jurado\s+evaluador)\b/iu.test(textoCompleto)) {
-    const tieneTerna = /(?:presidente|secretario|integrante|vocal|primer\s+miembro|segundo\s+miembro)/iu.test(textoCompleto);
+    const tieneTerna =
+      /(?:presidente|secretario|integrante|vocal|primer\s+miembro|segundo\s+miembro)/iu.test(
+        textoCompleto,
+      );
     if (tieneTerna) {
       agregar(
         "JURADO_TERNA",
@@ -1276,17 +1297,16 @@ export function analizarDocumentoSubido(
       .filter((p) => p.length > 4);
     const matchProg = palabrasProg.filter((p) => textoNormalizado.includes(p));
     if (matchProg.length >= Math.min(2, palabrasProg.length)) {
-      agregar(
-        "PROGRAMA",
-        "CONFORME",
-        `Mención al programa académico oficial verificada.`,
-      );
+      agregar("PROGRAMA", "CONFORME", `Mención al programa académico oficial verificada.`);
     }
   }
 
   // F. Cláusulas reglamentarias específicas según el tipo de Anexo
   if (tipoDoc.includes("ANEXO_01") || tipoDoc.includes("AUTORIZACION_PUBLICACION")) {
-    const tieneRepositorio = /(?:repositorio|publicaci[oó]n\s+digital|difusi[oó]n|acceso\s+abierto|restringido|embargo|licencia)/iu.test(textoCompleto);
+    const tieneRepositorio =
+      /(?:repositorio|publicaci[oó]n\s+digital|difusi[oó]n|acceso\s+abierto|restringido|embargo|licencia)/iu.test(
+        textoCompleto,
+      );
     if (tieneRepositorio) {
       agregar(
         "CLAUSULA_NORMATIVA",
@@ -1323,7 +1343,9 @@ export function analizarDocumentoSubido(
       );
     }
   } else if (tipoDoc.includes("ANEXO_32") || tipoDoc.includes("VERACIDAD")) {
-    const tieneVeracidad = /(?:veracidad|autenticidad|originalidad|autor[ií]a|plagio)/iu.test(textoCompleto);
+    const tieneVeracidad = /(?:veracidad|autenticidad|originalidad|autor[ií]a|plagio)/iu.test(
+      textoCompleto,
+    );
     if (tieneVeracidad) {
       agregar(
         "CLAUSULA_NORMATIVA",
@@ -1341,7 +1363,9 @@ export function analizarDocumentoSubido(
       );
     }
   } else if (tipoDoc.includes("CONFIDENCIALIDAD")) {
-    const tieneConf = /(?:confidencialidad|reserva|secreto|uso\s+de\s+informaci[oó]n)/iu.test(textoCompleto);
+    const tieneConf = /(?:confidencialidad|reserva|secreto|uso\s+de\s+informaci[oó]n)/iu.test(
+      textoCompleto,
+    );
     if (tieneConf) {
       agregar(
         "CLAUSULA_NORMATIVA",
@@ -1359,7 +1383,8 @@ export function analizarDocumentoSubido(
       );
     }
   } else if (tipoDoc.includes("ANEXO_18")) {
-    const tieneConformidad = /(?:conformidad|asesoramiento|satisfactorio|aprobado|favorable)/iu.test(textoCompleto);
+    const tieneConformidad =
+      /(?:conformidad|asesoramiento|satisfactorio|aprobado|favorable)/iu.test(textoCompleto);
     if (tieneConformidad) {
       agregar(
         "CLAUSULA_NORMATIVA",

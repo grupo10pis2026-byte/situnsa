@@ -35,6 +35,7 @@ export function useListarSolicitudes(f: FiltrosSolicitudesQuery) {
   const page = f.page ?? 1;
   const limit = f.limit ?? 20;
   const params = new URLSearchParams();
+  if (f.modalidad) params.set("modalidad", f.modalidad);
   if (f.via) params.set("via", f.via);
   if (f.estado) params.set("estado", f.estado);
   if (f.programa) params.set("programa", f.programa);
@@ -47,6 +48,7 @@ export function useListarSolicitudes(f: FiltrosSolicitudesQuery) {
   return useQuery({
     queryKey: [
       ...solicitudesKey,
+      f.modalidad ?? "",
       f.via ?? "",
       f.estado ?? "",
       f.programa ?? "",

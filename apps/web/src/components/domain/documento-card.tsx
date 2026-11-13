@@ -373,7 +373,11 @@ export function DocumentoCard(p: Props) {
               ) : (
                 p.tipo
               )}
-              {p.version !== null ? ` · v${p.version}` : p.formato ? ` · v${p.formato.version}` : ""}
+              {p.version !== null
+                ? ` · v${p.version}`
+                : p.formato
+                  ? ` · v${p.formato.version}`
+                  : ""}
             </p>
           </div>
         </div>

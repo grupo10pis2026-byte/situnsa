@@ -1,4 +1,4 @@
-import type { EstadoSolicitud, SolicitudResumen, ViaIngreso } from "@pis/contracts";
+import type { EstadoSolicitud, Modalidad, SolicitudResumen } from "@pis/contracts";
 import { Link } from "@tanstack/react-router";
 import {
   AlertTriangle,
@@ -22,15 +22,22 @@ import { Select } from "../components/ui/select.js";
 import { StatCard } from "../components/ui/stat-card.js";
 import { StatusBadge } from "../components/ui/status-badge.js";
 
+function etiquetaModalidad(m: Modalidad | string): string {
+  if (m === "TESIS") return "Tesis";
+  if (m === "TRABAJO_ACADEMICO") return "Trabajo Académico";
+  if (m === "ARTICULO") return "Artículo Indexado";
+  return m;
+}
+
 export function SolicitudesPage() {
   const [q, setQ] = useState("");
-  const [via, setVia] = useState<ViaIngreso | "">("");
+  const [modalidad, setModalidad] = useState<Modalidad | "">("");
   const [estado, setEstado] = useState<EstadoSolicitud | "">("");
   const [page, setPage] = useState(1);
 
   const { data, isLoading, refetch, isFetching } = useListarSolicitudes({
     q: q.trim() || undefined,
-    via: via || undefined,
+    modalidad: modalidad || undefined,
     estado: estado || undefined,
     page,
     limit: 20,
@@ -64,25 +71,22 @@ export function SolicitudesPage() {
       ),
     },
     {
-      encabezado: "Vía / Modalidad",
+      encabezado: "Modalidad",
       celda: (s) => (
-        <div className="text-xs">
-          <span className="font-semibold text-navy-950">
-            {s.via === "REGULAR" ? "Vía Regular" : "Taller de Tesis"}
-          </span>
-          <p className="text-[11px] text-grafito-500">{s.modalidad}</p>
-        </div>
+        <span className="inline-flex items-center rounded-lg bg-navy-50 px-2 py-0.5 text-xs font-semibold text-navy-900 border border-navy-200/60">
+          {etiquetaModalidad(s.modalidad)}
+        </span>
       ),
     },
     {
-      encabezado: "Tesista(s)",
+      encabezado: "Participante(s)",
       celda: (s) => (
         <div className="text-xs max-w-xs">
           <p className="font-medium text-navy-950 truncate">{s.tesistaTitular.nombresCompletos}</p>
           <p className="text-[11px] font-mono text-grafito-500">DNI: {s.tesistaTitular.dni}</p>
           {s.coTesista && (
             <p className="text-[11px] text-grafito-600 truncate mt-0.5">
-              Co-tesista: {s.coTesista.nombresCompletos} ({s.coTesista.dni})
+              Participante 2: {s.coTesista.nombresCompletos} ({s.coTesista.dni})
             </p>
           )}
         </div>
@@ -146,7 +150,7 @@ export function SolicitudesPage() {
 
   return (
     <AppShell activo="/solicitudes">
-      <div className="space-y-5 p-4 sm:p-6 lg:p-8">
+      <div className="mx-auto max-w-7xl space-y-5 p-4 sm:p-6 lg:p-8">
         <PageHeader
           acciones={
             <Button
@@ -158,11 +162,11 @@ export function SolicitudesPage() {
               <RefreshCw className={isFetching ? "animate-spin" : ""} size={14} /> Actualizar
             </Button>
           }
-          descripcion="Gestión y revisión preliminar de solicitudes de titulación recibidas por Mesa de Partes Virtual."
+          descripcion="Revisión de solicitudes de titulación remitidas desde la Mesa de Partes Virtual."
           titulo="Bandeja de Solicitudes"
         />
 
-        {/* KPIs de Cabecera (Mockup Vista 1) */}
+        {/* KPIs de Cabecera */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           <StatCard
             acento="bg-blue-600"
@@ -206,7 +210,7 @@ export function SolicitudesPage() {
               />
               <input
                 className="h-9 w-full rounded-lg border border-slate-300 pl-9 pr-3 text-xs text-grafito-900 shadow-card placeholder:text-slate-400 focus:border-navy-800 focus:outline-none"
-                placeholder="Buscar por código SOL, DNI o nombres de tesista..."
+                placeholder="Buscar por código SOL, DNI o nombres de participante..."
                 value={q}
                 onChange={(e) => {
                   setQ(e.target.value);
@@ -216,15 +220,16 @@ export function SolicitudesPage() {
             </div>
 
             <Select
-              value={via}
+              value={modalidad}
               onChange={(v) => {
-                setVia(v as ViaIngreso | "");
+                setModalidad(v as Modalidad | "");
                 setPage(1);
               }}
             >
-              <option value="">Todas las Vías</option>
-              <option value="REGULAR">Vía Regular</option>
-              <option value="TALLER">Taller de Tesis</option>
+              <option value="">Todas las Modalidades</option>
+              <option value="TESIS">Tesis</option>
+              <option value="TRABAJO_ACADEMICO">Trabajo Académico</option>
+              <option value="ARTICULO">Artículo Indexado</option>
             </Select>
 
             <Select
