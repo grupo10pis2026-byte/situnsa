@@ -33,6 +33,7 @@ import {
 } from "@pis/domain";
 import { and, eq, inArray } from "drizzle-orm";
 import { DrizzleUnitOfWork } from "../../../../infra/db/unit-of-work.js";
+import { convertirDocxAPdf, verificarSaludGotenberg } from "../../../../infra/docx/docx-to-pdf.js";
 import { obtenerPlantillaDocx, procesarDocxBuffer } from "../../../../infra/docx/render-docx.js";
 import { type MetaPdf, renderizarPdf } from "../../../../infra/pdf/render-documento.js";
 import type { AlmacenamientoPort } from "../../../../infra/storage/almacenamiento.port.js";
@@ -315,6 +316,7 @@ export class GenerarDocumentosUseCase {
     }
 
     // Render fuera de la transacción (CPU); la escritura va en un COMMIT.
+    const gotenbergDisponible = await verificarSaludGotenberg();
     const renderizados = await Promise.all(
       plantillas.map(async (p) => {
         const plantillaDocx = obtenerPlantillaDocx(p.tipo, p.etapa, numTesistas);
@@ -351,18 +353,37 @@ export class GenerarDocumentosUseCase {
           pendientesDocx = res.pendientes;
         }
 
-        const doc = renderizarPlantilla(p, datos);
-        const bytesPdf = await this.renderer(doc, {
-          codigo: detalle.codigo,
-          versionPlantilla: VERSION_PLANTILLAS,
-          generadoEn: ahora,
-        });
+        let bytesPdfFinal: Buffer;
+        let pendientes = plantillaDocx ? pendientesDocx : [];
+        if (bytesDocx && gotenbergDisponible) {
+          try {
+            bytesPdfFinal = await convertirDocxAPdf(bytesDocx, `${p.tipo}.docx`);
+          } catch {
+            const doc = renderizarPlantilla(p, datos);
+            const bytesPdf = await this.renderer(doc, {
+              codigo: detalle.codigo,
+              versionPlantilla: VERSION_PLANTILLAS,
+              generadoEn: ahora,
+            });
+            bytesPdfFinal = Buffer.from(bytesPdf);
+            if (!plantillaDocx) pendientes = [...doc.pendientes];
+          }
+        } else {
+          const doc = renderizarPlantilla(p, datos);
+          const bytesPdf = await this.renderer(doc, {
+            codigo: detalle.codigo,
+            versionPlantilla: VERSION_PLANTILLAS,
+            generadoEn: ahora,
+          });
+          bytesPdfFinal = Buffer.from(bytesPdf);
+          if (!plantillaDocx) pendientes = [...doc.pendientes];
+        }
 
         return {
           plantilla: p,
           bytesDocx,
-          bytesPdf: Buffer.from(bytesPdf),
-          pendientes: plantillaDocx ? pendientesDocx : [...doc.pendientes],
+          bytesPdf: bytesPdfFinal,
+          pendientes,
         };
       }),
     );

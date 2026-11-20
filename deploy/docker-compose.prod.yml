@@ -19,6 +19,17 @@ services:
       timeout: 5s
       retries: 10
 
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    restart: unless-stopped
+    environment:
+      - DISABLE_GOOGLE_CHROME=1
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   web:
     build:
       context: ..
@@ -55,9 +66,12 @@ services:
       SMTP_PASS: ${SMTP_PASS:-}
       SMTP_SECURE: ${SMTP_SECURE:-false}
       MAIL_FROM: ${MAIL_FROM:-no-reply@fips.unsa.edu.pe}
+      GOTENBERG_URL: ${GOTENBERG_URL:-http://gotenberg:3000}
     depends_on:
       postgres:
         condition: service_healthy
+      gotenberg:
+        condition: service_started
     volumes:
       - ${DOCKER_VOLUMES_PATH:-../../docker-volumes/grupo10-proyecto}/documentos:/var/data/titulacion-docs
       - ${DOCKER_VOLUMES_PATH:-../../docker-volumes/grupo10-proyecto}/sandbox/queue:/var/data/pdf-sandbox-queue

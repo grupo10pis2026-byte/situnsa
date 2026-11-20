@@ -27,6 +27,7 @@ import {
   descargarArchivoProtegido,
   documentoDescargaUrl,
   formatoDescargaUrl,
+  formatoPdfUrl,
   useGenerarDocumentos,
   useObservacionesDocumento,
   useSubirDocumento,
@@ -422,32 +423,12 @@ export function DocumentoCard(p: Props) {
         </p>
       )}
       <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-200/70 pt-3">
-        {p.documentoId ? (
+        {p.documentoId || p.formato ? (
           <Button
             tamano="sm"
             variante="oscuro"
             onClick={() => setVisorAbierto(true)}
-            title="Ver documento cargado en el visor"
-            type="button"
-          >
-            <Eye size={14} />
-            VER
-          </Button>
-        ) : p.formato && p.onVistaPrevia ? (
-          <Button
-            tamano="sm"
-            variante="oscuro"
-            onClick={() => {
-              if (!p.formato) return;
-              p.onVistaPrevia?.({
-                id: p.formato.id,
-                tipo: p.tipo,
-                nombre: p.nombre,
-                version: p.formato.version,
-                pendientes: p.formato.pendientes,
-              });
-            }}
-            title="Ver formato oficial prellenado y acceder a descargas (PDF / Word)"
+            title="Ver documento en el visor y acceder a descargas (PDF / Word)"
             type="button"
           >
             <Eye size={14} />
@@ -466,36 +447,7 @@ export function DocumentoCard(p: Props) {
           </Button>
         )}
 
-        {puedeDescargar ? (
-          <Button
-            tamano="sm"
-            variante="contorno"
-            disabled={descargando || generar.isPending}
-            onClick={() => void onDescargar()}
-            title={
-              p.formato
-                ? "Descargar formato Word (.docx) prellenado para firmar"
-                : tieneFormatoGenerable
-                  ? "Generar y descargar plantilla oficial Word (.docx) para firmar"
-                  : "Descargar archivo cargado"
-            }
-            type="button"
-          >
-            <FileDown size={14} />
-            {descargando || generar.isPending ? "DESCARGANDO…" : "DESCARGAR"}
-          </Button>
-        ) : (
-          <Button
-            tamano="sm"
-            variante="contorno"
-            disabled
-            title="Este documento no cuenta con plantilla autogenerable para descarga previa"
-            type="button"
-          >
-            <FileDown size={14} />
-            DESCARGAR
-          </Button>
-        )}
+
 
         {esPersonal && p.onModificar ? (
           tieneFormatoGenerable || p.formato ? (
@@ -747,17 +699,23 @@ export function DocumentoCard(p: Props) {
           onCancelar={() => setPendiente(null)}
         />
       )}
-      {p.documentoId && (
+      {(p.documentoId || p.formato) && (
         <ModalVisorDocumento
           abierto={visorAbierto}
           onCerrar={() => setVisorAbierto(false)}
           titulo={p.nombre}
           subtitulo={NOMBRES_LISTADO_OFICIAL[p.tipo]}
-          documentoUrl={documentoDescargaUrl(p.documentoId)}
-          nombrePdf={`${p.tipo}_v${p.version ?? 1}.pdf`}
+          documentoUrl={
+            p.documentoId
+              ? documentoDescargaUrl(p.documentoId)
+              : p.formato
+                ? formatoPdfUrl(p.formato.id)
+                : ""
+          }
+          nombrePdf={`${p.tipo}_v${p.version ?? p.formato?.version ?? 1}.pdf`}
           formatoUrl={p.formato && tieneFormatoGenerable ? formatoDescargaUrl(p.formato.id) : null}
           nombreDocx={`${p.tipo}_v${p.formato?.version ?? 1}.docx`}
-          version={p.version}
+          version={p.version ?? p.formato?.version ?? 1}
           estado={p.estado}
         />
       )}

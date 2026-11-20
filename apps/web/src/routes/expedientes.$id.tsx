@@ -544,7 +544,7 @@ function DocumentosTab({
       return {
         tipo: f.tipo,
         nombre: gen.nombre || f.nombre,
-        documentoId: gen.documentoId ?? gen.id,
+        documentoId: gen.documentoId ?? null,
         estado: gen.pendientes.length === 0 ? "APROBADO" : "CARGADO",
         version: gen.version,
         faltantes: gen.pendientes.map((p) => `Campo pendiente: ${p}`),
@@ -580,7 +580,7 @@ function DocumentosTab({
       docsInstitucionales.push({
         tipo: g.tipo,
         nombre: g.nombre,
-        documentoId: g.documentoId ?? g.id,
+        documentoId: g.documentoId ?? null,
         estado: g.pendientes.length === 0 ? "APROBADO" : "CARGADO",
         version: g.version,
         faltantes: g.pendientes.map((p) => `Campo pendiente: ${p}`),

@@ -454,7 +454,28 @@ export function registerDocumentosRoutes(app: FastifyInstance): void {
             .send(pdfBuffer);
           return;
         } catch (err) {
-          req.log.error(err, "[documentos-generados/pdf] Error al convertir DOCX con Gotenberg");
+          req.log.warn(err, "[documentos-generados/pdf] Gotenberg no disponible, buscando PDF oficial de respaldo");
+          const docRow = await db
+            .select()
+            .from(documentos)
+            .where(
+              and(
+                eq(documentos.expedienteId, gen.expedienteId),
+                eq(documentos.tipo, gen.tipo),
+              ),
+            )
+            .limit(1);
+          if (docRow[0]?.archivoContenido) {
+            void reply
+              .header("Content-Type", "application/pdf")
+              .header(
+                "Content-Disposition",
+                `${disposition}; filename="${asciiSafe}"; filename*=UTF-8''${encodeURIComponent(nombrePdf)}`,
+              )
+              .header("Content-Length", docRow[0].archivoContenido.length)
+              .send(docRow[0].archivoContenido);
+            return;
+          }
           await reply
             .status(502)
             .send(
