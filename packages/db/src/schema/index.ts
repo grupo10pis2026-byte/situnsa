@@ -6,6 +6,7 @@ export * from "./documento-revisiones.js";
 export * from "./documentos.js";
 export * from "./enums.js";
 export * from "./expedientes.js";
+export * from "./formatos-numeracion.js";
 export * from "./grupos-pagos.js";
 export * from "./idempotencia.js";
 export * from "./mensajes.js";
