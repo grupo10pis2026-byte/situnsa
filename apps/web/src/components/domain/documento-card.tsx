@@ -78,6 +78,8 @@ interface Props {
   }) => void;
   /** Etapa actual del documento ("E1" | "E2" | "E6") */
   etapa?: "E1" | "E2" | "E6";
+  /** Etiqueta visible de etapa (ej. "Etapa 1") */
+  etiquetaEtapa?: string;
   /** Permite al tesista subir o reemplazar directamente en su sección de etapa */
   permitirSubir?: boolean;
 }

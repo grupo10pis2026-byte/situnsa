@@ -516,6 +516,7 @@ function DocumentosTab({
 
   const generados = d.generados.filter((g) => g.etapa === etapa);
   const generadoPorTipo = new Map(generados.map((g) => [g.tipo, g]));
+  const etiquetaEtapa = etapa === "E1" ? "Etapa 1" : etapa === "E2" ? "Etapa 2" : "Etapa 6";
 
   // 1. Requisitos entregados formalmente por el postulante / tesista
   const docsTesista = items.filter((c) => esDocumentoTesista(c.tipo));

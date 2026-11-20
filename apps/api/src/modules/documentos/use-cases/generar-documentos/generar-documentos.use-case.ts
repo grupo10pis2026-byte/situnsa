@@ -598,7 +598,7 @@ export class GenerarDocumentosUseCase {
         // 2. Auto-subir y adjuntar el PDF oficial generado directamente al checklist
         // SOLO para documentos institucionales emitidos por la facultad/jurado.
         // NUNCA sobreescribir ni eliminar los documentos entregados formalmente por el tesista.
-        if (!esDocumentoTesista(plantilla.tipo)) {
+        if (!esDocumentoTesista(plantilla.tipo) && bytesPdf) {
           const tiposEquivalentes = [plantilla.tipo];
           if (plantilla.tipo === "SOLICITUD_INSCRIPCION" || plantilla.tipo === "ANEXO_17") {
             tiposEquivalentes.push("SOLICITUD_INSCRIPCION", "ANEXO_17");
