@@ -20,6 +20,8 @@ import type { AlmacenamientoPort } from "../../../../infra/storage/almacenamient
 import { LocalStorageService } from "../../../../infra/storage/local-storage.service.js";
 import { appendAuditoria } from "../../../expedientes/expedientes.auditoria.js";
 import { leerChecklist, subetapaActivaDe } from "../../../expedientes/expedientes.repository.js";
+import { PREFIJO_AGREGADO } from "../../../formatos/catalogo-formatos.js";
+import { catalogoVigente } from "../../../formatos/formatos.repository.js";
 
 const MAX_BYTES = 50 * 1024 * 1024; // R2: tesis de 20–50MB
 
@@ -97,10 +99,20 @@ export class SubirDocumentoUseCase {
     }
     const enCodigo = CHECKLIST_COMPLETO.find((d) => d.tipo === input.tipo);
     const plantilla = plantillaDe(input.tipo);
-    if (this.catalogo && !this.catalogo.some((d) => d.tipo === input.tipo) && !plantilla) {
+    // Formato agregado por el área en «Gestión de formatos» (versión firmada en PDF).
+    const agregado =
+      plantilla || enCodigo || !input.tipo.startsWith(PREFIJO_AGREGADO)
+        ? null
+        : ((await catalogoVigente()).find((f) => f.agregado && f.tipo === input.tipo) ?? null);
+    if (
+      this.catalogo &&
+      !this.catalogo.some((d) => d.tipo === input.tipo) &&
+      !plantilla &&
+      !agregado
+    ) {
       return fail(new DomainError("DOCUMENTO_INVALIDO", `Tipo desconocido: ${input.tipo}`));
     }
-    if (!enCodigo && !plantilla && !this.catalogo) {
+    if (!enCodigo && !plantilla && !agregado && !this.catalogo) {
       return fail(new DomainError("DOCUMENTO_INVALIDO", `Tipo desconocido: ${input.tipo}`));
     }
     const uow = new DrizzleUnitOfWork(db);
@@ -123,7 +135,15 @@ export class SubirDocumentoUseCase {
               obligatorio: false,
               requeridoEn: null,
             }
-          : null);
+          : agregado
+            ? {
+                tipo: agregado.tipo,
+                nombre: agregado.nombre,
+                etapa: agregado.etapa,
+                obligatorio: false,
+                requeridoEn: null,
+              }
+            : null);
       if (!def)
         return fail(new DomainError("DOCUMENTO_INVALIDO", `Tipo desconocido: ${input.tipo}`));
       const exp = await tx

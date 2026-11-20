@@ -5,7 +5,9 @@ import { cierreContract } from "./cierre.contract.js";
 import { configuracionContract } from "./configuracion.contract.js";
 import { documentosContract } from "./documentos.contract.js";
 import { expedientesContract } from "./expedientes.contract.js";
+import { formatosContract } from "./formatos.contract.js";
 import { gruposContract, reportesContract } from "./grupos-pagos.contract.js";
+import { numeracionContract } from "./numeracion.contract.js";
 import { programasContract } from "./programas.contract.js";
 import { seguimientoContract } from "./seguimiento.contract.js";
 import { seguridadContract } from "./seguridad.contract.js";
@@ -32,6 +34,8 @@ export const appContract = c.router({
   cierre: cierreContract,
   configuracion: configuracionContract,
   programas: programasContract,
+  formatos: formatosContract,
+  numeracion: numeracionContract,
   health: {
     method: "GET",
     path: "/api/health",
@@ -49,7 +53,9 @@ export * from "./configuracion.contract.js";
 export * from "./documentos.contract.js";
 export * from "./enums.js";
 export * from "./expedientes.contract.js";
+export * from "./formatos.contract.js";
 export * from "./grupos-pagos.contract.js";
+export * from "./numeracion.contract.js";
 export * from "./programas.contract.js";
 export * from "./reportes.contract.js";
 export * from "./seguimiento.contract.js";

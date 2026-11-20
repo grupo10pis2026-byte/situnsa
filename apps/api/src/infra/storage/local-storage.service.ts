@@ -4,8 +4,19 @@
  */
 import { createHash, randomUUID } from "node:crypto";
 import { constants, createReadStream, type ReadStream } from "node:fs";
-import { chmod, copyFile, mkdir, mkdtemp, open, rm, stat, writeFile } from "node:fs/promises";
-import { join, relative, resolve, sep } from "node:path";
+import {
+  chmod,
+  copyFile,
+  mkdir,
+  mkdtemp,
+  open,
+  readFile,
+  rename,
+  rm,
+  stat,
+  writeFile,
+} from "node:fs/promises";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import type { Readable } from "node:stream";
 import type { AlmacenamientoPort } from "./almacenamiento.port.js";
 
@@ -108,6 +119,64 @@ export class LocalStorageService implements AlmacenamientoPort {
     await writeFile(ruta, bytes);
     await chmod(ruta, 0o644).catch(() => {});
     return { ruta, sha256 };
+  }
+
+  /**
+   * Gestión de formatos: guarda una versión de plantilla DOCX bajo
+   * `_plantillas/<variante>/` (fuera de las carpetas por expediente).
+   */
+  async savePlantilla(
+    variante: number,
+    filename: string,
+    bytes: Uint8Array,
+  ): Promise<{ ruta: string; sha256: string }> {
+    if (variante !== 1 && variante !== 2) throw new Error("Variante de plantilla inválida");
+    const sha256 = createHash("sha256").update(bytes).digest("hex");
+    const dir = join(this.baseDir, "_plantillas", String(variante));
+    await mkdir(dir, { recursive: true });
+    const ruta = join(dir, nombreSeguro(filename));
+    await writeFile(ruta, bytes);
+    await chmod(ruta, 0o644).catch(() => {});
+    return { ruta, sha256 };
+  }
+
+  /** Ruta de la vista previa PDF cacheada de una plantilla (`_plantillas/vista-previa/<clave>.pdf`). */
+  rutaVistaPrevia(clave: string): string {
+    return join(this.baseDir, "_plantillas", "vista-previa", `${nombreSeguro(clave)}.pdf`);
+  }
+
+  /** ¿Existe el archivo dentro del volumen? */
+  async existe(ruta: string): Promise<boolean> {
+    if (!this.relativa(ruta)) return false;
+    try {
+      return (await stat(ruta)).isFile();
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Guarda la vista previa de forma atómica (temporal + rename): una lectura
+   * concurrente nunca entrega un PDF a medio escribir.
+   */
+  async saveVistaPrevia(clave: string, bytes: Uint8Array): Promise<string> {
+    const ruta = this.rutaVistaPrevia(clave);
+    await mkdir(dirname(ruta), { recursive: true });
+    const temporal = `${ruta}.${randomUUID()}.tmp`;
+    await writeFile(temporal, bytes);
+    await chmod(temporal, 0o644).catch(() => {});
+    await rename(temporal, ruta);
+    return ruta;
+  }
+
+  /** Lee un archivo del volumen (plantillas DOCX pequeñas); null si sale del volumen o no existe. */
+  async leer(ruta: string): Promise<Buffer | null> {
+    if (!this.relativa(ruta)) return null;
+    try {
+      return await readFile(ruta);
+    } catch {
+      return null;
+    }
   }
 
   /** Ruta interna Nginx para X-Accel-Redirect: /protected-files/<exp>/<…> */

@@ -17,6 +17,7 @@ import { AsesorPage } from "./routes/asesor.js";
 import { ConfiguracionPage } from "./routes/configuracion.js";
 import { ExpedienteDetallePage } from "./routes/expedientes.$id.js";
 import { NuevoExpedientePage } from "./routes/expedientes-nuevo.js";
+import { FormatosPage } from "./routes/formatos.js";
 import { HomePage } from "./routes/index.js";
 import { InscripcionesPage } from "./routes/inscripciones.js";
 import { LandingPage } from "./routes/landing.js";
@@ -27,6 +28,7 @@ import { MiTramitePage } from "./routes/mi-tramite.js";
 import { MisPagosPage } from "./routes/mis-pagos.js";
 import { MisTalleresPage } from "./routes/mis-talleres.js";
 import { PagosTallerPage } from "./routes/pagos-taller.js";
+import { RegistroOficiosPage } from "./routes/registro-oficios.js";
 import { RestablecerPage } from "./routes/restablecer.js";
 import { SolicitudDetallePage } from "./routes/solicitudes.$id.js";
 import { SolicitudesPage } from "./routes/solicitudes.js";
@@ -65,6 +67,18 @@ const configuracionRoute = createRoute({
   path: "/configuracion",
   beforeLoad: guard("/configuracion"),
   component: ConfiguracionPage,
+});
+const formatosRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/formatos",
+  beforeLoad: guard("/formatos"),
+  component: FormatosPage,
+});
+const registroOficiosRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/registro-oficios",
+  beforeLoad: guard("/registro-oficios"),
+  component: RegistroOficiosPage,
 });
 const adminRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -195,6 +209,8 @@ const routeTree = rootRoute.addChildren([
   activarRoute,
   restablecerRoute,
   configuracionRoute,
+  formatosRoute,
+  registroOficiosRoute,
   adminRoute,
   solicitudesRoute,
   solicitudDetalleRoute,

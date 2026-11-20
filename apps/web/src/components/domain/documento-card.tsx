@@ -16,7 +16,6 @@ import {
   Eye,
   FileDown,
   FileText,
-  Info,
   MessageSquare,
   PenTool,
   Stamp,
@@ -35,12 +34,14 @@ import {
 import { useVistoBueno } from "../../api/seguimiento.js";
 import { useSession } from "../../api/session.js";
 import { cn } from "../../utils/cn.js";
+import { Aviso } from "../ui/aviso.js";
 import { Button } from "../ui/button.js";
 import { Card } from "../ui/card.js";
 import { ConfirmDialog } from "../ui/confirm-dialog.js";
 import { Dialogo } from "../ui/dialog.js";
 import { StatusBadge } from "../ui/status-badge.js";
 import { useToast } from "../ui/toast.js";
+import { Tooltip } from "../ui/tooltip.js";
 import { AnalisisDocumentalPanel } from "./analisis-documental-panel.js";
 import { ItemHallazgo } from "./item-hallazgo.js";
 import { ModalObservacionesDocumento } from "./modal-observaciones-documento.js";
@@ -77,13 +78,20 @@ interface Props {
   }) => void;
   /** Etapa actual del documento ("E1" | "E2" | "E6") */
   etapa?: "E1" | "E2" | "E6";
-  /** Etiqueta visible de la etapa (ej. "Etapa 1 · Verificación") */
-  etiquetaEtapa?: string;
   /** Permite al tesista subir o reemplazar directamente en su sección de etapa */
   permitirSubir?: boolean;
 }
 
 const PERSONAL = ["ADMIN_FIPS", "SECRETARIA", "DECANO"];
+/** Roles que pueden registrar observaciones (mismo criterio que ModalObservacionesDocumento). */
+const ROLES_OBSERVADORES = [
+  "ADMIN_FIPS",
+  "SECRETARIA",
+  "DECANO",
+  "ASESOR",
+  "ADMIN_SISTEMA",
+  "RESP_TITULACION",
+];
 
 /**
  * Nombres oficiales según el listado normativo y de la facultad (para guiar al usuario
@@ -184,6 +192,53 @@ export function requiereFirma(tipo: string): boolean {
   return TIPOS_CON_FIRMA.has(tipo);
 }
 
+export type AvisoDocumento = {
+  tono: "peligro" | "aviso" | "info";
+  texto: string;
+  detalle?: string[];
+};
+
+/**
+ * Elige el ÚNICO aviso visible de la tarjeta, por prioridad:
+ * observaciones pendientes > campos por completar > paso de firma/adjunto.
+ * El paso de firma/adjunto solo se muestra a quien puede cargar el archivo;
+ * para el resto el estado (StatusBadge) ya comunica que falta.
+ */
+export function resolverAvisoDocumento(e: {
+  observacionesPendientes: number;
+  camposPendientes: string[];
+  requiereFirma: boolean;
+  tieneArchivo: boolean;
+  tieneFormato: boolean;
+  faltaAdjuntar: boolean;
+  puedeCargar: boolean;
+}): AvisoDocumento | null {
+  if (e.observacionesPendientes > 0) {
+    const n = e.observacionesPendientes;
+    return {
+      tono: "peligro",
+      texto: `${n} ${n > 1 ? "observaciones" : "observación"} por corregir`,
+    };
+  }
+  if (e.camposPendientes.length > 0) {
+    const n = e.camposPendientes.length;
+    return {
+      tono: "aviso",
+      texto: `${n} campo${n > 1 ? "s" : ""} por completar`,
+      detalle: e.camposPendientes,
+    };
+  }
+  if (!e.tieneArchivo && e.puedeCargar) {
+    if (e.requiereFirma) {
+      return { tono: "info", texto: "Descarga el formato, fírmalo y súbelo con Adjuntar." };
+    }
+    if (e.faltaAdjuntar && !e.tieneFormato) {
+      return { tono: "info", texto: "Adjunta el archivo requerido (PDF o Word)." };
+    }
+  }
+  return null;
+}
+
 /**
  * Tarjeta de /expedientes/$id y /mi-tramite: carga, descarga y visto bueno del documento.
  * PLAN_ESTRUCTURADO incorpora AnalisisDocumentalPanel cuando hay documentoId.
@@ -204,7 +259,6 @@ export function DocumentoCard(p: Props) {
   const [revisionAbierta, setRevisionAbierta] = useState(false);
   const [visorAbierto, setVisorAbierto] = useState(false);
   const [observacionesAbiertas, setObservacionesAbiertas] = useState(false);
-  const [modoObservarDirecto, setModoObservarDirecto] = useState(false);
   const [descargando, setDescargando] = useState(false);
 
   const { data: observaciones = [] } = useObservacionesDocumento(p.expedienteId, p.tipo);
@@ -235,6 +289,37 @@ export function DocumentoCard(p: Props) {
 
   const tieneFormatoGenerable = tienePlantilla(p.tipo);
   const puedeDescargar = !!p.formato || !!p.documentoId || tieneFormatoGenerable;
+
+  // Regla "ocultar en vez de deshabilitar": solo se muestran las acciones que este rol
+  // puede ejecutar. Se deshabilita (con tooltip) únicamente lo bloqueado temporalmente.
+  const puedeVer = (!!p.formato && !!p.onVistaPrevia) || !!p.documentoId;
+  const puedeEditar = esPersonal && !!p.onModificar && (tieneFormatoGenerable || !!p.formato);
+  // Tesista con documento propio aún no aprobado: la carga llegará en su subetapa.
+  const cargaBloqueadaTemporal =
+    !puedeCargar && esTesista && esDeTesista && p.estado !== "APROBADO";
+  const puedeObservar = !!sesion && ROLES_OBSERVADORES.includes(sesion.rol);
+  const muestraObservaciones = observaciones.length > 0 || puedeObservar;
+
+  const firma = requiereFirma(p.tipo);
+  const aviso = resolverAvisoDocumento({
+    observacionesPendientes,
+    camposPendientes,
+    requiereFirma: firma,
+    tieneArchivo: !!p.documentoId,
+    tieneFormato: !!p.formato,
+    faltaAdjuntar: p.faltantes.includes("Falta adjuntar el archivo"),
+    puedeCargar,
+  });
+  const nombreOficial = NOMBRES_LISTADO_OFICIAL[p.tipo];
+  const version = p.formato ? p.formato.version : p.version;
+  // El código técnico (ANEXO_17…) solo orienta al personal; al tesista le basta el nombre oficial.
+  const subtitulo = [
+    nombreOficial ?? p.tipo,
+    esPersonal && nombreOficial ? p.tipo : null,
+    version !== null ? `v${version}` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   async function onDescargar(): Promise<void> {
     setDescargando(true);
@@ -270,20 +355,15 @@ export function DocumentoCard(p: Props) {
     }
   }
 
-  /** Envía aprobación u observación a POST /api/documentos/:id/visto-bueno. */
-  async function visar(aprobado: boolean): Promise<void> {
+  /**
+   * Registra el V°B° en POST /api/documentos/:id/visto-bueno.
+   * Observar se hace desde ModalObservacionesDocumento (botón Observaciones).
+   */
+  async function aprobar(): Promise<void> {
     if (!p.documentoId) return;
-    const comentario = aprobado
-      ? undefined
-      : window.prompt("Motivo de la observación para el tesista:");
-    if (!aprobado && !(comentario ?? "").trim()) return;
     try {
-      await vistoBueno.mutateAsync({
-        documentoId: p.documentoId,
-        aprobado,
-        ...(comentario != null ? { comentario } : {}),
-      });
-      avisar(aprobado ? "V°B° registrado" : "Documento observado");
+      await vistoBueno.mutateAsync({ documentoId: p.documentoId, aprobado: true });
+      avisar("V°B° registrado");
     } catch (e) {
       avisar(e instanceof Error ? e.message : "No se pudo visar", "error");
     }
@@ -334,7 +414,7 @@ export function DocumentoCard(p: Props) {
             <FileText size={18} aria-hidden />
           </span>
           <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <h3 className="truncate text-sm font-bold text-navy-950">{p.nombre}</h3>
               {p.version !== null ? (
                 <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-xs font-bold text-blue-700 border border-blue-200">
@@ -345,41 +425,15 @@ export function DocumentoCard(p: Props) {
                   v{p.formato.version}
                 </span>
               ) : null}
-              {camposPendientes.length > 0 ? (
-                <span className="inline-flex items-center gap-1 rounded-md bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-800 border border-amber-200">
-                  <span className="h-1.5 w-1.5 rounded-full bg-amber-600" />
-                  {camposPendientes.length} pendiente{camposPendientes.length > 1 ? "s" : ""}
-                </span>
-              ) : p.formato || p.documentoId ? (
-                <span className="inline-flex items-center gap-1 rounded-md bg-emerald-100 px-2 py-0.5 text-[11px] font-bold text-emerald-800 border border-emerald-200">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
-                  Completo
-                </span>
-              ) : null}
-              {requiereFirma(p.tipo) && (
-                <span className="inline-flex items-center gap-1 rounded-md bg-purple-50 px-2 py-0.5 text-[11px] font-bold text-purple-700 border border-purple-200">
-                  <PenTool size={11} />
-                  Requiere firma
-                </span>
+              {firma && (
+                <Tooltip texto="Requiere firma del interesado o del jurado">
+                  <span className="inline-flex shrink-0 text-purple-700">
+                    <PenTool size={13} aria-label="Requiere firma" />
+                  </span>
+                </Tooltip>
               )}
             </div>
-            <p className="text-xs text-grafito-600">
-              {NOMBRES_LISTADO_OFICIAL[p.tipo] ? (
-                <>
-                  <span className="font-medium text-slate-700">
-                    {NOMBRES_LISTADO_OFICIAL[p.tipo]}
-                  </span>
-                  <span className="text-slate-400"> · {p.tipo}</span>
-                </>
-              ) : (
-                p.tipo
-              )}
-              {p.version !== null
-                ? ` · v${p.version}`
-                : p.formato
-                  ? ` · v${p.formato.version}`
-                  : ""}
-            </p>
+            <p className="truncate text-xs text-grafito-600">{subtitulo}</p>
           </div>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
@@ -391,44 +445,39 @@ export function DocumentoCard(p: Props) {
           <StatusBadge estado={p.estado} />
         </div>
       </div>
-      {camposPendientes.length > 0 && (
-        <div className="mt-2.5 flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 shadow-xs">
-          <AlertTriangle size={15} className="mt-0.5 shrink-0 text-amber-600" aria-hidden />
-          <div className="min-w-0">
-            <span className="font-bold text-amber-950">Campos pendientes por completar:</span>{" "}
-            <span className="text-amber-900">{camposPendientes.join(", ")}</span>
-          </div>
-        </div>
-      )}
-      {p.faltantes.includes("Falta adjuntar el archivo") && !p.documentoId && !p.formato && (
-        <p className="mt-2 flex items-center gap-1.5 rounded-lg bg-slate-100 px-2.5 py-1.5 text-xs text-slate-700">
-          <Info size={14} className="shrink-0 text-slate-500" aria-hidden />
-          <span>Falta adjuntar el archivo requerido</span>
-        </p>
-      )}
-      {requiereFirma(p.tipo) && !p.documentoId && (
-        <div className="mt-2.5 flex items-center justify-between gap-2 rounded-lg bg-indigo-50/70 border border-indigo-200/80 px-2.5 py-1.5 text-xs text-indigo-950">
-          <div className="flex items-center gap-1.5">
-            <PenTool size={13} className="text-indigo-600 shrink-0" />
-            <span>
-              <strong>Paso requerido:</strong> Descargue el formato en Word, firme el documento y
-              súbalo mediante <strong>ADJUNTAR</strong>.
-            </span>
-          </div>
-        </div>
+      {aviso && (
+        <Aviso
+          tono={aviso.tono}
+          className="mt-2.5"
+          {...(aviso.detalle ? { detalle: aviso.detalle } : {})}
+        >
+          {aviso.texto}
+        </Aviso>
       )}
       {error && (
         <p className="mt-2 text-xs font-medium text-red-700" role="alert">
           {error}
         </p>
       )}
-      <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-200/70 pt-3">
-        {p.documentoId || p.formato ? (
+      <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-200/70 pt-3 empty:hidden">
+        {puedeVer ? (
           <Button
             tamano="sm"
             variante="oscuro"
-            onClick={() => setVisorAbierto(true)}
-            title="Ver documento en el visor y acceder a descargas (PDF / Word)"
+            onClick={() => {
+              if (p.formato && p.onVistaPrevia) {
+                p.onVistaPrevia({
+                  id: p.formato.id,
+                  tipo: p.tipo,
+                  nombre: p.nombre,
+                  version: p.formato.version,
+                  pendientes: p.formato.pendientes,
+                });
+                return;
+              }
+              setVisorAbierto(true);
+            }}
+            title="Ver documento oficial y acceder a descargas (PDF / Word)"
             type="button"
           >
             <Eye size={14} />
@@ -447,45 +496,19 @@ export function DocumentoCard(p: Props) {
           </Button>
         )}
 
-
-
-        {esPersonal && p.onModificar ? (
-          tieneFormatoGenerable || p.formato ? (
-            <Button
-              tamano="sm"
-              variante="contorno"
-              onClick={() => {
-                p.onModificar?.({
-                  tipo: p.tipo,
-                  nombre: p.nombre,
-                  version: p.formato?.version ?? 1,
-                  pendientes: p.formato?.pendientes ?? [],
-                });
-              }}
-              title="Editar y corregir datos de este formato"
-              type="button"
-            >
-              <Edit3 size={14} />
-              EDITAR
-            </Button>
-          ) : (
-            <Button
-              tamano="sm"
-              variante="contorno"
-              disabled
-              title="Este documento no cuenta con plantilla de variables autogenerable"
-              type="button"
-            >
-              <Edit3 size={14} />
-              EDITAR
-            </Button>
-          )
-        ) : (
+        {puedeEditar && (
           <Button
             tamano="sm"
             variante="contorno"
-            disabled
-            title="Edición de variables reservada para personal administrativo"
+            onClick={() => {
+              p.onModificar?.({
+                tipo: p.tipo,
+                nombre: p.nombre,
+                version: p.formato?.version ?? 1,
+                pendientes: p.formato?.pendientes ?? [],
+              });
+            }}
+            title="Editar y corregir datos de este formato"
             type="button"
           >
             <Edit3 size={14} />
@@ -493,26 +516,7 @@ export function DocumentoCard(p: Props) {
           </Button>
         )}
 
-        <Button
-          tamano="sm"
-          variante={observacionesPendientes > 0 ? "peligro" : "contorno"}
-          onClick={() => {
-            setModoObservarDirecto(false);
-            setObservacionesAbiertas(true);
-          }}
-          type="button"
-          title="Ver historial de observaciones y correcciones de este documento"
-        >
-          <MessageSquare size={14} />
-          OBSERVACIONES
-          {observacionesPendientes > 0 && (
-            <span className="ml-1 rounded-full bg-white text-red-700 px-1.5 py-0.2 text-[10px] font-black shadow-xs">
-              {observacionesPendientes}
-            </span>
-          )}
-        </Button>
-
-        {puedeCargar ? (
+        {puedeCargar && (
           <Button
             tamano="sm"
             variante="contorno"
@@ -524,28 +528,53 @@ export function DocumentoCard(p: Props) {
             <UploadCloud size={14} />
             {subir.isPending ? "SUBIENDO…" : p.version === null ? "ADJUNTAR" : "VOLVER A SUBIR"}
           </Button>
-        ) : (
+        )}
+        {cargaBloqueadaTemporal && (
+          <Tooltip texto="La carga se habilita cuando el expediente llegue a la subetapa que exige este documento.">
+            {/* El span recibe el hover: un botón deshabilitado no emite eventos de puntero. */}
+            <span className="inline-flex">
+              <Button
+                tamano="sm"
+                variante="contorno"
+                disabled
+                type="button"
+                aria-label="Adjuntar (aún no habilitado en esta subetapa)"
+              >
+                <UploadCloud size={14} />
+                ADJUNTAR
+              </Button>
+            </span>
+          </Tooltip>
+        )}
+
+        {muestraObservaciones && (
           <Button
             tamano="sm"
             variante="contorno"
-            disabled
-            title={
-              p.estado === "APROBADO"
-                ? "Documento aprobado formalmente"
-                : "Carga de archivo no habilitada en este estado"
-            }
+            onClick={() => setObservacionesAbiertas(true)}
             type="button"
+            title={
+              puedeObservar
+                ? "Ver historial o registrar una nueva observación"
+                : "Ver historial de observaciones y correcciones de este documento"
+            }
           >
-            <UploadCloud size={14} />
-            ADJUNTAR
+            <MessageSquare size={14} />
+            OBSERVACIONES
+            {observacionesPendientes > 0 && (
+              <span className="rounded-full bg-red-700 px-1.5 text-[10px] font-black text-white">
+                {observacionesPendientes}
+              </span>
+            )}
           </Button>
         )}
+
         {puedeVisar && (
           <Button
             tamano="sm"
             variante="exito"
             disabled={vistoBueno.isPending}
-            onClick={() => void visar(true)}
+            onClick={() => void aprobar()}
             type="button"
             title="Otorgar Visto Bueno institucional"
           >
@@ -553,17 +582,17 @@ export function DocumentoCard(p: Props) {
             V°B°
           </Button>
         )}
-        <input
-          accept="application/pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-          className="hidden"
-          ref={inputRef}
-          type="file"
-          onChange={(e) => {
-            onFile(e.target.files?.[0]);
-            e.target.value = "";
-          }}
-        />
       </div>
+      <input
+        accept="application/pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        className="hidden"
+        ref={inputRef}
+        type="file"
+        onChange={(e) => {
+          onFile(e.target.files?.[0]);
+          e.target.value = "";
+        }}
+      />
 
       {p.documentoId && (
         <Dialogo
@@ -726,7 +755,6 @@ export function DocumentoCard(p: Props) {
         tipoDocumento={p.tipo}
         nombreDocumento={p.nombre}
         documentoId={p.documentoId}
-        modoInicialObservar={modoObservarDirecto}
       />
     </Card>
   );

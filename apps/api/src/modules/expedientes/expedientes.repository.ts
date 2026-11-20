@@ -23,6 +23,8 @@ import {
 } from "@pis/domain";
 import { and, asc, eq, inArray, ne, or, type SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
+import { etapaEnExpediente, nombreAgregado, type Variante } from "../formatos/catalogo-formatos.js";
+import { catalogoVigente } from "../formatos/formatos.repository.js";
 
 export type EstadoLiteral =
   | "REGISTRADO"
@@ -306,6 +308,9 @@ export async function getDetalleById(
   const generadoPorTipo = new Map(generadosRows.map((g) => [g.tipo, g]));
 
   const catalogo = await leerChecklist(db);
+  // «Gestión de formatos»: el área puede mover formatos de etapa por variante.
+  const variante: Variante = row.participante2Id ? 2 : 1;
+  const formatos = await catalogoVigente(db, { incluirArchivados: true });
   const checklist = catalogo.flatMap((def) => {
     if (row.participante2Id && (def.tipo === "ANEXO_01_DJ" || def.tipo === "ANEXO_02_DJ")) {
       const p1Tipo = `${def.tipo}_P1`;
@@ -441,14 +446,21 @@ export async function getDetalleById(
     participante2: row.participante2Id ? (porId.get(row.participante2Id) ?? null) : null,
     asesor: row.asesorId ? (porId.get(row.asesorId) ?? null) : null,
     datosAdmin,
-    checklist,
+    checklist: checklist.map((c) => ({
+      ...c,
+      etapa: etapaEnExpediente(formatos, c.tipo, variante, { soloAjustes: true }) ?? c.etapa,
+    })),
     generados: generadosRows.map((g) => {
       const docAdjunto = porTipo.get(g.tipo);
+      const guardada = (g.etapa === "E2" || g.etapa === "E6" ? g.etapa : "E1") as
+        | "E1"
+        | "E2"
+        | "E6";
       return {
         id: g.id,
         tipo: g.tipo,
-        nombre: plantillaDe(g.tipo)?.nombre ?? g.tipo,
-        etapa: (g.etapa === "E2" || g.etapa === "E6" ? g.etapa : "E1") as "E1" | "E2" | "E6",
+        nombre: plantillaDe(g.tipo)?.nombre ?? nombreAgregado(formatos, g.tipo, variante) ?? g.tipo,
+        etapa: etapaEnExpediente(formatos, g.tipo, variante) ?? guardada,
         version: g.version,
         pendientes: g.pendientes,
         createdAt: g.createdAt.toISOString(),

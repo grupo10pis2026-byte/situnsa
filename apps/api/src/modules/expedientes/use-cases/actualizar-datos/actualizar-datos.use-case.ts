@@ -13,6 +13,7 @@ import {
 } from "@pis/domain";
 import { and, eq, ne, sql } from "drizzle-orm";
 import { DrizzleUnitOfWork } from "../../../../infra/db/unit-of-work.js";
+import { tiposVinculados } from "../../../numeracion/numeracion.repository.js";
 import { appendAuditoria } from "../../expedientes.auditoria.js";
 import { type DetalleRow, getDetalleById } from "../../expedientes.repository.js";
 import { GenerarDocumentosUseCase } from "../../../documentos/use-cases/generar-documentos/generar-documentos.use-case.js";
@@ -73,6 +74,31 @@ const CAMPOS_PERSONA = [
   ["Ciudad", "ciudad"],
   ["Direccion", "direccion"],
 ] as const;
+
+/**
+ * Con vínculo en el registro de oficios y decretos (Excel maestro), el N° de
+ * oficio circular y de decreto solo cambia desde el registro. Devuelve el
+ * mensaje de rechazo o null. Reenviar el mismo valor no es un cambio.
+ */
+export function numeracionBloqueada(
+  patch: Pick<ActualizarDatosInput, "nroOficio" | "nroDecreto">,
+  actual: Readonly<Record<string, string | null>>,
+  vinculados: ReadonlySet<string>,
+): string | null {
+  const campos = [
+    ["OFICIO", "nroOficio", "oficio circular"],
+    ["DECRETO", "nroDecreto", "decreto"],
+  ] as const;
+  for (const [tipo, campo, nombre] of campos) {
+    const v = patch[campo];
+    if (v === undefined || !vinculados.has(tipo)) continue;
+    const nuevo = v === "" ? null : normalizarAdministrativo(campo, v);
+    if (nuevo !== (actual[campo] ?? null)) {
+      return `El N° de ${nombre} se asigna desde el registro de oficios y decretos. Desvincúlelo para cambiarlo.`;
+    }
+  }
+  return null;
+}
 
 const NOMBRES_PROGRAMAS = new Set(PROGRAMAS_OFICIALES.map((p) => p.nombre));
 
@@ -145,6 +171,8 @@ export class ActualizarDatosUseCase {
           ),
         );
       }
+      const bloqueo = numeracionBloqueada(patch, actual.datosAdmin, await tiposVinculados(id, tx));
+      if (bloqueo) return fail(new DomainError("VALIDACION_FALLIDA", bloqueo));
       const patchExp: Record<string, unknown> = { updatedAt: new Date() };
       for (const k of CAMPOS_EXPEDIENTE) {
         const v = patch[k];

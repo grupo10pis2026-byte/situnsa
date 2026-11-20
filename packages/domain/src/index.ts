@@ -14,6 +14,7 @@ export * from "./expediente/propuesta-fechas.js";
 export * from "./expediente/reglas-avance.js";
 export * from "./expediente/seguimiento-catalogo.js";
 export * from "./expediente/specifications/expedito-para-sustentar.specification.js";
+export * from "./numeracion/registro-numeracion.js";
 export * from "./reportes/consejo-facultad.js";
 export * from "./shared/domain-error.base.js";
 export * from "./shared/domain-event.base.js";
