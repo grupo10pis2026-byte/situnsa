@@ -1,5 +1,11 @@
+import { PLANTILLAS } from "@pis/domain";
 import { describe, expect, it } from "vitest";
-import { extraerCambiosExpedienteYUsuarios } from "./generar-documentos.use-case.js";
+import { aplicarAjustes, CATALOGO_FORMATOS } from "../../../formatos/catalogo-formatos.js";
+import {
+  descartarOverridesNumeracion,
+  extraerCambiosExpedienteYUsuarios,
+  itemsDeEtapa,
+} from "./generar-documentos.use-case.js";
 
 describe("extraerCambiosExpedienteYUsuarios", () => {
   it("mapea campos de participante 1 y 2 correctamente", () => {
@@ -84,5 +90,108 @@ describe("extraerCambiosExpedienteYUsuarios", () => {
     expect(res.expediente).toEqual({});
     expect(res.participante1).toEqual({});
     expect(res.participante2).toEqual({});
+  });
+});
+
+describe("descartarOverridesNumeracion", () => {
+  it("conserva todo si el expediente no tiene vínculos", () => {
+    const o = { DECRETO: "99", TESIS: "x" };
+    expect(descartarOverridesNumeracion(o, new Set())).toEqual(o);
+  });
+
+  it("descarta solo las etiquetas del número vinculado", () => {
+    const o = { DECRETO: "99", "n° decreto": "99", OFICIO: "5", FECHA_DECRETO: "2026-01-01" };
+    expect(descartarOverridesNumeracion(o, new Set(["DECRETO"]))).toEqual({
+      OFICIO: "5",
+      FECHA_DECRETO: "2026-01-01",
+    });
+  });
+});
+
+describe("itemsDeEtapa (formatos agrupados por etapa en «Gestión de formatos»)", () => {
+  const tipos = (xs: Array<{ tipo: string }>) => xs.map((x) => x.tipo);
+
+  it("sin ajustes genera las plantillas del sistema en su etapa original", () => {
+    const e1 = itemsDeEtapa(PLANTILLAS, CATALOGO_FORMATOS, 1, "E1");
+    expect(tipos(e1)).toContain("DECRETO_APROBACION");
+    expect(tipos(e1)).not.toContain("ACTA_DICTAMEN");
+    const e2 = itemsDeEtapa(PLANTILLAS, CATALOGO_FORMATOS, 2, "E2");
+    expect(tipos(e2)).toContain("ANEXO_01_DJ_P2");
+    expect(tipos(e2)).not.toContain("ANEXO_01_DJ");
+  });
+
+  it("un formato movido se genera en su nueva etapa y solo en su variante", () => {
+    const catalogo = aplicarAjustes(CATALOGO_FORMATOS, [
+      {
+        tipo: "ACTA_DICTAMEN",
+        variante: 2,
+        etapa: "E1",
+        nombre: null,
+        agregado: false,
+        archivado: false,
+      },
+    ]);
+    const e1de2 = itemsDeEtapa(PLANTILLAS, catalogo, 2, "E1");
+    const movido = e1de2.find((i) => i.tipo === "ACTA_DICTAMEN");
+    expect(movido).toMatchObject({ etapa: "E1", etapaBase: "E2" });
+    expect(tipos(itemsDeEtapa(PLANTILLAS, catalogo, 2, "E2"))).not.toContain("ACTA_DICTAMEN");
+    expect(tipos(itemsDeEtapa(PLANTILLAS, catalogo, 1, "E2"))).toContain("ACTA_DICTAMEN");
+  });
+
+  it("incluye los formatos agregados por el área (sin plantilla de texto)", () => {
+    const catalogo = aplicarAjustes(CATALOGO_FORMATOS, [
+      {
+        tipo: "AREA_CONSTANCIA",
+        variante: 1,
+        etapa: "E2",
+        nombre: "Constancia",
+        agregado: true,
+        archivado: false,
+      },
+    ]);
+    const e2 = itemsDeEtapa(PLANTILLAS, catalogo, 1, "E2");
+    expect(e2.find((i) => i.tipo === "AREA_CONSTANCIA")).toMatchObject({
+      nombre: "Constancia",
+      plantilla: null,
+    });
+    expect(tipos(itemsDeEtapa(PLANTILLAS, catalogo, 2, "E2"))).not.toContain("AREA_CONSTANCIA");
+    expect(tipos(itemsDeEtapa(PLANTILLAS, catalogo, 1, "E1"))).not.toContain("AREA_CONSTANCIA");
+  });
+
+  it("no genera los formatos que el área eliminó", () => {
+    const catalogo = aplicarAjustes(
+      CATALOGO_FORMATOS,
+      [
+        {
+          tipo: "ANEXO_17",
+          variante: 1,
+          etapa: "E1",
+          nombre: null,
+          agregado: false,
+          archivado: true,
+        },
+        {
+          tipo: "AREA_VIEJO",
+          variante: 1,
+          etapa: "E1",
+          nombre: "Viejo",
+          agregado: true,
+          archivado: true,
+        },
+      ],
+      { incluirArchivados: true },
+    );
+    const e1 = tipos(itemsDeEtapa(PLANTILLAS, catalogo, 1, "E1"));
+    // SOLICITUD_INSCRIPCION se edita como ANEXO_17: al eliminarlo deja de generarse.
+    expect(e1).not.toContain("SOLICITUD_INSCRIPCION");
+    expect(e1).not.toContain("AREA_VIEJO");
+    expect(e1).toContain("DECRETO_APROBACION");
+    expect(tipos(itemsDeEtapa(PLANTILLAS, catalogo, 2, "E1"))).toContain("SOLICITUD_INSCRIPCION");
+  });
+
+  it("el informe de Secretaría (E6) no depende del catálogo de formatos", () => {
+    expect(tipos(itemsDeEtapa(PLANTILLAS, CATALOGO_FORMATOS, 1, "E6"))).toEqual([
+      "INFORME_SECRETARIA",
+    ]);
   });
 });

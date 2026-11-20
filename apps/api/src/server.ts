@@ -13,6 +13,8 @@ import { registerCierreRoutes } from "./modules/cierre/cierre.routes.js";
 import { registerConfiguracionRoutes } from "./modules/configuracion/configuracion.routes.js";
 import { registerDocumentosRoutes } from "./modules/documentos/documentos.routes.js";
 import { registerExpedientesRoutes } from "./modules/expedientes/expedientes.routes.js";
+import { registerFormatosRoutes } from "./modules/formatos/formatos.routes.js";
+import { registerNumeracionRoutes } from "./modules/numeracion/numeracion.routes.js";
 import { registerReportesTitulacionRoutes } from "./modules/reportes/reportes.routes.js";
 import { registerSeguimientoRoutes } from "./modules/seguimiento/seguimiento.routes.js";
 import { registerSeguridadRoutes } from "./modules/seguridad/seguridad.routes.js";
@@ -72,6 +74,8 @@ export async function buildServer() {
   registerReportesRoutes(app);
   registerReportesTitulacionRoutes(app);
   registerConfiguracionRoutes(app);
+  registerFormatosRoutes(app);
+  registerNumeracionRoutes(app);
   registerSolicitudesPublicasRoutes(app);
   registerSolicitudesAdminRoutes(app);
 

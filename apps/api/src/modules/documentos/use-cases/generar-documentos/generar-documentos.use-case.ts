@@ -24,6 +24,7 @@ import {
   horaLimpia,
   ok,
   PLANTILLAS,
+  type PlantillaDocumento,
   type Result,
   renderizarPlantilla,
   resolverNombreArchivo,
@@ -32,12 +33,21 @@ import {
 } from "@pis/domain";
 import { and, eq } from "drizzle-orm";
 import { DrizzleUnitOfWork } from "../../../../infra/db/unit-of-work.js";
-import { obtenerPlantillaDocx, procesarDocxBuffer } from "../../../../infra/docx/render-docx.js";
+import { convertirDocxAPdf } from "../../../../infra/docx/docx-to-pdf.js";
+import { procesarDocxBuffer } from "../../../../infra/docx/render-docx.js";
 import { type MetaPdf, renderizarPdf } from "../../../../infra/pdf/render-documento.js";
 import type { AlmacenamientoPort } from "../../../../infra/storage/almacenamiento.port.js";
 import { LocalStorageService } from "../../../../infra/storage/local-storage.service.js";
 import { appendAuditoria } from "../../../expedientes/expedientes.auditoria.js";
 import { type DetalleRow, getDetalleById } from "../../../expedientes/expedientes.repository.js";
+import {
+  archivoDeNombre,
+  type FormatoCatalogo,
+  tipoFormatoCanonico,
+  type Variante,
+} from "../../../formatos/catalogo-formatos.js";
+import { catalogoVigente, resolverPlantillaDocx } from "../../../formatos/formatos.repository.js";
+import { tiposVinculados } from "../../../numeracion/numeracion.repository.js";
 
 export interface Actor {
   id: string;
@@ -85,6 +95,91 @@ export function expedienteParaDocumentos(
     sustentacion,
     ...extras,
   };
+}
+
+/** Etiquetas del modal que fijarían el N° de oficio circular / decreto. */
+const CLAVES_NUMERACION = {
+  OFICIO: new Set(["OFICIO", "N° OFICIO", "N°_OFICIO", "NRO_OFICIO"]),
+  DECRETO: new Set(["DECRETO", "N° DECRETO", "N°_DECRETO", "NRO_DECRETO"]),
+} as const;
+
+/**
+ * Con vínculo en el registro de oficios y decretos, el número sale del
+ * registro: se descartan los overrides del modal que intenten cambiarlo.
+ */
+export function descartarOverridesNumeracion(
+  overrides: Record<string, string>,
+  vinculados: ReadonlySet<string>,
+): Record<string, string> {
+  if (vinculados.size === 0) return overrides;
+  const salida: Record<string, string> = {};
+  for (const [k, v] of Object.entries(overrides)) {
+    const clave = k.trim().toUpperCase().replace(/\s+/g, " ");
+    const bloqueada = (["OFICIO", "DECRETO"] as const).some(
+      (t) => vinculados.has(t) && CLAVES_NUMERACION[t].has(clave),
+    );
+    if (!bloqueada) salida[k] = v;
+  }
+  return salida;
+}
+
+/**
+ * Formato a generar: una plantilla del sistema (con texto para el PDF) o un
+ * formato agregado por el área (solo DOCX; el PDF sale de convertirlo).
+ */
+export interface ItemGeneracion {
+  readonly tipo: string;
+  readonly nombre: string;
+  /** Etapa en la que se agrupa y guarda (la vigente en «Gestión de formatos»). */
+  readonly etapa: EtapaPlantilla;
+  /** Etapa de la plantilla base del repositorio (ubica el archivo DOCX). */
+  readonly etapaBase: EtapaPlantilla;
+  readonly plantilla: PlantillaDocumento | null;
+}
+
+/**
+ * Formatos que «Insertar datos en documentos» genera en `etapa` para la
+ * variante: plantillas del sistema en su etapa vigente (el área puede
+ * moverlas) + formatos agregados por el área a esa etapa. Los formatos que
+ * el área eliminó (`archivado`) no se generan. Puro.
+ */
+export function itemsDeEtapa(
+  plantillas: readonly PlantillaDocumento[],
+  catalogo: readonly FormatoCatalogo[],
+  variante: Variante,
+  etapa: EtapaPlantilla,
+): ItemGeneracion[] {
+  const propios = catalogo.filter((f) => f.variante === variante);
+  const etapaVigente = new Map(propios.map((f) => [f.tipo, f.etapa]));
+  const eliminados = new Set(propios.filter((f) => f.archivado).map((f) => f.tipo));
+  const delSistema = plantillas
+    .filter((p) =>
+      variante === 1
+        ? !p.tipo.endsWith("_P1") && !p.tipo.endsWith("_P2")
+        : p.tipo !== "ANEXO_01_DJ" && p.tipo !== "ANEXO_02_DJ",
+    )
+    .filter((p) => !eliminados.has(tipoFormatoCanonico(p.tipo, variante)))
+    .map(
+      (p): ItemGeneracion => ({
+        tipo: p.tipo,
+        nombre: p.nombre,
+        etapa: etapaVigente.get(tipoFormatoCanonico(p.tipo, variante)) ?? p.etapa,
+        etapaBase: p.etapa,
+        plantilla: p,
+      }),
+    );
+  const agregados = propios
+    .filter((f) => f.agregado && !f.archivado)
+    .map(
+      (f): ItemGeneracion => ({
+        tipo: f.tipo,
+        nombre: f.nombre,
+        etapa: f.etapa,
+        etapaBase: f.etapa,
+        plantilla: null,
+      }),
+    );
+  return [...delSistema, ...agregados].filter((i) => i.etapa === etapa);
 }
 
 /** Estados en que se emite el informe para Secretaría (E6, HU-0045). */
@@ -188,6 +283,11 @@ export class GenerarDocumentosUseCase {
       doc: DocumentoRenderizado,
       meta: MetaPdf,
     ) => Promise<Uint8Array> = renderizarPdf,
+    /** DOCX → PDF (Gotenberg) para los formatos agregados por el área. */
+    private readonly convertir: (
+      docx: Buffer,
+      nombre: string,
+    ) => Promise<Buffer> = convertirDocxAPdf,
   ) {}
 
   async execute(
@@ -203,7 +303,16 @@ export class GenerarDocumentosUseCase {
       | undefined,
   ): Promise<Result<{ generados: FormatoGenerado[] }, DomainError>> {
     const ahora = ahoraUopciones instanceof Date ? ahoraUopciones : new Date();
-    const opts = ahoraUopciones instanceof Date ? opciones : ahoraUopciones;
+    const optsEntrada = ahoraUopciones instanceof Date ? opciones : ahoraUopciones;
+    const vinculados = optsEntrada?.overrides
+      ? await tiposVinculados(expedienteId)
+      : new Set<string>();
+    const opts = optsEntrada?.overrides
+      ? {
+          ...optsEntrada,
+          overrides: descartarOverridesNumeracion(optsEntrada.overrides, vinculados),
+        }
+      : optsEntrada;
     const detalle = await getDetalleById(db, expedienteId, ahora);
     if (!detalle) return fail(new DomainError("NO_ENCONTRADO", "Expediente no encontrado"));
     if (detalle.estado === "ANULADO") {
@@ -284,27 +393,23 @@ export class GenerarDocumentosUseCase {
     }
     const datos = { ...datosBase, ...overridesNormalizados };
     const numTesistas = detalle.participante2 ? 2 : 1;
-    let plantillasEtapa = PLANTILLAS.filter((p) => p.etapa === etapa);
+    const variante: Variante = numTesistas === 2 ? 2 : 1;
+    const itemsEtapa = itemsDeEtapa(
+      PLANTILLAS,
+      await catalogoVigente(undefined, { incluirArchivados: true }),
+      variante,
+      etapa,
+    );
 
-    if (numTesistas === 1) {
-      plantillasEtapa = plantillasEtapa.filter(
-        (p) => !p.tipo.endsWith("_P1") && !p.tipo.endsWith("_P2"),
-      );
-    } else {
-      plantillasEtapa = plantillasEtapa.filter(
-        (p) => p.tipo !== "ANEXO_01_DJ" && p.tipo !== "ANEXO_02_DJ",
-      );
-    }
-
-    const plantillas = opts?.tipo
+    const items = opts?.tipo
       ? opts.tipo === "ANEXO_01_DJ" && numTesistas === 2
-        ? plantillasEtapa.filter((p) => p.tipo.startsWith("ANEXO_01_DJ_P"))
+        ? itemsEtapa.filter((p) => p.tipo.startsWith("ANEXO_01_DJ_P"))
         : opts.tipo === "ANEXO_02_DJ" && numTesistas === 2
-          ? plantillasEtapa.filter((p) => p.tipo.startsWith("ANEXO_02_DJ_P"))
-          : plantillasEtapa.filter((p) => p.tipo === opts.tipo)
-      : plantillasEtapa;
+          ? itemsEtapa.filter((p) => p.tipo.startsWith("ANEXO_02_DJ_P"))
+          : itemsEtapa.filter((p) => p.tipo === opts.tipo)
+      : itemsEtapa;
 
-    if (plantillas.length === 0) {
+    if (items.length === 0) {
       return fail(
         new DomainError(
           "NO_ENCONTRADO",
@@ -314,45 +419,67 @@ export class GenerarDocumentosUseCase {
     }
 
     // Render fuera de la transacción (CPU); la escritura va en un COMMIT.
-    const renderizados = await Promise.all(
-      plantillas.map(async (p) => {
-        const plantillaDocx = obtenerPlantillaDocx(p.tipo, p.etapa, numTesistas);
-        let bytesDocx: Buffer | null = null;
-        let pendientesDocx: string[] = [];
-        if (plantillaDocx) {
-          const datosDocx: Record<string, string> = p.tipo.endsWith("_P2")
-            ? {
-                ...datos,
-                NOMBRES: datos.NOMBRES02 || datos.NOMBRES_2 || datos.NOMBRES || "",
-                DNI: datos.DNI02 || datos.DNI_2 || datos.DNI || "",
-                CUI: datos.CUI02 || datos.CUI_2 || datos.CUI || "",
-                CORREO: datos.CORREO02 || datos.CORREO || "",
-                NACIONALIDAD: datos.NACIONALIDAD02 || datos.NACIONALIDAD || "",
-                DIRECCION: datos.DIRECCION02 || datos.DIRECCION || "",
-                CIUDAD: datos.CIUDAD02 || datos.CIUDAD || "",
-                TELEFONO: datos.TELEFONO02 || datos.TELEFONO || "",
-              }
-            : datos;
-          const res = procesarDocxBuffer(plantillaDocx, datosDocx);
-          bytesDocx = res.buffer;
-          pendientesDocx = res.pendientes;
-        }
+    const renderizados = (
+      await Promise.all(
+        items.map(async (p) => {
+          // Versión activa de "Gestión de formatos" o, si no hay, la plantilla base.
+          const resuelta = await resolverPlantillaDocx(p.tipo, p.etapaBase, numTesistas);
+          const plantillaDocx = resuelta?.buffer ?? null;
+          let bytesDocx: Buffer | null = null;
+          let pendientesDocx: string[] = [];
+          if (plantillaDocx) {
+            const datosDocx: Record<string, string> = p.tipo.endsWith("_P2")
+              ? {
+                  ...datos,
+                  NOMBRES: datos.NOMBRES02 || datos.NOMBRES_2 || datos.NOMBRES || "",
+                  DNI: datos.DNI02 || datos.DNI_2 || datos.DNI || "",
+                  CUI: datos.CUI02 || datos.CUI_2 || datos.CUI || "",
+                  CORREO: datos.CORREO02 || datos.CORREO || "",
+                  NACIONALIDAD: datos.NACIONALIDAD02 || datos.NACIONALIDAD || "",
+                  DIRECCION: datos.DIRECCION02 || datos.DIRECCION || "",
+                  CIUDAD: datos.CIUDAD02 || datos.CIUDAD || "",
+                  TELEFONO: datos.TELEFONO02 || datos.TELEFONO || "",
+                }
+              : datos;
+            const res = procesarDocxBuffer(plantillaDocx, datosDocx);
+            bytesDocx = res.buffer;
+            pendientesDocx = res.pendientes;
+          }
+          const versionPlantilla = resuelta?.versionPlantilla ?? VERSION_PLANTILLAS;
 
-        const doc = renderizarPlantilla(p, datos);
-        const bytesPdf = await this.renderer(doc, {
-          codigo: detalle.codigo,
-          versionPlantilla: VERSION_PLANTILLAS,
-          generadoEn: ahora,
-        });
+          if (!p.plantilla) {
+            // Formato agregado por el área: sin DOCX no hay nada que generar;
+            // el PDF sale del DOCX ya rellenado (si Gotenberg falla, queda el Word).
+            if (!bytesDocx) return null;
+            let bytesPdf: Buffer | null = null;
+            try {
+              bytesPdf = await this.convertir(bytesDocx, `${p.tipo}.docx`);
+            } catch (err) {
+              console.error(
+                `[GenerarDocumentosUseCase] No se pudo convertir ${p.tipo} a PDF; se guarda solo el Word`,
+                err,
+              );
+            }
+            return { item: p, versionPlantilla, bytesDocx, bytesPdf, pendientes: pendientesDocx };
+          }
 
-        return {
-          plantilla: p,
-          bytesDocx,
-          bytesPdf: Buffer.from(bytesPdf),
-          pendientes: plantillaDocx ? pendientesDocx : [...doc.pendientes],
-        };
-      }),
-    );
+          const doc = renderizarPlantilla(p.plantilla, datos);
+          const bytesPdf = await this.renderer(doc, {
+            codigo: detalle.codigo,
+            versionPlantilla,
+            generadoEn: ahora,
+          });
+
+          return {
+            item: p,
+            versionPlantilla,
+            bytesDocx,
+            bytesPdf: Buffer.from(bytesPdf) as Buffer | null,
+            pendientes: plantillaDocx ? pendientesDocx : [...doc.pendientes],
+          };
+        }),
+      )
+    ).filter((x) => x !== null);
 
     const uow = new DrizzleUnitOfWork(db);
     const r = await uow.run(async (tx) => {
@@ -379,7 +506,13 @@ export class GenerarDocumentosUseCase {
       }
 
       const generados: FormatoGenerado[] = [];
-      for (const { plantilla, bytesDocx, bytesPdf, pendientes } of renderizados) {
+      for (const {
+        item: plantilla,
+        versionPlantilla,
+        bytesDocx,
+        bytesPdf,
+        pendientes,
+      } of renderizados) {
         const previo = await tx
           .select({
             id: documentosGenerados.id,
@@ -398,6 +531,7 @@ export class GenerarDocumentosUseCase {
 
         // 1. Guardar formato editable en documentos_generados
         const bytesGenerado = bytesDocx ?? bytesPdf;
+        if (!bytesGenerado) continue;
         const extGenerado = bytesDocx ? "docx" : "pdf";
         if (previo[0]?.ruta) {
           await this.storage.delete?.(previo[0].ruta);
@@ -413,7 +547,7 @@ export class GenerarDocumentosUseCase {
           ruta,
           sha256,
           version,
-          versionPlantilla: VERSION_PLANTILLAS,
+          versionPlantilla,
           pendientes,
           archivoContenido: bytesGenerado,
           tamanoBytes: bytesGenerado.length,
@@ -456,26 +590,30 @@ export class GenerarDocumentosUseCase {
             );
         }
 
-        const pdfGuardado = await this.storage.save(
-          expedienteId,
-          `${plantilla.tipo}_v${version}.pdf`,
-          bytesPdf,
-        );
+        // Sin PDF (formato agregado y Gotenberg caído) solo queda el Word generado.
+        if (bytesPdf) {
+          const pdfGuardado = await this.storage.save(
+            expedienteId,
+            `${plantilla.tipo}_v${version}.pdf`,
+            bytesPdf,
+          );
 
-        await tx.insert(documentos).values({
-          expedienteId,
-          tipo: plantilla.tipo,
-          etapa: plantilla.etapa,
-          ruta: pdfGuardado.ruta,
-          version,
-          sha256: pdfGuardado.sha256,
-          estado: "CARGADO",
-          origen: "SISTEMA",
-          driveSyncEstado: process.env.GOOGLE_DRIVE_ENABLED === "true" ? "PENDIENTE" : "NO_APLICA",
-          archivoContenido: bytesPdf,
-          tamanoBytes: bytesPdf.length,
-          createdAt: ahora,
-        });
+          await tx.insert(documentos).values({
+            expedienteId,
+            tipo: plantilla.tipo,
+            etapa: plantilla.etapa,
+            ruta: pdfGuardado.ruta,
+            version,
+            sha256: pdfGuardado.sha256,
+            estado: "CARGADO",
+            origen: "SISTEMA",
+            driveSyncEstado:
+              process.env.GOOGLE_DRIVE_ENABLED === "true" ? "PENDIENTE" : "NO_APLICA",
+            archivoContenido: bytesPdf,
+            tamanoBytes: bytesPdf.length,
+            createdAt: ahora,
+          });
+        }
 
         generados.push({
           id,
@@ -509,10 +647,17 @@ export class GenerarDocumentosUseCase {
         const boss = await getBoss();
         const subcarpeta = resolverSubcarpetaEtapa(etapa);
 
+        const conDocx = new Set(
+          renderizados.filter((x) => x.bytesDocx !== null).map((x) => x.item.tipo),
+        );
+        const agregados = new Set(
+          renderizados.filter((x) => x.item.plantilla === null).map((x) => x.item.tipo),
+        );
         for (const gen of r.value.generados) {
-          const plantillaDocx = obtenerPlantillaDocx(gen.tipo, etapa, numTesistas);
-          const ext = plantillaDocx ? "docx" : "pdf";
-          const nombreArchivo = resolverNombreArchivo(gen.tipo, numTesistas, ext);
+          const ext = conDocx.has(gen.tipo) ? "docx" : "pdf";
+          const nombreArchivo = agregados.has(gen.tipo)
+            ? archivoDeNombre(gen.nombre).replace(/\.docx$/, `.${ext}`)
+            : resolverNombreArchivo(gen.tipo, numTesistas, ext);
           await boss.send(
             COLAS.SYNC_DRIVE_INSTITUCIONAL,
             {

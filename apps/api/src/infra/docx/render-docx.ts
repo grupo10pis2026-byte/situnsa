@@ -8,6 +8,22 @@ export interface ResultadoDocx {
   readonly pendientes: string[];
 }
 
+/** Partes del paquete .docx donde viven etiquetas (cuerpo, encabezados y pies). */
+export const ARCHIVOS_XML_DOCX = [
+  "word/document.xml",
+  "word/header1.xml",
+  "word/header2.xml",
+  "word/header3.xml",
+  "word/footer1.xml",
+  "word/footer2.xml",
+  "word/footer3.xml",
+] as const;
+
+/** Clave canónica de una etiqueta (`<< fecha_circular >>` → `FECHA_CIRCULAR`). */
+export function claveEtiqueta(tag: string): string {
+  return tag.trim().replace(/\s+/g, " ").toUpperCase();
+}
+
 export function escapeXmlValue(str: string): string {
   const sanitized = str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   // En OpenXML, saltos de línea se expresan cerrando y reabriendo el run de texto con un <w:br/>
@@ -28,18 +44,9 @@ export function procesarDocxBuffer(
 
   const PATRON_TAG = /(?:<<|&lt;&lt;)([^<>&]+)(?:>>|&gt;&gt;)/g;
 
-  // Archivos XML a procesar dentro del paquete .docx
-  const archivosXml = [
-    "word/document.xml",
-    "word/header1.xml",
-    "word/header2.xml",
-    "word/footer1.xml",
-    "word/footer2.xml",
-  ];
-
   const tieneCoasesor = Boolean((datos.COASESOR ?? datos["CO ASESOR"] ?? "").trim());
 
-  for (const rutaXml of archivosXml) {
+  for (const rutaXml of ARCHIVOS_XML_DOCX) {
     const file = zip.file(rutaXml);
     if (!file) continue;
 
@@ -69,7 +76,7 @@ export function procesarDocxBuffer(
     }
 
     xml = xml.replace(PATRON_TAG, (_match, tag) => {
-      const clave = tag.trim().replace(/\s+/g, " ").toUpperCase();
+      const clave = claveEtiqueta(tag);
       const valor = (datos[clave] ?? "").trim();
       if (valor) {
         return escapeXmlValue(valor);
@@ -231,18 +238,30 @@ const ETAPAS_E1 = new Set([
   "ETIQUETAS",
 ]);
 
-/**
- * Obtiene el buffer de la plantilla maestra oficial correspondiente según tipo y cantidad de participantes.
- */
-export function obtenerPlantillaDocx(tipo: string, etapa: string, numTesistas = 1): Buffer | null {
+/** Nombre del archivo base del repositorio para el tipo y la variante (1|2 tesistas). */
+export function archivoBasePlantilla(tipo: string, numTesistas = 1): string | null {
   const config = MAPA_ARCHIVOS[tipo];
   if (!config) return null;
+  return numTesistas > 1 ? config[2] : config[1];
+}
 
-  const archivo = numTesistas > 1 ? config[2] : config[1];
+/** Ruta absoluta de la plantilla base (puede no existir en disco). */
+export function rutaPlantillaBase(tipo: string, etapa: string, numTesistas = 1): string | null {
+  const archivo = archivoBasePlantilla(tipo, numTesistas);
+  if (!archivo) return null;
   const subcarpeta = numTesistas > 1 ? "2tesistas" : "1tesista";
   const etapaDir = ETAPAS_E1.has(tipo) || etapa === "E1" ? "ETAPA01" : "ETAPA02";
+  return join(DIR_MAESTRAS, subcarpeta, etapaDir, archivo);
+}
 
-  const rutaCompleta = join(DIR_MAESTRAS, subcarpeta, etapaDir, archivo);
+/**
+ * Obtiene el buffer de la plantilla maestra oficial correspondiente según tipo y cantidad de participantes.
+ * Las versiones subidas desde "Gestión de formatos" se resuelven en
+ * `modules/formatos/formatos.repository.ts` (`resolverPlantillaDocx`).
+ */
+export function obtenerPlantillaDocx(tipo: string, etapa: string, numTesistas = 1): Buffer | null {
+  const rutaCompleta = rutaPlantillaBase(tipo, etapa, numTesistas);
+  if (!rutaCompleta) return null;
   if (!existsSync(rutaCompleta)) {
     console.error(`[obtenerPlantillaDocx] No se encontró plantilla en: ${rutaCompleta}`);
     return null;
