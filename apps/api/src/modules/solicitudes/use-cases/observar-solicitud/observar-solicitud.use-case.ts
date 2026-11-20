@@ -14,6 +14,7 @@ import { DrizzleUnitOfWork } from "../../../../infra/db/unit-of-work.js";
 import { enqueueCorreo } from "../../../../infra/jobs/colas.js";
 import { urlPortal } from "../../../../infra/mail/correo.service.js";
 import type { Actor } from "../../../expedientes/use-cases/inscribir-plan/inscribir-plan.use-case.js";
+import { correoSolicitudObservada } from "../../correos-solicitud.js";
 import { appendHistorialSolicitud, getSolicitudRaw } from "../../solicitudes.repository.js";
 
 /** RF-02xx[007] — Observar solicitud y emitir token de subsanación */
@@ -79,23 +80,22 @@ export class ObservarSolicitudUseCase {
         metadata: { detalleObservacion: input.detalleObservacion, diasHabiles },
       });
 
-      return ok({ token: tokenPlano, sol, correos });
+      return ok({ token: tokenPlano, sol, correos, fechaLimite, motivoObservacion });
     });
 
     if (!r.ok) return fail(r.error);
 
     // Post-commit: correo con enlace de subsanación al tesista
     const enlaceSubsanacion = `${urlPortal()}/subsanar/${r.value.token}`;
-    await enqueueCorreo({
-      asunto: `[${r.value.sol.codigo}] Solicitud observada – subsane en 10 días hábiles`,
-      titulo: "Tu solicitud requiere subsanación",
-      texto:
-        `Tu solicitud <strong>${r.value.sol.codigo}</strong> ha sido observada. ` +
-        "Para subsanarla, accede al siguiente enlace (válido hasta la fecha límite):",
-      enlace: enlaceSubsanacion,
-      textoEnlace: "Subsanar solicitud",
-      para: r.value.correos,
-    });
+    await enqueueCorreo(
+      correoSolicitudObservada({
+        codigo: r.value.sol.codigo,
+        detalle: r.value.motivoObservacion,
+        fechaLimite: r.value.fechaLimite,
+        enlace: enlaceSubsanacion,
+        para: r.value.correos,
+      }),
+    );
 
     return ok({
       ok: true as const,

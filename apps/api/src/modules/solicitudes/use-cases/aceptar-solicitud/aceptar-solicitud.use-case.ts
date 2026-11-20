@@ -21,10 +21,12 @@ import {
 import { eq, sql } from "drizzle-orm";
 import { DrizzleUnitOfWork } from "../../../../infra/db/unit-of-work.js";
 import { enqueueCorreo } from "../../../../infra/jobs/colas.js";
-import { hashearClave } from "../../../auth/hash.js";
+import { urlPortal } from "../../../../infra/mail/correo.service.js";
+import { EmitirAccesoUseCase } from "../../../auth/use-cases/acceso/emitir-acceso.use-case.js";
 import { appendAuditoria } from "../../../expedientes/expedientes.auditoria.js";
 import type { Actor } from "../../../expedientes/use-cases/inscribir-plan/inscribir-plan.use-case.js";
 import { asignarRol } from "../../../seguridad/roles.repository.js";
+import { correoExpedienteCreado } from "../../correos-solicitud.js";
 import { appendHistorialSolicitud, getSolicitudRaw } from "../../solicitudes.repository.js";
 import { GenerarDocumentosUseCase } from "../../../documentos/use-cases/generar-documentos/generar-documentos.use-case.js";
 
@@ -38,15 +40,19 @@ export interface ExpedienteAceptado {
  *
  * Transacción UoW atómica:
  * 1. Valida FSM (EN_REVISION o OBSERVADA → ACEPTADA).
- * 2. Sincroniza o crea cuentas de usuario en `usuarios` usando hashearClave() (bcrypt).
+ * 2. Sincroniza o crea cuentas de usuario en `usuarios` (las nuevas, sin clave).
  * 3. Candado advisory sobre 'expedientes:codigo' → asigna SETNNN correlativo.
  * 4. Crea expediente formal en `expedientes`.
  * 5. Migra `solicitudDocumentos` a `documentos` (Etapa 'E1', estado 'APROBADO').
  * 6. Inicializa subetapas del FLUJO_TITULACION con la primera subetapa (E1.1) en EN_CURSO y fecha de inicio.
  * 7. Vincula solicitud → expediente + historial y auditoría.
- * 8. Post-commit: correos de bienvenida incluyendo DNI y contraseña temporal en el cuerpo.
+ * 8. Post-commit: usuarios sin clave (nuevos) → enlace de activación de un solo uso
+ *    (`EmitirAccesoUseCase`); usuarios con clave → aviso de expediente creado.
+ *    Nunca se envían contraseñas por correo (CR-MOD-OBT-001, D-2).
  */
 export class AceptarSolicitudUseCase {
+  constructor(private readonly acceso = new EmitirAccesoUseCase()) {}
+
   async execute(
     id: string,
     input: AceptarSolicitudInput,
@@ -75,6 +81,14 @@ export class AceptarSolicitudUseCase {
 
       let p1Id: string | null = null;
       let p2Id: string | null = null;
+      const notificar: Array<{
+        usuarioId: string;
+        email: string;
+        dni: string;
+        nombres: string;
+        requiereActivacion: boolean;
+        enviarCorreo: boolean;
+      }> = [];
 
       for (const part of partsRows.sort((a, b) => a.orden - b.orden)) {
         const cfg = input.participantesConfig.find(
@@ -87,6 +101,7 @@ export class AceptarSolicitudUseCase {
           .limit(1);
 
         let usuarioId: string;
+        let requiereActivacion: boolean;
 
         if (existente[0]) {
           // Sincronizar datos de contacto actualizados
@@ -99,9 +114,9 @@ export class AceptarSolicitudUseCase {
             })
             .where(eq(usuarios.id, existente[0].id));
           usuarioId = existente[0].id;
+          requiereActivacion = !existente[0].passwordHash;
         } else {
-          // Crear nuevo usuario con contraseña hasheada mediante bcrypt (hashearClave)
-          const pwdHash = cfg ? hashearClave(cfg.claveTemporalGenerada) : null;
+          // Cuenta nueva SIN clave: el tesista la crea con el enlace de activación.
           const [creado] = await tx
             .insert(usuarios)
             .values({
@@ -114,7 +129,7 @@ export class AceptarSolicitudUseCase {
               ciudad: part.ciudad ?? null,
               direccion: part.direccion ?? null,
               rol: "TESISTA",
-              passwordHash: pwdHash,
+              passwordHash: null,
             })
             .returning({ id: usuarios.id });
           if (!creado) {
@@ -126,7 +141,16 @@ export class AceptarSolicitudUseCase {
             );
           }
           usuarioId = creado.id;
+          requiereActivacion = true;
         }
+        notificar.push({
+          usuarioId,
+          email: part.email.trim().toLowerCase(),
+          dni: part.dni,
+          nombres: part.nombres,
+          requiereActivacion,
+          enviarCorreo: cfg?.enviarActivacionCorreo ?? true,
+        });
 
         await asignarRol(tx, usuarioId, "TESISTA");
 
@@ -251,51 +275,43 @@ export class AceptarSolicitudUseCase {
         detalle: `Expediente ${codigoSet} creado desde solicitud ${sol.codigo}`,
       });
 
-      // Recopilar datos de credenciales para la notificación
-      const credencialesNotif = partsRows.map((part) => {
-        const cfg = input.participantesConfig.find(
-          (c) => c.orden === part.orden || c.dni === part.dni,
-        );
-        return {
-          email: part.email.trim().toLowerCase(),
-          dni: part.dni,
-          nombres: part.nombres,
-          claveTemporal: cfg?.claveTemporalGenerada ?? null,
-          enviarCredenciales: cfg?.enviarCredencialesCorreo ?? true,
-        };
-      });
-
-      return ok({ expedienteId: expRow.id, codigoSet, credencialesNotif });
+      return ok({ expedienteId: expRow.id, codigoSet, notificar });
     });
 
     if (!r.ok) return fail(r.error);
 
-    // Post-commit: correos de bienvenida incluyendo DNI (usuario) y contraseña temporal sin hashear
-    for (const cred of r.value.credencialesNotif) {
-      let detalleCredenciales = "";
-      if (cred.claveTemporal && cred.enviarCredenciales) {
-        detalleCredenciales =
-          `<br/><br/><strong>Credenciales de acceso al portal:</strong><br/>` +
-          `Usuario (DNI): <strong>${cred.dni}</strong><br/>` +
-          `Contraseña temporal: <strong>${cred.claveTemporal}</strong><br/><br/>` +
-          `Por motivos de seguridad institucional, deberás cambiar tu contraseña tras tu primer inicio de sesión.`;
-      } else {
-        detalleCredenciales =
-          `<br/><br/><strong>Acceso al portal:</strong><br/>` +
-          `Usuario (DNI): <strong>${cred.dni}</strong><br/>` +
-          `Puedes ingresar utilizando tu contraseña institucional previamente registrada.`;
+    // Post-commit (AGENTS.md §3): correos solo tras el commit.
+    const { codigoSet, notificar } = r.value;
+    const habilitarAcceso = input.crearCuentasUsuarios !== false;
+    const porActivar = notificar.filter(
+      (n) => n.enviarCorreo && n.requiereActivacion && habilitarAcceso,
+    );
+    if (porActivar.length > 0) {
+      // Emite el token en su propia transacción; si fallara, el administrativo
+      // puede reenviar el acceso desde el expediente ("Enviar acceso").
+      try {
+        await this.acceso.execute(
+          porActivar.map((n) => n.usuarioId),
+          "ACTIVACION",
+          new Date(),
+          { codigoExpediente: codigoSet },
+        );
+      } catch (err) {
+        console.error("[aceptar-solicitud] no se pudo emitir el acceso", err);
       }
-
-      await enqueueCorreo({
-        expedienteId: r.value.expedienteId,
-        asunto: `¡Solicitud aprobada! Expediente ${r.value.codigoSet} creado`,
-        titulo: "Tu expediente de titulación fue creado",
-        texto:
-          `Estimado(a) ${cred.nombres},<br/><br/>` +
-          `Tu solicitud ha sido aprobada. Tu expediente de titulación oficial fue registrado con el código <strong>${r.value.codigoSet}</strong>.` +
-          detalleCredenciales,
-        para: [cred.email],
-      });
+    }
+    for (const n of notificar) {
+      if (!n.enviarCorreo || porActivar.includes(n)) continue;
+      await enqueueCorreo(
+        correoExpedienteCreado({
+          nombres: n.nombres,
+          codigoSet,
+          dni: n.dni,
+          conAcceso: !n.requiereActivacion,
+          enlace: urlPortal("/mi-tramite"),
+          para: [n.email],
+        }),
+      );
     }
 
     // Post-commit: autogenerar documentación institucional inicial de Etapa 1

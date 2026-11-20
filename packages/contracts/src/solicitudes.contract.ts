@@ -123,8 +123,8 @@ export const ParticipanteConfigAceptacionSchema = z.object({
   orden: z.number().int().min(1).max(2),
   dni: z.string().length(8),
   usuarioAsignado: z.string().min(3).max(64),
-  claveTemporalGenerada: z.string().min(8).max(100),
-  enviarCredencialesCorreo: z.boolean().default(true),
+  /** Enviar el correo de alta: enlace de activación (cuenta nueva) o aviso (cuenta previa). */
+  enviarActivacionCorreo: z.boolean().default(true),
 });
 
 export const AceptarSolicitudSchema = z.object({

@@ -10,6 +10,7 @@
 | **Requerimientos Cubiertos** | `RF-02xx[000]` al `RF-02xx[015]` |
 | **Mockup Base** | `docs/06-mockups/prototipos_modulo_obtencion_de_datos/prototipo_version2/` (Vistas 0, 1, 2 y 3) |
 | **Arquitectura de Referencia** | Monorepo PIS-UNSA (`AGENTS.md`, Fastify 5, React 19, ts-rest, Drizzle ORM, Postgres 16) |
+| **Solicitudes de Cambio** | [`cambios-cliente-2026-11.md`](./cambios-cliente-2026-11.md) (`CR-MOD-OBT-001`: dropzones, correos, corrector de título, vista previa) |
 
 ---
 

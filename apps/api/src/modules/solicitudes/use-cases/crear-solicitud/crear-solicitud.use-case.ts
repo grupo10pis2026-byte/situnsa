@@ -7,6 +7,7 @@ import { DomainError, esProgramaOficial, fail, ok, type Result } from "@pis/doma
 import { sql } from "drizzle-orm";
 import { DrizzleUnitOfWork } from "../../../../infra/db/unit-of-work.js";
 import { enqueueCorreo } from "../../../../infra/jobs/colas.js";
+import { correoSolicitudRecibida } from "../../correos-solicitud.js";
 import { appendHistorialSolicitud, siguienteCodigoSol } from "../../solicitudes.repository.js";
 
 /** Magic bytes de PDF: primeros 5 bytes deben ser `%PDF-` */
@@ -295,15 +296,13 @@ export class CrearSolicitudUseCase {
       if (input.participante2?.email) {
         destinatarios.push(input.participante2.email.trim().toLowerCase());
       }
-      await enqueueCorreo({
-        asunto: `Solicitud ${r.value.codigo} recibida`,
-        titulo: "Recibimos tu solicitud de titulación",
-        texto:
-          `Tu solicitud ha sido registrada con el código <strong>${r.value.codigo}</strong>. ` +
-          "El área de titulación revisará tus documentos y te notificará al correo con el resultado. " +
-          "Si hay observaciones, recibirás un enlace para subsanarlas.",
-        para: destinatarios,
-      });
+      await enqueueCorreo(
+        correoSolicitudRecibida({
+          codigo: r.value.codigo,
+          modalidad: input.modalidad,
+          para: destinatarios,
+        }),
+      );
     }
 
     return r;

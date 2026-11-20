@@ -4,8 +4,6 @@ import {
   AlertTriangle,
   ArrowLeft,
   ExternalLink,
-  FileCheck,
-  FileText,
   FileX,
   History,
   Pencil,
@@ -17,9 +15,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { abrirArchivoProtegido } from "../api/expedientes.js";
 import {
-  documentoSolicitudUrl,
   useActualizarConformidadDocumento,
   useActualizarDatosMenores,
   useSolicitudDetalle,
@@ -27,12 +23,14 @@ import {
 import { ModalAceptarExpediente } from "../components/domain/solicitudes/modal-aceptar-expediente.js";
 import { ModalObservarSolicitud } from "../components/domain/solicitudes/modal-observar-solicitud.js";
 import { ModalRechazarSolicitud } from "../components/domain/solicitudes/modal-rechazar-solicitud.js";
+import { PanelDocumentosSolicitud } from "../components/domain/solicitudes/panel-documentos-solicitud.js";
 import { AppShell } from "../components/layout/app-shell.js";
 import { Button } from "../components/ui/button.js";
 import { Card } from "../components/ui/card.js";
 import { Field, ReadonlyField } from "../components/ui/field.js";
 import { StatusBadge } from "../components/ui/status-badge.js";
 import { Tab, TabPanel, Tabs, TabsLista } from "../components/ui/tabs.js";
+import { TextareaCorrector } from "../components/ui/textarea-corrector.js";
 
 function formatoModalidad(m: Modalidad | string): string {
   if (m === "TESIS") return "Modalidad de Tesis";
@@ -366,12 +364,7 @@ export function SolicitudDetallePage() {
 
               {editando ? (
                 <Field etiqueta="Título del Plan o Trabajo">
-                  <textarea
-                    className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-grafito-900 shadow-card focus:border-navy-800 focus:outline-none"
-                    rows={3}
-                    value={tituloEdit}
-                    onChange={(e) => setTituloEdit(e.target.value)}
-                  />
+                  <TextareaCorrector rows={3} value={tituloEdit} onChange={setTituloEdit} />
                 </Field>
               ) : (
                 <ReadonlyField etiqueta="Título del Plan o Trabajo" valor={sol.titulo} />
@@ -625,81 +618,13 @@ export function SolicitudDetallePage() {
 
           {/* PANEL 2: DOCUMENTOS */}
           <TabPanel value="documentos" className="pt-4">
-            <Card className="p-6 shadow-card space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
-                <div>
-                  <h2 className="text-xs font-bold uppercase tracking-wider text-grafito-600">
-                    Checklist Documentario
-                  </h2>
-                  <p className="text-[11px] text-grafito-500">
-                    Verifique cada requisito y marque su conformidad para habilitar la apertura del
-                    expediente.
-                  </p>
-                </div>
-                <span className="font-mono text-xs font-bold text-navy-950">
-                  {conformesCount} / {sol.documentos.length} conformes
-                </span>
-              </div>
-
-              <div className="space-y-3">
-                {sol.documentos.map((doc) => (
-                  <div
-                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:border-slate-300 transition-colors"
-                    key={doc.id}
-                  >
-                    <div className="flex items-start gap-3 min-w-0">
-                      <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
-                        <FileText size={18} />
-                      </span>
-                      <div className="min-w-0 text-xs">
-                        <p className="font-bold text-navy-950 truncate">{doc.nombreOriginal}</p>
-                        <p className="text-grafito-500 text-[11px] mt-0.5">
-                          {doc.tipo} · {Math.round(doc.pesoBytes / 1024)} KB · Versión {doc.version}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                      <button
-                        className="rounded p-1.5 text-slate-500 hover:text-navy-950 hover:bg-slate-100 transition-colors"
-                        onClick={() =>
-                          void abrirArchivoProtegido(documentoSolicitudUrl(sol.id, doc.id))
-                        }
-                        title="Abrir y verificar documento"
-                        type="button"
-                      >
-                        <ExternalLink size={16} />
-                      </button>
-
-                      <StatusBadge estado={doc.estadoConformidad} />
-
-                      {!cerrada && (
-                        <div className="flex items-center gap-1 border-l pl-2 border-slate-200 ml-1">
-                          <button
-                            className="rounded p-1 text-slate-400 hover:text-verde-inst-700 hover:bg-verde-inst-50 transition-colors"
-                            disabled={conformidadMutation.isPending}
-                            onClick={() => void cambiarConformidad(doc.id, "CONFORME")}
-                            title="Marcar Conforme"
-                            type="button"
-                          >
-                            <FileCheck size={17} />
-                          </button>
-                          <button
-                            className="rounded p-1 text-slate-400 hover:text-orange-600 hover:bg-orange-50 transition-colors"
-                            disabled={conformidadMutation.isPending}
-                            onClick={() => void cambiarConformidad(doc.id, "OBSERVADO")}
-                            title="Marcar Observado"
-                            type="button"
-                          >
-                            <AlertTriangle size={17} />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Card>
+            <PanelDocumentosSolicitud
+              cambiandoConformidad={conformidadMutation.isPending}
+              cerrada={cerrada}
+              documentos={sol.documentos}
+              onCambiarConformidad={(docId, estado) => void cambiarConformidad(docId, estado)}
+              solicitudId={sol.id}
+            />
           </TabPanel>
 
           {/* PANEL 3: TRAZABILIDAD */}

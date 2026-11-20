@@ -33,13 +33,19 @@ function crearTransporte(): Transporter | null {
     host,
     port: puerto,
     secure: process.env.SMTP_SECURE === "true" || puerto === 465,
-    ...(usuario ? { auth: { user: usuario, pass: process.env.SMTP_PASS ?? "" } } : {}),
+    // Las contraseñas de aplicación de Google se muestran con espacios: se normalizan.
+    ...(usuario
+      ? { auth: { user: usuario, pass: (process.env.SMTP_PASS ?? "").replace(/\s+/g, "") } }
+      : {}),
   });
 }
 
-/** Resuelve el remitente institucional configurado sin exponer credenciales SMTP. */
+/**
+ * Remitente: MAIL_FROM, o la cuenta autenticada (SMTP_USER). Gmail/Google
+ * Workspace reescribe o rechaza un From distinto de la cuenta o sus alias.
+ */
 function remitente(): string {
-  return process.env.MAIL_FROM || "no-reply@fips.unsa.edu.pe";
+  return process.env.MAIL_FROM || process.env.SMTP_USER || "no-reply@fips.unsa.edu.pe";
 }
 
 /** Envía mensajes de los casos de uso tras el commit; no es un endpoint HTTP ni revisión editorial. */
