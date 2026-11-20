@@ -8,7 +8,6 @@ import {
   ExternalLink,
   FileText,
   GraduationCap,
-  HelpCircle,
   Image as ImageIcon,
   Info,
   Mail,
@@ -16,14 +15,16 @@ import {
   UploadCloud,
   User,
   Users,
-  X,
 } from "lucide-react";
 import { useState } from "react";
 import { crearSolicitudPublica } from "../api/solicitudes.js";
 import { Button } from "../components/ui/button.js";
 import { Card } from "../components/ui/card.js";
+import { Dropzone } from "../components/ui/dropzone.js";
 import { Field } from "../components/ui/field.js";
+import { FormSection } from "../components/ui/form-section.js";
 import { Select } from "../components/ui/select.js";
+import { TextareaCorrector } from "../components/ui/textarea-corrector.js";
 import { LandingPage } from "./landing.js";
 
 type Modalidad = "TESIS" | "TRABAJO_ACADEMICO" | "ARTICULO";
@@ -91,7 +92,7 @@ export function MesaDePartesPage() {
 
   // Paso 3: Documentos
   const [archivos, setArchivos] = useState<Record<string, File>>({});
-  const [guiaAbierta, setGuiaAbierta] = useState<Record<string, boolean>>({});
+  const [erroresArchivo, setErroresArchivo] = useState<Record<string, string>>({});
 
   // Paso 4: Declaración Jurada
   const [declaracionJurada, setDeclaracionJurada] = useState(false);
@@ -289,42 +290,20 @@ export function MesaDePartesPage() {
       : []),
   ];
 
-  function toggleGuia(clave: string) {
-    setGuiaAbierta((prev) => ({ ...prev, [clave]: !prev[clave] }));
-  }
-
   function handleFileChange(clave: string, file: File | null, esFoto = false) {
-    if (!file) {
-      setArchivos((prev) => {
-        const copy = { ...prev };
-        delete copy[clave];
-        return copy;
-      });
-      return;
-    }
-
-    if (esFoto) {
-      const extensionValida = /\.(pdf|jpe?g|png)$/i.test(file.name);
-      const mimeValido = ["application/pdf", "image/jpeg", "image/png", "image/jpg"].includes(
-        file.type,
-      );
-      if (!extensionValida && !mimeValido) {
-        setErrorGlobal(`La fotografía "${file.name}" debe ser formato JPG, PNG o PDF`);
-        return;
-      }
-    } else {
-      if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
-        setErrorGlobal(`El archivo "${file.name}" debe ser formato PDF`);
-        return;
-      }
-    }
-    if (file.size > 20 * 1024 * 1024) {
-      setErrorGlobal(`El archivo "${file.name}" supera el límite máximo de 20MB`);
-      return;
-    }
-
-    setErrorGlobal(null);
-    setArchivos((prev) => ({ ...prev, [clave]: file }));
+    const error = file ? validarArchivo(file, esFoto) : null;
+    setErroresArchivo((prev) => {
+      const copia = { ...prev };
+      if (error) copia[clave] = error;
+      else delete copia[clave];
+      return copia;
+    });
+    setArchivos((prev) => {
+      const copia = { ...prev };
+      if (file && !error) copia[clave] = file;
+      else delete copia[clave];
+      return copia;
+    });
   }
 
   function validarPaso1(): boolean {
@@ -402,13 +381,19 @@ export function MesaDePartesPage() {
 
   function validarPaso3(): boolean {
     setErrorGlobal(null);
-    for (const doc of docsRequeridos) {
-      if (doc.requerido && !archivos[doc.clave]) {
-        setErrorGlobal(`Debe adjuntar el archivo obligatorio: ${doc.nombre}`);
-        return false;
-      }
-    }
-    return true;
+    const faltantes = docsRequeridos.filter((doc) => doc.requerido && !archivos[doc.clave]);
+    if (faltantes.length === 0) return true;
+    setErroresArchivo((prev) => {
+      const copia = { ...prev };
+      for (const doc of faltantes) copia[doc.clave] ??= "Este documento es obligatorio.";
+      return copia;
+    });
+    setErrorGlobal(
+      faltantes.length === 1
+        ? `Falta adjuntar: ${faltantes[0]?.nombre}`
+        : `Faltan ${faltantes.length} documentos obligatorios (marcados en rojo).`,
+    );
+    return false;
   }
 
   async function handleEnviarSolicitud() {
@@ -679,12 +664,11 @@ export function MesaDePartesPage() {
                 ayuda="Título del proyecto según su plan presentado."
                 etiqueta="Título del Plan de Tesis o Trabajo Académico"
               >
-                <textarea
-                  className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-grafito-900 shadow-card placeholder:text-slate-400 focus:border-navy-800 focus:outline-none"
-                  placeholder="Ej. Implementación de una plataforma de analítica para la optimización de procesos..."
+                <TextareaCorrector
+                  placeholder="Ej. Implementación de una plataforma de analítica para la optimización de procesos"
                   rows={3}
                   value={titulo}
-                  onChange={(e) => setTitulo(e.target.value)}
+                  onChange={setTitulo}
                 />
               </Field>
 
@@ -985,194 +969,54 @@ export function MesaDePartesPage() {
                 </p>
               </div>
 
-              <div className="space-y-3.5">
-                {docsRequeridos.map((doc) => {
-                  const cargado = archivos[doc.clave];
-                  const tieneGuia =
-                    Boolean(doc.guiaTexto) ||
-                    Boolean(doc.guiaEnlaces) ||
-                    Boolean(doc.guiaCorreo) ||
-                    Boolean(doc.guiaManual);
-                  const guiaVisible = guiaAbierta[doc.clave] ?? false;
+              <ProgresoDocumentos
+                cargados={docsRequeridos.filter((d) => d.requerido && archivos[d.clave]).length}
+                total={docsRequeridos.filter((d) => d.requerido).length}
+              />
 
-                  return (
-                    <section
+              {[
+                {
+                  titulo: "Documentos del trámite",
+                  ayuda: "Formato PDF, máximo 20 MB por archivo.",
+                  icono: <FileText size={16} />,
+                  docs: docsRequeridos.filter((d) => !d.esFoto),
+                },
+                {
+                  titulo:
+                    cantidadTesistas === 2
+                      ? "Fotografías de los participantes"
+                      : "Fotografía del estudiante",
+                  ayuda: "Fondo blanco, de frente. JPG o PNG (se admite PDF), máximo 20 MB.",
+                  icono: <ImageIcon size={16} />,
+                  docs: docsRequeridos.filter((d) => d.esFoto),
+                },
+              ].map((grupo) => (
+                <FormSection
+                  className="shadow-none"
+                  gridClassName="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 md:p-5"
+                  icono={grupo.icono}
+                  key={grupo.titulo}
+                  titulo={grupo.titulo}
+                  ayuda={grupo.ayuda}
+                >
+                  {grupo.docs.map((doc) => (
+                    <Dropzone
+                      aceptar={doc.formatos ?? "application/pdf,.pdf"}
+                      archivo={archivos[doc.clave] ?? null}
+                      ayuda={tieneGuia(doc) ? <GuiaDocumento doc={doc} /> : undefined}
+                      error={erroresArchivo[doc.clave] ?? null}
+                      etiqueta={doc.nombre}
                       key={doc.clave}
-                      aria-label={`Zona de carga: ${doc.nombre}`}
-                      className={`rounded-xl border p-4 transition-all ${
-                        cargado
-                          ? "border-verde-inst-300 bg-verde-inst-50/20 shadow-sm"
-                          : "border-slate-200 bg-white hover:border-slate-300"
-                      }`}
-                      onDragOver={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                      }}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        const file = e.dataTransfer.files?.[0];
-                        if (file) handleFileChange(doc.clave, file, doc.esFoto);
-                      }}
-                    >
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div className="flex items-start gap-3 min-w-0">
-                          <span
-                            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
-                              cargado
-                                ? "bg-verde-inst-600 text-white"
-                                : doc.esFoto
-                                  ? "bg-amber-100 text-amber-700"
-                                  : "bg-slate-100 text-slate-600"
-                            }`}
-                          >
-                            {cargado ? (
-                              <CheckCircle size={20} />
-                            ) : doc.esFoto ? (
-                              <ImageIcon size={20} />
-                            ) : (
-                              <FileText size={20} />
-                            )}
-                          </span>
-
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <p className="text-xs font-bold text-navy-950">{doc.nombre}</p>
-                              {doc.requerido ? (
-                                <span className="rounded bg-red-50 text-red-600 px-1.5 py-0.2 text-[10px] font-bold">
-                                  Obligatorio
-                                </span>
-                              ) : (
-                                <span className="rounded bg-slate-100 text-slate-600 px-1.5 py-0.2 text-[10px] font-semibold">
-                                  Opcional
-                                </span>
-                              )}
-                              {tieneGuia && (
-                                <button
-                                  type="button"
-                                  onClick={() => toggleGuia(doc.clave)}
-                                  className="text-slate-400 hover:text-navy-950 inline-flex items-center gap-0.5 text-[11px] ml-1 transition-colors"
-                                  title="Ver guía y formato"
-                                >
-                                  <HelpCircle size={13} />
-                                  <span className="underline text-[10px]">Ayuda</span>
-                                </button>
-                              )}
-                            </div>
-
-                            {cargado ? (
-                              <div className="mt-1 flex items-center gap-2 text-[11px] text-verde-inst-700 font-medium">
-                                <span className="truncate max-w-xs">{cargado.name}</span>
-                                <span className="text-slate-400">·</span>
-                                <span>{(cargado.size / 1024).toFixed(0)} KB</span>
-                              </div>
-                            ) : (
-                              <p className="text-[11px] text-slate-500 mt-0.5">
-                                Arrastre el archivo aquí o haga clic para examinar
-                              </p>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Botón de adjuntar o quitar */}
-                        <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
-                          {cargado ? (
-                            <button
-                              type="button"
-                              onClick={() => handleFileChange(doc.clave, null)}
-                              className="inline-flex items-center gap-1 text-[11px] text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50"
-                              title="Quitar archivo"
-                            >
-                              <X size={14} /> Quitar
-                            </button>
-                          ) : null}
-
-                          <label className="cursor-pointer">
-                            <span
-                              className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold shadow-sm transition-colors ${
-                                cargado
-                                  ? "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
-                                  : "border-navy-800 bg-navy-950 text-white hover:bg-navy-900"
-                              }`}
-                            >
-                              <UploadCloud size={14} />
-                              {cargado ? "Reemplazar" : "Subir Archivo"}
-                            </span>
-                            <input
-                              accept={doc.formatos ?? "application/pdf"}
-                              className="hidden"
-                              onChange={(e) =>
-                                handleFileChange(doc.clave, e.target.files?.[0] ?? null, doc.esFoto)
-                              }
-                              type="file"
-                            />
-                          </label>
-                        </div>
-                      </div>
-
-                      {/* Guía desplegable sutil */}
-                      {tieneGuia && guiaVisible && (
-                        <div className="mt-3 pt-3 border-t border-slate-100 rounded-lg bg-slate-50/80 p-3 text-xs text-slate-700 space-y-2">
-                          {doc.guiaTexto && (
-                            <div className="flex items-start gap-1.5">
-                              <Info size={14} className="mt-0.5 shrink-0 text-navy-800" />
-                              <span className="leading-relaxed">{doc.guiaTexto}</span>
-                            </div>
-                          )}
-
-                          {doc.guiaEnlaces && (
-                            <div className="flex flex-wrap gap-2 pl-5 pt-0.5">
-                              {doc.guiaEnlaces.map((enl) => (
-                                <a
-                                  key={enl.url}
-                                  href={enl.url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1 rounded bg-white px-2.5 py-1 text-[11px] font-semibold text-navy-800 shadow-sm border border-slate-200 hover:bg-slate-100"
-                                >
-                                  <ExternalLink size={12} className="text-blue-600" />
-                                  {enl.texto}
-                                </a>
-                              ))}
-                            </div>
-                          )}
-
-                          {doc.guiaCorreo && (
-                            <div className="flex items-center gap-1.5 pl-5 text-[11px] font-semibold text-slate-800">
-                              <Mail size={13} className="text-blue-700" />
-                              <span>Solicitar a: </span>
-                              <a
-                                href={`mailto:${doc.guiaCorreo}`}
-                                className="underline hover:text-navy-950"
-                              >
-                                {doc.guiaCorreo}
-                              </a>
-                            </div>
-                          )}
-
-                          {doc.guiaManual && (
-                            <div className="pt-1.5 border-t border-slate-200/60 pl-5 space-y-1 text-[11px]">
-                              <p className="font-semibold text-slate-800">{doc.guiaManual.texto}</p>
-                              <a
-                                href={doc.guiaManual.enlace.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 font-bold text-navy-800 underline hover:text-navy-950"
-                              >
-                                <ExternalLink size={12} className="text-blue-600" />
-                                {doc.guiaManual.enlace.texto}
-                              </a>
-                              <p className="text-slate-600 italic">
-                                {doc.guiaManual.correoSoporte}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </section>
-                  );
-                })}
-              </div>
+                      onArchivo={(file) => handleFileChange(doc.clave, file, doc.esFoto)}
+                      requerido={doc.requerido}
+                      restricciones={
+                        doc.esFoto ? "JPG · PNG · PDF · máx. 20 MB" : "PDF · máx. 20 MB"
+                      }
+                      tipo={doc.esFoto ? "foto" : "documento"}
+                    />
+                  ))}
+                </FormSection>
+              ))}
 
               <div className="flex justify-between pt-4 border-t border-slate-100">
                 <Button onClick={() => setPaso(2)} variante="contorno">
@@ -1287,5 +1131,107 @@ export function MesaDePartesPage() {
         </Card>
       </div>
     </main>
+  );
+}
+
+const PESO_MAXIMO_BYTES = 20 * 1024 * 1024;
+
+/** Valida formato y peso de un archivo del Paso 3 (el servidor vuelve a validar). */
+function validarArchivo(file: File, esFoto: boolean): string | null {
+  if (esFoto) {
+    const extensionValida = /\.(pdf|jpe?g|png)$/i.test(file.name);
+    const mimeValido = ["application/pdf", "image/jpeg", "image/png", "image/jpg"].includes(
+      file.type,
+    );
+    if (!extensionValida && !mimeValido) return "La fotografía debe ser JPG, PNG o PDF.";
+  } else if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
+    return `"${file.name}" no es un PDF. Solo se aceptan archivos PDF.`;
+  }
+  if (file.size > PESO_MAXIMO_BYTES) return `"${file.name}" supera el límite de 20 MB.`;
+  return null;
+}
+
+function tieneGuia(doc: RequisitoDoc): boolean {
+  return Boolean(doc.guiaTexto || doc.guiaEnlaces || doc.guiaCorreo || doc.guiaManual);
+}
+
+/** Barra de avance de documentos obligatorios del Paso 3. */
+function ProgresoDocumentos({ cargados, total }: { cargados: number; total: number }) {
+  const porcentaje = total === 0 ? 100 : Math.round((cargados / total) * 100);
+  const completo = cargados === total;
+  return (
+    <div className="rounded-lg border border-slate-200 bg-slate-50/70 px-4 py-3">
+      <div className="mb-1.5 flex items-center justify-between text-xs">
+        <span className="font-semibold text-navy-950">Documentos obligatorios</span>
+        <span
+          className={`font-mono font-bold ${completo ? "text-verde-inst-700" : "text-grafito-600"}`}
+        >
+          {cargados} de {total} cargados
+        </span>
+      </div>
+      <div className="h-1.5 overflow-hidden rounded-full bg-slate-200">
+        <div
+          className={`h-full rounded-full transition-all ${completo ? "bg-verde-inst-700" : "bg-navy-800"}`}
+          style={{ width: `${porcentaje}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+/** Guía de formato, enlaces y soporte de un requisito documental. */
+function GuiaDocumento({ doc }: { doc: RequisitoDoc }) {
+  return (
+    <>
+      {doc.guiaTexto && (
+        <div className="flex items-start gap-1.5">
+          <Info size={14} className="mt-0.5 shrink-0 text-navy-800" />
+          <span className="leading-relaxed">{doc.guiaTexto}</span>
+        </div>
+      )}
+
+      {doc.guiaEnlaces && (
+        <div className="flex flex-wrap gap-2 pt-0.5 pl-5">
+          {doc.guiaEnlaces.map((enl) => (
+            <a
+              key={enl.url}
+              href={enl.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 rounded border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-navy-800 shadow-sm hover:bg-slate-100"
+            >
+              <ExternalLink size={12} className="text-blue-600" />
+              {enl.texto}
+            </a>
+          ))}
+        </div>
+      )}
+
+      {doc.guiaCorreo && (
+        <div className="flex items-center gap-1.5 pl-5 text-[11px] font-semibold text-slate-800">
+          <Mail size={13} className="text-blue-700" />
+          <span>Solicitar a: </span>
+          <a href={`mailto:${doc.guiaCorreo}`} className="underline hover:text-navy-950">
+            {doc.guiaCorreo}
+          </a>
+        </div>
+      )}
+
+      {doc.guiaManual && (
+        <div className="space-y-1 border-t border-slate-200/60 pt-1.5 pl-5 text-[11px]">
+          <p className="font-semibold text-slate-800">{doc.guiaManual.texto}</p>
+          <a
+            href={doc.guiaManual.enlace.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 font-bold text-navy-800 underline hover:text-navy-950"
+          >
+            <ExternalLink size={12} className="text-blue-600" />
+            {doc.guiaManual.enlace.texto}
+          </a>
+          <p className="text-slate-600 italic">{doc.guiaManual.correoSoporte}</p>
+        </div>
+      )}
+    </>
   );
 }

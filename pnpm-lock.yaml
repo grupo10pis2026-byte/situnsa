@@ -172,12 +172,24 @@ importers:
       clsx:
         specifier: 2.1.1
         version: 2.1.1
+      dictionary-en:
+        specifier: 4.0.0
+        version: 4.0.0
+      dictionary-es:
+        specifier: 4.0.0
+        version: 4.0.0
       docx-preview:
         specifier: ^0.4.1
         version: 0.4.1
       lucide-react:
         specifier: ^1.47.0
         version: 1.47.0(react@19.1.1)
+      nspell:
+        specifier: 2.1.5
+        version: 2.1.5
+      pdfjs-dist:
+        specifier: 5.4.296
+        version: 5.4.296
       react:
         specifier: 19.1.1
         version: 19.1.1
@@ -194,6 +206,9 @@ importers:
       '@tailwindcss/vite':
         specifier: 4.1.13
         version: 4.1.13(vite@7.3.7(@types/node@26.6.1)(jiti@2.7.0)(lightningcss@1.30.1)(tsx@4.23.15))
+      '@types/nspell':
+        specifier: ^2.1.6
+        version: 2.1.6
       '@types/react':
         specifier: 19.1.13
         version: 19.1.13
@@ -1721,6 +1736,9 @@ packages:
   '@types/nodemailer@6.4.24':
     resolution: {integrity: sha512-Ww4u0rT9wQNXh4JiQaIwx3QWdcOFXzOjQA2zc+jtFYNmQiT4mIUqcDin51bDFdkzKubFnQCZNK7FIHlPKQ/q9w==}
 
+  '@types/nspell@2.1.6':
+    resolution: {integrity: sha512-PnWYqrBZhkKAreX2kIZDJcBeigZJzXC8VmSuNiXeILUNreczBZHLxGEv/pRT+zL8rsXLxT5bRbiIF9wuh6cGgg==}
+
   '@types/pg@8.15.5':
     resolution: {integrity: sha512-LF7lF6zWEKxuT3/OR8wAZGzkg4ENGXFNyiV/JeOt9z5B+0ZVwbql9McqX5c/WStFq1GaGso7H1AzP/qSzmlCKQ==}
 
@@ -1911,6 +1929,12 @@ packages:
 
   detect-node-es@1.1.0:
     resolution: {integrity: sha512-ypdmJU/TbBby2Dxibuv7ZLW3Bs1QEmM7nHjEANfohJLvE0XVujisn1qPJcZxg+qDucsr+bP6fLD1rPS3AhJ7EQ==}
+
+  dictionary-en@4.0.0:
+    resolution: {integrity: sha512-3NHnE1uq33ZE/CIwaZ6gqxa4BnglHnxeAcTM0GJ7cmtRGcvX9InMK/IqLtYcUMFCUpUNgybH+DzkqdgAo3F1zg==}
+
+  dictionary-es@4.0.0:
+    resolution: {integrity: sha512-8J3IYdaHYmkojxqhB+DneQpek6N/s3MwbVk3bPNGQSTBT5kxJtmbuiT0LSDP0Al6K9Vevo1sjspG8AGP9Yvxiw==}
 
   docx-preview@0.4.1:
     resolution: {integrity: sha512-Dv4g+LeE0swHpPvNC0lAT0YsR5Zq5pAxw7d3vHQ8EChBLgIrqqe9VPL5nVt2HBJap8bEZbXUI0TJob7kBeNU9w==}
@@ -2250,6 +2274,10 @@ packages:
     resolution: {integrity: sha512-aq+t5NAc+cS6rZQQVWC2x98CPqGtKKTMDd4Gaodv0wShnItdKg/51djkGJ1hqH+Oy0ivDftCbSLCQob8zso01w==}
     engines: {node: '>= 10'}
 
+  is-buffer@2.0.5:
+    resolution: {integrity: sha512-i2R6zNFDwgEHJyQUtJEk0XFi1i0dPFn/oqjK3/vPCcDeJvW5NQ83V8QbicfF1SupOaB0h8ntgBC2YiE7dfyctQ==}
+    engines: {node: '>=4'}
+
   isarray@1.0.0:
     resolution: {integrity: sha512-VLghIWNM6ELQzo7zwmcg0NmTVyWKYjvIeM83yjp0wRDTmUnrM678fQbcKBo6n2CJEF0szoG//ytg+TKla89ALQ==}
 
@@ -2465,6 +2493,9 @@ packages:
   nodemailer@6.10.1:
     resolution: {integrity: sha512-Z+iLaBGVaSjbIzQ4pX6XV41HrooLsQ10ZWPUehGmuantvzWoDVBnmsdUcOIDM1t+yPor5pDhVlDESgOMEGxhHA==}
     engines: {node: '>=6.0.0'}
+
+  nspell@2.1.5:
+    resolution: {integrity: sha512-PSStyugKMiD9mHmqI/CR5xXrSIGejUXPlo88FBRq5Og1kO5QwQ5Ilu8D8O5I/SHpoS+mibpw6uKA8rd3vXd2Sg==}
 
   object-inspect@1.13.4:
     resolution: {integrity: sha512-W67iLl4J2EXEGTbfeHCffrjDfitvLANg0UlX3wFUUSTx92KXRFegMHUVgSqE+wvhAbi4WqjGg9czysTV2Epbew==}
@@ -4191,6 +4222,10 @@ snapshots:
     dependencies:
       '@types/node': 22.20.3
 
+  '@types/nspell@2.1.6':
+    dependencies:
+      '@types/node': 22.20.3
+
   '@types/pg@8.15.5':
     dependencies:
       '@types/node': 22.20.3
@@ -4383,6 +4418,10 @@ snapshots:
   detect-libc@2.1.2: {}
 
   detect-node-es@1.1.0: {}
+
+  dictionary-en@4.0.0: {}
+
+  dictionary-es@4.0.0: {}
 
   docx-preview@0.4.1:
     dependencies:
@@ -4719,6 +4758,8 @@ snapshots:
 
   ipaddr.js@2.5.0: {}
 
+  is-buffer@2.0.5: {}
+
   isarray@1.0.0: {}
 
   isbot@5.2.2: {}
@@ -4910,6 +4951,10 @@ snapshots:
   nodemailer@10.1.0: {}
 
   nodemailer@6.10.1: {}
+
+  nspell@2.1.5:
+    dependencies:
+      is-buffer: 2.0.5
 
   object-inspect@1.13.4: {}
 

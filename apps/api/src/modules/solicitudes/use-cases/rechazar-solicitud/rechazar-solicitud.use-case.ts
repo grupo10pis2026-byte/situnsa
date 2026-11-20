@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { DrizzleUnitOfWork } from "../../../../infra/db/unit-of-work.js";
 import { enqueueCorreo } from "../../../../infra/jobs/colas.js";
 import type { Actor } from "../../../expedientes/use-cases/inscribir-plan/inscribir-plan.use-case.js";
+import { correoSolicitudRechazada } from "../../correos-solicitud.js";
 import { appendHistorialSolicitud, getSolicitudRaw } from "../../solicitudes.repository.js";
 
 /** RF-02xx[010] — Rechazar solicitud definitivamente */
@@ -56,14 +57,13 @@ export class RechazarSolicitudUseCase {
 
     if (!r.ok) return fail(r.error);
 
-    await enqueueCorreo({
-      asunto: `[${r.value.codigo}] Solicitud no admitida`,
-      titulo: "Solicitud de titulación no admitida",
-      texto:
-        `Tu solicitud <strong>${r.value.codigo}</strong> no fue admitida. ` +
-        `Fundamento: ${input.fundamentoReglamentario}`,
-      para: r.value.correos,
-    });
+    await enqueueCorreo(
+      correoSolicitudRechazada({
+        codigo: r.value.codigo,
+        fundamento: input.fundamentoReglamentario,
+        para: r.value.correos,
+      }),
+    );
 
     return ok({ ok: true as const, mensaje: "Solicitud rechazada correctamente." });
   }

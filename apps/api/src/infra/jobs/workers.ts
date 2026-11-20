@@ -92,6 +92,12 @@ function normalizar(p: Partial<CorreoPayload> & { codigo?: string }): CorreoPayl
     ...(p.aParticipantes !== undefined ? { aParticipantes: p.aParticipantes } : {}),
     ...(p.enlace ? { enlace: p.enlace } : {}),
     ...(p.textoEnlace ? { textoEnlace: p.textoEnlace } : {}),
+    ...(p.variante ? { variante: p.variante } : {}),
+    ...(p.etiqueta ? { etiqueta: p.etiqueta } : {}),
+    ...(p.saludo ? { saludo: p.saludo } : {}),
+    ...(Array.isArray(p.datos) ? { datos: p.datos } : {}),
+    ...(p.lista && Array.isArray(p.lista.items) ? { lista: p.lista } : {}),
+    ...(p.nota ? { nota: p.nota } : {}),
   };
 }
 
@@ -133,6 +139,12 @@ export async function procesarCorreo(entrada: unknown): Promise<void> {
     estado,
     enlace: p.enlace ?? (p.expedienteId ? urlPortal("/mi-tramite") : null),
     textoEnlace: p.textoEnlace ?? "Ver mi trámite",
+    variante: p.variante ?? null,
+    etiqueta: p.etiqueta ?? null,
+    saludo: p.saludo ?? null,
+    datos: p.datos ?? null,
+    lista: p.lista ?? null,
+    nota: p.nota ?? null,
   });
   const r = await enviarCorreo({ para, asunto: p.asunto, html: correo.html, texto: correo.texto });
   console.log(

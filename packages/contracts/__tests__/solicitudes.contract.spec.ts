@@ -235,8 +235,7 @@ describe("Contratos y Validación Zod de Solicitudes", () => {
           orden: 1,
           dni: "71234567",
           usuarioAsignado: "jperez_71234567",
-          claveTemporalGenerada: "Temporal#2026",
-          enviarCredencialesCorreo: true,
+          enviarActivacionCorreo: true,
         },
       ],
     };

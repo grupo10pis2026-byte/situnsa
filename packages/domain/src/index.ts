@@ -19,6 +19,7 @@ export * from "./shared/domain-error.base.js";
 export * from "./shared/domain-event.base.js";
 export * from "./shared/result.js";
 export * from "./solicitud/plazos-solicitud.js";
+export * from "./solicitud/revision-titulo.js";
 export * from "./solicitud/solicitud.aggregate.js";
 export * from "./taller/asistencia.js";
 export * from "./taller/pase.js";

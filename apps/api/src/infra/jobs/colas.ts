@@ -1,3 +1,4 @@
+import type { DatoCorreo, ListaCorreo, VarianteCorreo } from "../mail/plantilla-correo.js";
 import { enqueue } from "./pg-boss.client.js";
 
 /** Colas del sistema (pg-boss sobre Postgres, sin Redis — Lean). */
@@ -32,6 +33,13 @@ export interface CorreoPayload {
   aParticipantes?: boolean;
   enlace?: string;
   textoEnlace?: string;
+  /** Bloques estructurados de la plantilla (ver `plantilla-correo.ts`). */
+  variante?: VarianteCorreo;
+  etiqueta?: string;
+  saludo?: string;
+  datos?: DatoCorreo[];
+  lista?: ListaCorreo;
+  nota?: string;
 }
 
 export interface RecordatorioPayload {

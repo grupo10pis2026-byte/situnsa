@@ -13,6 +13,7 @@ import { DomainError, estaSubsanacionVencida, fail, ok, type Result } from "@pis
 import { eq } from "drizzle-orm";
 import { DrizzleUnitOfWork } from "../../../../infra/db/unit-of-work.js";
 import { enqueueCorreo } from "../../../../infra/jobs/colas.js";
+import { correoSubsanacionRecibida } from "../../correos-solicitud.js";
 import {
   appendHistorialSolicitud,
   getTokenSubsanacionPorHash,
@@ -228,14 +229,9 @@ export class SubsanarSolicitudUseCase {
 
     if (!r.ok) return fail(r.error);
 
-    await enqueueCorreo({
-      asunto: `[${r.value.codigo}] Subsanación recibida`,
-      titulo: "Recibimos tu subsanación",
-      texto:
-        `Tu subsanación para la solicitud <strong>${r.value.codigo}</strong> fue registrada exitosamente. ` +
-        "El personal de titulación revisará los documentos actualizados y te notificará.",
-      para: r.value.correos,
-    });
+    await enqueueCorreo(
+      correoSubsanacionRecibida({ codigo: r.value.codigo, para: r.value.correos }),
+    );
 
     return ok({
       mensaje: "Subsanación registrada correctamente. Se notificó al área de titulación.",

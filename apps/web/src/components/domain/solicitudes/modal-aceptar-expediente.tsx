@@ -1,21 +1,13 @@
 import type { SolicitudDetalleDTO } from "@pis/contracts";
 import { PROGRAMAS_OFICIALES } from "@pis/domain/dist/expediente/seguimiento-catalogo.js";
-import { CheckCircle2, KeyRound, RefreshCw, Sparkles, UserCheck } from "lucide-react";
+import { CheckCircle2, KeyRound, Mail, Sparkles, UserCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useAceptarSolicitud, useSugerirCodigoSet } from "../../../api/solicitudes.js";
 import { Button } from "../../ui/button.js";
 import { Dialogo } from "../../ui/dialog.js";
 import { Field } from "../../ui/field.js";
 import { Select } from "../../ui/select.js";
-
-function generarClaveAleatoria(): string {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let resultado = "UNSA-";
-  for (let i = 0; i < 6; i++) {
-    resultado += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return resultado;
-}
+import { TextareaCorrector } from "../../ui/textarea-corrector.js";
 
 export function ModalAceptarExpediente({
   solicitud,
@@ -34,15 +26,6 @@ export function ModalAceptarExpediente({
   const [programa, setPrograma] = useState(solicitud.programa);
   const [crearCuentas, setCrearCuentas] = useState(true);
 
-  // Configuración de participantes
-  const [claves, setClaves] = useState<Record<number, string>>(() => {
-    const mapa: Record<number, string> = {};
-    for (const p of solicitud.participantes) {
-      mapa[p.orden] = generarClaveAleatoria();
-    }
-    return mapa;
-  });
-
   const [errorLocal, setErrorLocal] = useState<string | null>(null);
   const mutation = useAceptarSolicitud(solicitud.id);
 
@@ -56,10 +39,6 @@ export function ModalAceptarExpediente({
     setTitulo(solicitud.titulo);
     setPrograma(solicitud.programa);
   }, [solicitud]);
-
-  function regenerarClave(orden: number) {
-    setClaves((prev) => ({ ...prev, [orden]: generarClaveAleatoria() }));
-  }
 
   async function handleAceptar() {
     setErrorLocal(null);
@@ -77,8 +56,7 @@ export function ModalAceptarExpediente({
         orden: p.orden,
         dni: p.dni,
         usuarioAsignado: p.dni,
-        claveTemporalGenerada: claves[p.orden] ?? generarClaveAleatoria(),
-        enviarCredencialesCorreo: true,
+        enviarActivacionCorreo: true,
       }));
 
       const res = await mutation.mutateAsync({
@@ -164,12 +142,7 @@ export function ModalAceptarExpediente({
           ayuda="Puede corregir tildes o erratas menores"
           etiqueta="Título del Plan Confirmado"
         >
-          <textarea
-            className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-grafito-900 shadow-card placeholder:text-slate-400 focus:border-navy-800 focus:outline-none"
-            rows={2}
-            value={titulo}
-            onChange={(e) => setTitulo(e.target.value)}
-          />
+          <TextareaCorrector rows={2} value={titulo} onChange={setTitulo} />
         </Field>
 
         {/* Cuentas de participantes */}
@@ -221,20 +194,13 @@ export function ModalAceptarExpediente({
                   )}
                 </div>
 
-                {!part.poseeCuentaPrevia && crearCuentas && (
-                  <div className="mt-2.5 flex items-center gap-2 rounded-md bg-slate-50 border border-slate-200 px-2.5 py-1.5 text-xs">
-                    <span className="text-grafito-600">Clave temporal:</span>
-                    <span className="font-mono font-bold text-navy-950">{claves[part.orden]}</span>
-                    <button
-                      aria-label="Generar otra clave"
-                      className="ml-auto text-slate-500 hover:text-navy-800"
-                      onClick={() => regenerarClave(part.orden)}
-                      title="Generar otra clave"
-                      type="button"
-                    >
-                      <RefreshCw size={13} />
-                    </button>
-                  </div>
+                {!part.poseeCuentaPrevia && (
+                  <p className="mt-2.5 flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs text-grafito-600">
+                    <Mail className="shrink-0 text-navy-800" size={13} />
+                    {crearCuentas
+                      ? `Recibirá en ${part.email} un enlace para crear su clave (vence en 72 h).`
+                      : "La cuenta se creará sin acceso; podrá enviarse el enlace luego desde el expediente."}
+                  </p>
                 )}
               </div>
             ))}
@@ -250,7 +216,10 @@ export function ModalAceptarExpediente({
               <strong className="font-mono text-navy-950">{codigoConfirmado}</strong>.
             </li>
             <li>Se inicializarán las 38 subetapas del flujo de titulación oficial.</li>
-            <li>Se enviará notificación automática por correo a los tesistas.</li>
+            <li>
+              Se notificará por correo a los tesistas; las cuentas nuevas reciben un enlace de
+              activación (no se envían contraseñas).
+            </li>
           </ul>
         </div>
 
