@@ -438,7 +438,6 @@ export function MiTramitePage() {
                     requeridoEn={c.requeridoEn}
                     subetapaActiva={d.subetapaActiva?.clave ?? null}
                     formato={generadoPorTipo.get(c.tipo) ?? null}
-                    etiquetaEtapa={`Etapa ${etapaSeleccionada}`}
                     permitirSubir={true}
                   />
                 ))}
@@ -476,7 +475,6 @@ export function MiTramitePage() {
                     requeridoEn={c.requeridoEn}
                     subetapaActiva={d.subetapaActiva?.clave ?? null}
                     formato={generadoPorTipo.get(c.tipo) ?? null}
-                    etiquetaEtapa={`Etapa ${etapaSeleccionada}`}
                     permitirSubir={false}
                   />
                 ))}

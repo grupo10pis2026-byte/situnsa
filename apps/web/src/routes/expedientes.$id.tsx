@@ -550,13 +550,6 @@ function DocumentosTab({
     }
   }
 
-  const etiquetaEtapa =
-    etapa === "E1"
-      ? "Etapa 1 · Verificación"
-      : etapa === "E2"
-        ? "Etapa 2 · Borrador"
-        : "Etapa 6 · Aprobaciones";
-
   return (
     <div className="space-y-6">
       <Card>
@@ -651,7 +644,6 @@ function DocumentosTab({
                 subetapaActiva={d.subetapaActiva?.clave ?? null}
                 formato={generadoPorTipo.get(c.tipo) ?? null}
                 etapa={etapa}
-                etiquetaEtapa={etiquetaEtapa}
                 onModificar={setFormatoAModificar}
                 onVistaPrevia={setFormatoAVer}
               />
@@ -694,7 +686,6 @@ function DocumentosTab({
                 subetapaActiva={d.subetapaActiva?.clave ?? null}
                 formato={c.formato}
                 etapa={etapa}
-                etiquetaEtapa={etiquetaEtapa}
                 permitirSubir={c.permitirSubir}
                 onModificar={setFormatoAModificar}
                 onVistaPrevia={setFormatoAVer}

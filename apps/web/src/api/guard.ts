@@ -17,6 +17,8 @@ const PUBLICAS = new Set(["/", "/login", "/activar", "/restablecer", "/mesa-de-p
 const REGLAS: Array<{ prefijo: string; roles: Set<string> | "*" }> = [
   { prefijo: "/configuracion", roles: new Set(["ADMIN_FIPS"]) },
   { prefijo: "/admin", roles: STAFF },
+  { prefijo: "/formatos", roles: STAFF },
+  { prefijo: "/registro-oficios", roles: STAFF },
   { prefijo: "/solicitudes", roles: STAFF },
   { prefijo: "/inscripciones", roles: STAFF },
   { prefijo: "/talleres", roles: STAFF },

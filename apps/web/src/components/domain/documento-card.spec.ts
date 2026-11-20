@@ -10,6 +10,7 @@ import {
   NOMBRES_LISTADO_OFICIAL,
   obtenerCamposPendientesUnificados,
   requiereFirma,
+  resolverAvisoDocumento,
 } from "./documento-card.js";
 
 describe("DocumentoCard: Nombres normativos oficiales y consistencia de tipos", () => {
@@ -101,5 +102,51 @@ describe("DocumentoCard: Detección de documentos que requieren firma", () => {
     for (const tipo of tiposSinFirma) {
       expect(requiereFirma(tipo), `${tipo} no debe requerir firma`).toBe(false);
     }
+  });
+});
+
+describe("DocumentoCard: un solo aviso por tarjeta, por prioridad", () => {
+  const base = {
+    observacionesPendientes: 0,
+    camposPendientes: [] as string[],
+    requiereFirma: false,
+    tieneArchivo: false,
+    tieneFormato: false,
+    faltaAdjuntar: false,
+    puedeCargar: true,
+  };
+
+  it("prioriza observaciones pendientes sobre campos y firma", () => {
+    const r = resolverAvisoDocumento({
+      ...base,
+      observacionesPendientes: 2,
+      camposPendientes: ["VOCAL"],
+      requiereFirma: true,
+    });
+    expect(r).toEqual({ tono: "peligro", texto: "2 observaciones por corregir" });
+  });
+
+  it("muestra campos pendientes con su lista plegable antes que el paso de firma", () => {
+    const r = resolverAvisoDocumento({
+      ...base,
+      camposPendientes: ["PRESIDENTE"],
+      requiereFirma: true,
+    });
+    expect(r).toEqual({
+      tono: "aviso",
+      texto: "1 campo por completar",
+      detalle: ["PRESIDENTE"],
+    });
+  });
+
+  it("guía firma o adjunto solo a quien puede cargar el archivo", () => {
+    expect(resolverAvisoDocumento({ ...base, requiereFirma: true })?.tono).toBe("info");
+    expect(resolverAvisoDocumento({ ...base, faltaAdjuntar: true })?.texto).toContain("Adjunta");
+    expect(resolverAvisoDocumento({ ...base, requiereFirma: true, puedeCargar: false })).toBeNull();
+  });
+
+  it("no muestra aviso cuando el archivo ya está cargado y no hay pendientes", () => {
+    expect(resolverAvisoDocumento({ ...base, requiereFirma: true, tieneArchivo: true })).toBeNull();
+    expect(resolverAvisoDocumento({ ...base, faltaAdjuntar: true, tieneFormato: true })).toBeNull();
   });
 });

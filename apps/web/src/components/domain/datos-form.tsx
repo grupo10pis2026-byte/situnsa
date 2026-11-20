@@ -14,6 +14,7 @@ import { controlClase, Field, ReadonlyField } from "../ui/field.js";
 import { FormSection } from "../ui/form-section.js";
 import { InputFechaLatina } from "../ui/input-fecha-latina.js";
 import { Select } from "../ui/select.js";
+import { NumeracionExpediente } from "./numeracion-expediente.js";
 
 type Clave = keyof ActualizarDatosInput;
 
@@ -281,10 +282,10 @@ export function DatosForm({
       <FormSection
         icono={<FileSignature size={16} />}
         titulo="N° DE OFICIO Y N° DE DECRETO"
-        ayuda="Valores únicos para este expediente, aplicables a todas sus etapas."
-        gridClassName="grid grid-cols-2 gap-3 p-3 max-w-xl md:p-4"
+        ayuda="Valores únicos para este expediente, aplicables a todas sus etapas. Salen del registro de oficios y decretos."
+        gridClassName="grid grid-cols-1 gap-4 p-3 max-w-3xl sm:grid-cols-2 md:p-4"
       >
-        {campos(NUMERACION_EXPEDIENTE)}
+        <NumeracionExpediente expedienteId={detalle.id} manual={campos(NUMERACION_EXPEDIENTE)} />
       </FormSection>
 
       {!grupo2 && (
