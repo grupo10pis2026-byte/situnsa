@@ -22,6 +22,7 @@ import { StatusBadge } from "../components/ui/status-badge.js";
 import { Tab, TabPanel, Tabs, TabsLista } from "../components/ui/tabs.js";
 import { useToast } from "../components/ui/toast.js";
 import { cn } from "../utils/cn.js";
+import { parametroInicial } from "../utils/parametro-url.js";
 
 /**
  * P12 Alertas, retiros y reportes (spec v1.0 §9): la Secretaría atiende las
@@ -37,7 +38,8 @@ type Dialogos = { tipo: "retiro" | "descartar"; alerta: AlertaTallerDTO } | null
 
 export function ReportesTallerPage() {
   const [tab, setTab] = useState("alertas");
-  const [tallerId, setTallerId] = useState("");
+  // Adenda 1.2 N2: el dashboard enlaza aquí con ?tallerId= (y ?deudores=true).
+  const [tallerId, setTallerId] = useState(() => parametroInicial("tallerId"));
   const [estado, setEstado] = useState("ACTIVA");
   const alertas = useAlertasTaller({
     ...(tallerId ? { tallerId } : {}),

@@ -56,6 +56,7 @@ export * from "./asesores.contract.js";
 export * from "./auth.contract.js";
 export * from "./cierre.contract.js";
 export * from "./configuracion.contract.js";
+export * from "./dashboard-taller.contract.js";
 export * from "./documentos.contract.js";
 export * from "./encuestas-taller.contract.js";
 export * from "./enums.js";

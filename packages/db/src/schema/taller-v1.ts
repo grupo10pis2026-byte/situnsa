@@ -137,7 +137,7 @@ export const asesorArchivos = pgTable(
 
 // ── Estructura del taller (P3, P5) ─────────────────────────────────────
 
-/** Grupo de horario: lo crea el asesor dentro de su taller. */
+/** Grupo de horario: lo crea el asesor dentro de su taller (horario por día en grupo_horario_dias). */
 export const gruposHorario = pgTable(
   "grupos_horario",
   {
@@ -146,13 +146,29 @@ export const gruposHorario = pgTable(
       .notNull()
       .references(() => talleres.id),
     nombre: varchar("nombre", { length: 80 }).notNull(),
-    horaInicio: varchar("hora_inicio", { length: 5 }).notNull(),
-    horaFin: varchar("hora_fin", { length: 5 }).notNull(),
     /** (propuesta) Se elimina solo sin proyectos: se desactiva. */
     activo: boolean("activo").notNull().default(true),
     ...creado,
   },
   (t) => [uniqueIndex("grupos_horario_taller_nombre_uq").on(t.tallerId, t.nombre)],
+);
+
+/**
+ * Adenda 1.2 A2: horario del grupo por día de sesión (sábado y domingo
+ * suelen tener horas distintas). Uno por cada día del taller.
+ */
+export const grupoHorarioDias = pgTable(
+  "grupo_horario_dias",
+  {
+    grupoHorarioId: uuid("grupo_horario_id")
+      .notNull()
+      .references(() => gruposHorario.id),
+    /** Día ISO 1 (lunes) … 7 (domingo). */
+    dia: integer("dia").notNull(),
+    horaInicio: varchar("hora_inicio", { length: 5 }).notNull(),
+    horaFin: varchar("hora_fin", { length: 5 }).notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.grupoHorarioId, t.dia] })],
 );
 
 /** Proyecto: cuenta 1 en el cupo; 1 o 2 tesistas. */
@@ -404,13 +420,24 @@ export const comprobantesPension = pgTable(
       .notNull()
       .references(() => pensionesAlumno.id),
     ...archivo,
+    /**
+     * Adenda 1.2 N1: código del comprobante (número de operación), sin
+     * espacios y en mayúsculas. Único entre los EN_REVISION y VALIDADO.
+     * Null solo en comprobantes anteriores a la adenda.
+     */
+    codigo: varchar("codigo", { length: 64 }),
     estado: estadoComprobanteEnum("estado").notNull().default("EN_REVISION"),
     motivo: text("motivo"),
     validadoPor: uuid("validado_por").references(() => usuarios.id),
     validadoAt: timestamp("validado_at", { withTimezone: true }),
     ...creado,
   },
-  (t) => [index("comprobantes_pension_pension_idx").on(t.pensionAlumnoId)],
+  (t) => [
+    index("comprobantes_pension_pension_idx").on(t.pensionAlumnoId),
+    uniqueIndex("comprobantes_pension_codigo_uq")
+      .on(t.codigo)
+      .where(sql`${t.codigo} is not null and ${t.estado} in ('EN_REVISION', 'VALIDADO')`),
+  ],
 );
 
 // ── Alertas y retiros (P12) ────────────────────────────────────────────

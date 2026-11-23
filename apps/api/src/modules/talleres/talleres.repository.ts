@@ -3,6 +3,7 @@ import {
   asesorEspecialidades,
   type DbExecutor,
   especialidades,
+  gruposHorario,
   pensionesAlumno,
   pensionesTaller,
   planTaller,
@@ -12,7 +13,9 @@ import {
   tallerSesiones,
   usuarios,
 } from "@pis/db";
+import { textoHorario, tieneHorario } from "@pis/domain";
 import { and, asc, count, eq, inArray } from "drizzle-orm";
+import { enlaceReunion, horariosDeGrupos } from "./grupos-horario.js";
 
 export type TallerDetalle = TallerDetalleDTO;
 export type TallerResumen = TallerDTO;
@@ -106,8 +109,10 @@ export async function detalleTaller(
     dias,
     cupoProyectos: t.cupoProyectos,
     proyectos: Number(proyectos?.n ?? 0),
-    enlaceSabado: t.enlaceSabado,
-    enlaceDomingo: t.enlaceDomingo,
+    enlaceReunion: enlaceReunion(t),
+    enlaceRevisar: t.enlaceRevisar,
+    enlaceDescartado: t.enlaceDescartado,
+    conHorario: tieneHorario(dias),
     sesiones: { realizadas, total: calendario.length },
     asesorEspecialidades: especialidadesAsesor.map((e) => e.nombre),
     pensiones: pensiones.map((p) => ({
@@ -121,7 +126,33 @@ export async function detalleTaller(
     motivoCancelacion: t.motivoCancelacion,
     planSemanas: Number(plan?.n ?? 0),
     fechasEditables: realizadas === 0,
+    grupos: await distribucionGrupos(db, tallerId),
   };
+}
+
+/** Adenda 1.2 A2: la Secretaría solo ve la distribución de proyectos por grupo. */
+async function distribucionGrupos(db: DbExecutor, tallerId: string) {
+  const grupos = await db
+    .select({ id: gruposHorario.id, nombre: gruposHorario.nombre })
+    .from(gruposHorario)
+    .where(and(eq(gruposHorario.tallerId, tallerId), eq(gruposHorario.activo, true)))
+    .orderBy(asc(gruposHorario.nombre));
+  if (grupos.length === 0) return [];
+  const horarios = await horariosDeGrupos(
+    db,
+    grupos.map((g) => g.id),
+  );
+  const conteo = await db
+    .select({ grupoId: proyectosTaller.grupoHorarioId, n: count() })
+    .from(proyectosTaller)
+    .where(eq(proyectosTaller.tallerId, tallerId))
+    .groupBy(proyectosTaller.grupoHorarioId);
+  return grupos.map((g) => ({
+    id: g.id,
+    nombre: g.nombre,
+    horario: textoHorario(horarios.get(g.id) ?? []),
+    proyectos: Number(conteo.find((c) => c.grupoId === g.id)?.n ?? 0),
+  }));
 }
 
 /** P1: el detalle sin lo que solo usa P3. */
@@ -133,6 +164,7 @@ export function resumenTaller(d: TallerDetalle): TallerResumen {
     motivoCancelacion: _m,
     planSemanas: _ps,
     fechasEditables: _f,
+    grupos: _g,
     ...resumen
   } = d;
   return resumen;

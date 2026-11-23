@@ -7,7 +7,6 @@ import {
   gruposHorario,
   proyectosTaller,
   tallerAsistencias,
-  tallerDias,
   talleres,
   tallerSesiones,
   usuarios,
@@ -22,6 +21,7 @@ import {
   puedeRegistrarAsistencia,
   type RegistroAsistenciaCurso,
   type Result,
+  textoHorario,
   validarCambioAsistencia,
   validarGrupoHorario,
   validarSesionNueva,
@@ -31,6 +31,7 @@ import { DrizzleUnitOfWork } from "../../../infra/db/unit-of-work.js";
 import { enqueueCorreo } from "../../../infra/jobs/colas.js";
 import { urlPortal } from "../../../infra/mail/correo.service.js";
 import { leerParametrosTaller } from "../../taller-config/taller-config.repository.js";
+import { diasDelTaller, guardarHorariosGrupo } from "../grupos-horario.js";
 import { appendAuditoriaTaller } from "../taller-auditoria.js";
 import {
   asistenciaDeSesion,
@@ -321,9 +322,19 @@ async function fechaOcupada(tx: DbExecutor, tallerId: string, fecha: string, exc
 export class AgregarSesionUseCase {
   async execute(
     tallerId: string,
-    input: { fecha: string; horaInicio: string; horaFin: string; motivo: string },
+    entrada: {
+      fecha: string;
+      horaInicio?: string | null | undefined;
+      horaFin?: string | null | undefined;
+      motivo: string;
+    },
     actor: Actor,
   ): Promise<Result<true, ErrorSesion>> {
+    const input = {
+      ...entrada,
+      horaInicio: entrada.horaInicio || null,
+      horaFin: entrada.horaFin || null,
+    };
     const v = validarSesionNueva(input);
     if (!v.ok) return v;
     const r = await new DrizzleUnitOfWork(db).run(
@@ -358,7 +369,7 @@ export class AgregarSesionUseCase {
           actorId: idActor(actor),
           actorDni: actor.dni,
           accion: "AGREGAR_SESION",
-          detalle: `Sesión ${nro} el ${input.fecha} ${input.horaInicio}–${input.horaFin}. Motivo: ${input.motivo.trim()}`,
+          detalle: `Sesión ${nro} el ${input.fecha} ${input.horaInicio ? `${input.horaInicio}–${input.horaFin}` : "(horario de cada grupo)"}. Motivo: ${input.motivo.trim()}`,
         });
         return ok({ nro, tesistas });
       },
@@ -368,7 +379,7 @@ export class AgregarSesionUseCase {
       r.value.tesistas,
       tallerId,
       `Nueva sesión del taller: ${input.fecha}`,
-      `Se agregó la sesión ${r.value.nro} el ${input.fecha} de ${input.horaInicio} a ${input.horaFin}. Motivo: ${input.motivo.trim()}.`,
+      `Se agregó la sesión ${r.value.nro} el ${input.fecha} ${input.horaInicio ? `de ${input.horaInicio} a ${input.horaFin}` : "en el horario de tu grupo"}. Motivo: ${input.motivo.trim()}.`,
     );
     return ok(true);
   }
@@ -377,9 +388,19 @@ export class AgregarSesionUseCase {
 export class ReprogramarSesionUseCase {
   async execute(
     sesionId: string,
-    input: { fecha: string; horaInicio: string; horaFin: string; motivo: string },
+    entrada: {
+      fecha: string;
+      horaInicio?: string | null | undefined;
+      horaFin?: string | null | undefined;
+      motivo: string;
+    },
     actor: Actor,
   ): Promise<Result<{ tallerId: string }, ErrorSesion>> {
+    const input = {
+      ...entrada,
+      horaInicio: entrada.horaInicio || null,
+      horaFin: entrada.horaFin || null,
+    };
     const v = validarSesionNueva(input);
     if (!v.ok) return v;
     const r = await new DrizzleUnitOfWork(db).run(
@@ -415,7 +436,7 @@ export class ReprogramarSesionUseCase {
           actorId: idActor(actor),
           actorDni: actor.dni,
           accion: "REPROGRAMAR_SESION",
-          detalle: `Sesión ${s.nro}: ${s.fecha} → ${input.fecha} ${input.horaInicio}–${input.horaFin}. Motivo: ${input.motivo.trim()}`,
+          detalle: `Sesión ${s.nro}: ${s.fecha} → ${input.fecha} ${input.horaInicio ? `${input.horaInicio}–${input.horaFin}` : "(horario de cada grupo)"}. Motivo: ${input.motivo.trim()}`,
         });
         return ok({
           tallerId: s.tallerId,
@@ -430,7 +451,7 @@ export class ReprogramarSesionUseCase {
       r.value.tesistas,
       r.value.tallerId,
       `Sesión ${r.value.nro} reprogramada`,
-      `La sesión ${r.value.nro} del ${r.value.antes} pasa al ${input.fecha} de ${input.horaInicio} a ${input.horaFin}. Motivo: ${input.motivo.trim()}.`,
+      `La sesión ${r.value.nro} del ${r.value.antes} pasa al ${input.fecha} ${input.horaInicio ? `de ${input.horaInicio} a ${input.horaFin}` : "en el horario de tu grupo"}. Motivo: ${input.motivo.trim()}.`,
     );
     return ok({ tallerId: r.value.tallerId });
   }
@@ -513,13 +534,14 @@ export class GuardarGrupoUseCase {
   async execute(
     tallerId: string,
     grupoId: string | null,
-    input: { nombre: string; horaInicio: string; horaFin: string; proyectoIds: string[] },
+    input: {
+      nombre: string;
+      horarios: Array<{ dia: number; horaInicio: string; horaFin: string }>;
+      proyectoIds: string[];
+    },
     actor: Actor,
   ): Promise<Result<true, ErrorSesion>> {
-    const dias = await db
-      .select({ horaInicio: tallerDias.horaInicio, horaFin: tallerDias.horaFin })
-      .from(tallerDias)
-      .where(eq(tallerDias.tallerId, tallerId));
+    const dias = await diasDelTaller(db, tallerId);
     const v = validarGrupoHorario(input, dias);
     if (!v.ok) return v;
     return new DrizzleUnitOfWork(db).run(async (tx): Promise<Result<true, ErrorSesion>> => {
@@ -554,7 +576,7 @@ export class GuardarGrupoUseCase {
       if (id) {
         const r = await tx
           .update(gruposHorario)
-          .set({ ...v.value, updatedAt: new Date() })
+          .set({ nombre: v.value.nombre, updatedAt: new Date() })
           .where(
             and(
               eq(gruposHorario.id, id),
@@ -567,11 +589,12 @@ export class GuardarGrupoUseCase {
       } else {
         const [g] = await tx
           .insert(gruposHorario)
-          .values({ tallerId, ...v.value, creadoPor: idActor(actor) })
+          .values({ tallerId, nombre: v.value.nombre, creadoPor: idActor(actor) })
           .returning({ id: gruposHorario.id });
         id = g?.id ?? null;
       }
       if (!id) return fail(new DomainError("VALIDACION_FALLIDA", "No se pudo guardar el grupo"));
+      await guardarHorariosGrupo(tx, id, v.value.horarios);
       // Un proyecto pertenece a un solo grupo: los elegidos pasan aquí; los que salen quedan sin grupo.
       await tx
         .update(proyectosTaller)
@@ -587,7 +610,7 @@ export class GuardarGrupoUseCase {
         actorId: idActor(actor),
         actorDni: actor.dni,
         accion: grupoId ? "EDITAR_GRUPO_HORARIO" : "CREAR_GRUPO_HORARIO",
-        detalle: `${v.value.nombre} ${v.value.horaInicio}–${v.value.horaFin} con ${input.proyectoIds.length} proyectos`,
+        detalle: `${v.value.nombre} (${textoHorario(v.value.horarios)}) con ${input.proyectoIds.length} proyectos`,
       });
       return ok(true);
     });

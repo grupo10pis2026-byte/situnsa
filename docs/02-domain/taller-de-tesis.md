@@ -21,6 +21,7 @@
 | P12 Alertas, retiros y reportes | Secretaría | `/reportes-taller` | `alertas-taller.contract.ts` |
 | P14 Encuesta / P14b Resultados | Alumno / Secretaría y asesor | `/encuesta`, `/encuestas-resultados` | `encuestas-taller.contract.ts` |
 | P16 Configuración del taller | Administrador | `/configuracion` (pestaña Taller) | `taller-configuracion.contract.ts` |
+| Dashboard del taller (Adenda 1.2 N2) | Secretaría, Dirección, Administrador | `/dashboard-taller` | `dashboard-taller.contract.ts` |
 | D1 Asignar alumno · D2 Reprogramar/cancelar · D3 Aprobar plan | Secretaría · ambos · Asesor | diálogos | `proyectos`, `sesiones`, `hitos` |
 
 Archivos (subidas multipart y descargas protegidas) son rutas nativas Fastify:
@@ -130,7 +131,22 @@ Otras decisiones:
 - API e2e (CI): `taller-configuracion`, `asesores`, `talleres.api`,
   `proyectos.api`, `taller-seguimiento` (aceptación #12–#23). Requieren una
   base recién sembrada (`make setup`).
+- Adenda 1.2: `taller-adenda12.api.spec.ts` y
+  `packages/domain/__tests__/taller-adenda12.spec.ts`.
 - Interfaz (CI): `taller-ui.spec.ts` (#7, #11, #18/#19, #24), contra la web
   (`E2E_BASE_URL=http://localhost:5173`), después de la suite de API.
 - Paridad de producción: `make prod-local` (o `PROD_PORT=8088` si el 80 está
   ocupado) sirve las descargas nuevas por Nginx con `X-Accel-Redirect`.
+
+## 8. Adenda 1.2 (cambios pedidos por el cliente)
+
+| Cambio | Qué quedó | Decisión ante la duda |
+|---|---|---|
+| A1 Enlace único | `talleres.enlace_reunion` reemplaza a `enlace_sabado`/`enlace_domingo`. Se lee solo con `enlaceReunion(t)` (`grupos-horario.ts`); P2 tiene un campo, P7 y el asesor tienen «Unirme a la sesión». | Migración: se conserva el enlace del sábado (o el del domingo si no había). Si eran distintos, el taller queda con `enlace_revisar` y el enlace descartado en `enlace_descartado`; P2/P3 lo avisan, el proceso diario avisa por correo a la Secretaría y al guardar P2 se da por revisado. |
+| A2 Horario opcional y grupos | Horas de `taller_dias` y `taller_sesiones` admiten null («Horario por definir»), todo o nada por taller. Grupos con horario por día en `grupo_horario_dias`. Al crear con horario nace el **Grupo A**; al completar el horario después se llenan las sesiones sin hora y nace el Grupo A si no hay grupos. | La Secretaría ya no asigna grupo en D1 (lo arma el asesor en P5). Migración de grupos: la hora antigua se copia a cada día donde cabe; si no cabe, el grupo toma el bloque completo de ese día (el asesor lo ajusta). |
+| N1 Código del comprobante | `comprobantes_pension.codigo`, normalizado (sin espacios, mayúsculas, 3–40 caracteres). Índice único parcial sobre los comprobantes EN_REVISION y VALIDADO. P8 lo pide antes del archivo; P9 muestra la columna «Código». | Un código observado se puede volver a usar. Repetido: «Este código de comprobante ya fue registrado. Revisa que sea el correcto». La Secretaría de pagos o el Administrador lo corrige con motivo obligatorio (`PATCH /api/comprobantes/:id/codigo`, auditoría `CORREGIR_CODIGO_COMPROBANTE`). Los comprobantes anteriores quedan sin código. |
+| N2 Dashboard | `GET /api/dashboard-taller` y `/api/dashboard-taller/pdf` con los mismos filtros (taller o todos, período, grupo). Inscripción, asistencia, plan, avances, pensiones, alertas, sesiones y comparación por taller. | Acceso: personal con `reportes.ver` o Administrador; asesor y alumno reciben 403. Los números salen de las mismas reglas que P3/P9/P12 (`tieneDeuda`, `porcentajeAsistenciaCurso`). La vista de todos no lista datos personales y excluye talleres cancelados. Cada indicador enlaza al detalle filtrado (`?tallerId=`, `?deudores=true`). |
+
+Migraciones: `0018_adenda12_agregados` (columnas y tabla nuevas),
+`0019_adenda12_datos` (traslado de enlaces y horarios de grupos) y
+`0020_adenda12_sin_columnas_anteriores`.

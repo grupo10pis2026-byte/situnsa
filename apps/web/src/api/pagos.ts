@@ -53,7 +53,8 @@ export function usePagosTaller(f: FiltrosPagos) {
 export type OperacionPago =
   | { tipo: "validar"; comprobanteId: string }
   | { tipo: "observar"; comprobanteId: string; motivo: string }
-  | { tipo: "pagoDirecto"; pensionId: string; observacion: string | null };
+  | { tipo: "pagoDirecto"; pensionId: string; observacion: string | null }
+  | { tipo: "corregirCodigo"; comprobanteId: string; codigo: string; motivo: string };
 
 export function useOperarPago() {
   const qc = useQueryClient();
@@ -74,6 +75,14 @@ export function useOperarPago() {
           { motivo: op.motivo },
           PensionFilaDTOSchema,
           "No se pudo observar",
+        );
+      if (op.tipo === "corregirCodigo")
+        return sendApi(
+          `/api/comprobantes/${op.comprobanteId}/codigo`,
+          "PATCH",
+          { codigo: op.codigo, motivo: op.motivo },
+          PensionFilaDTOSchema,
+          "No se pudo corregir el código",
         );
       return sendApi(
         `/api/pensiones-alumno/${op.pensionId}/pago-directo`,
@@ -100,8 +109,10 @@ export function useMisPagos() {
 export function useSubirComprobante() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (v: { pensionId: string; archivo: File }) => {
+    mutationFn: async (v: { pensionId: string; codigo: string; archivo: File }) => {
       const datos = new FormData();
+      // Adenda 1.2 N1: el código va antes del archivo (el API lee los campos previos).
+      datos.append("codigo", v.codigo);
       datos.append("file", v.archivo);
       const res = await apiFetch(`${apiBaseUrl}/api/pensiones-alumno/${v.pensionId}/comprobante`, {
         method: "POST",

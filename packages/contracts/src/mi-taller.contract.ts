@@ -13,8 +13,9 @@ export const SesionAlumnoDTOSchema = z.object({
   id: z.string().uuid(),
   nro: z.number().int(),
   fecha: z.string(),
-  horaInicio: z.string(),
-  horaFin: z.string(),
+  /** Null = «Horario por definir». */
+  horaInicio: z.string().nullable(),
+  horaFin: z.string().nullable(),
   estado: z.enum(["PROGRAMADA", "REPROGRAMADA", "REALIZADA", "CANCELADA"]),
   marca: z.enum(["PENDIENTE", "PRESENTE", "FALTA", "JUSTIFICADA"]).nullable(),
   enlace: z.string().nullable(),

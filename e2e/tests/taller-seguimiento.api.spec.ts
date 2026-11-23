@@ -249,10 +249,18 @@ test("P8/P9 pagos: validar, observar con motivo, subir de nuevo y pago directo (
   );
   const c2 = mis.json.pensiones.find((p) => p.numero === 2);
   expect(c2?.estado).toBe("OBSERVADA");
-  const up = await subir(`/api/pensiones-alumno/${c2?.id}/comprobante`, CARLOS);
+  // Adenda 1.2 N1: el código del comprobante es obligatorio.
+  const sinCodigo = await subir(`/api/pensiones-alumno/${c2?.id}/comprobante`, CARLOS);
+  expect(sinCodigo.status).toBe(400);
+  const up = await subir(`/api/pensiones-alumno/${c2?.id}/comprobante`, CARLOS, {
+    codigo: `OP-CARLOS-${Date.now()}`,
+  });
   expect(up.status, JSON.stringify(up.json)).toBe(201);
   // María no puede subir el comprobante de Carlos.
-  expect((await subir(`/api/pensiones-alumno/${c2?.id}/comprobante`, MARIA)).status).toBe(403);
+  expect(
+    (await subir(`/api/pensiones-alumno/${c2?.id}/comprobante`, MARIA, { codigo: "OP-AJENO-1" }))
+      .status,
+  ).toBe(403);
 
   const lucia = (
     await llamar<Pagos>("GET", `/api/pagos-taller?tallerId=${tallerId}&deudores=true`, "00000001")

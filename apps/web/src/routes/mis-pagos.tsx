@@ -1,5 +1,6 @@
 import { Eye, FileUp, Lock } from "lucide-react";
 import { useState } from "react";
+import { ApiError } from "../api/errores.js";
 import {
   ETIQUETA_PENSION,
   type MiPensionDTO,
@@ -140,6 +141,8 @@ function SubirComprobante({
   const m = useSubirComprobante();
   const toast = useToast();
   const [archivo, setArchivo] = useState<File | null>(null);
+  const [codigo, setCodigo] = useState("");
+  const [errorCodigo, setErrorCodigo] = useState<string | null>(null);
   const grande = archivo !== null && archivo.size > maxMb * 1024 * 1024;
   return (
     <Dialogo
@@ -153,18 +156,44 @@ function SubirComprobante({
         onSubmit={(e) => {
           e.preventDefault();
           if (!archivo) return;
+          if (codigo.trim().length < 3) {
+            setErrorCodigo("Escribe el código del comprobante (número de operación)");
+            return;
+          }
           m.mutate(
-            { pensionId: pension.id, archivo },
+            { pensionId: pension.id, codigo: codigo.trim(), archivo },
             {
               onSuccess: () => {
                 toast("Comprobante enviado: la Secretaría lo revisará", "ok");
                 onCerrar();
               },
-              onError: (err) => toast(mensaje(err), "error"),
+              onError: (err) => {
+                // Adenda 1.2 N1: el código repetido o inválido se muestra junto al campo.
+                if (
+                  err instanceof ApiError &&
+                  (err.codigo === "DATOS_DUPLICADOS" || err.codigo === "VALIDACION_FALLIDA")
+                )
+                  setErrorCodigo(err.message);
+                else toast(mensaje(err), "error");
+              },
             },
           );
         }}
       >
+        <Field etiqueta="Código del comprobante *" error={errorCodigo ?? undefined}>
+          <input
+            aria-label="Código del comprobante"
+            className={controlClase}
+            maxLength={40}
+            placeholder="Número de operación del voucher"
+            value={codigo}
+            onChange={(e) => {
+              setCodigo(e.target.value);
+              setErrorCodigo(null);
+            }}
+            required
+          />
+        </Field>
         <Field etiqueta="Archivo" error={grande ? `Pasa de ${maxMb} MB` : undefined}>
           <input
             type="file"
@@ -178,7 +207,10 @@ function SubirComprobante({
           <Button variante="contorno" type="button" onClick={onCerrar}>
             Cancelar
           </Button>
-          <Button type="submit" disabled={m.isPending || !archivo || grande}>
+          <Button
+            type="submit"
+            disabled={m.isPending || !archivo || grande || codigo.trim() === ""}
+          >
             Enviar
           </Button>
         </div>

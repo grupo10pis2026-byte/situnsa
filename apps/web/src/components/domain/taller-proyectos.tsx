@@ -15,7 +15,6 @@ import { Card, CardEncabezado } from "../ui/card.js";
 import { DataTable } from "../ui/data-table.js";
 import { Dialogo } from "../ui/dialog.js";
 import { controlClase, Field } from "../ui/field.js";
-import { Select } from "../ui/select.js";
 import { useToast } from "../ui/toast.js";
 import { Tooltip } from "../ui/tooltip.js";
 
@@ -117,8 +116,8 @@ export function ProyectosTab({
               encabezado: "Grupo de horario",
               celda: (p) =>
                 p.grupoHorario
-                  ? `${p.grupoHorario.nombre} · ${p.grupoHorario.horaInicio}`
-                  : "Sin grupo",
+                  ? `${p.grupoHorario.nombre} · ${p.grupoHorario.horario}`
+                  : "Sin grupo (lo asigna el asesor)",
             },
             {
               encabezado: "Asistencia",
@@ -152,12 +151,7 @@ export function ProyectosTab({
         />
       </div>
       {asignar && datos && (
-        <AsignarDialogo
-          tallerId={tallerId}
-          cupo={datos.cupo}
-          grupos={datos.grupos}
-          onCerrar={() => setAsignar(false)}
-        />
+        <AsignarDialogo tallerId={tallerId} cupo={datos.cupo} onCerrar={() => setAsignar(false)} />
       )}
     </Card>
   );
@@ -199,19 +193,16 @@ function Chips({ c }: { c: CandidatoTallerDTO }) {
 function AsignarDialogo({
   tallerId,
   cupo,
-  grupos,
   onCerrar,
 }: {
   tallerId: string;
   cupo: { asignados: number; cupo: number };
-  grupos: Array<{ id: string; nombre: string; horaInicio: string; horaFin: string }>;
   onCerrar: () => void;
 }) {
   const avisar = useToast();
   const asignar = useAsignarProyecto(tallerId);
   const [dni1, setDni1] = useState("");
   const [dni2, setDni2] = useState("");
-  const [grupo, setGrupo] = useState("");
   const [errores, setErrores] = useState<Record<string, string | undefined>>({});
   const c1 = useCandidato(tallerId, dni1);
   const c2 = useCandidato(tallerId, dni2);
@@ -227,7 +218,6 @@ function AsignarDialogo({
       const r = await asignar.mutateAsync({
         dni1,
         dni2: dni2 === "" ? null : dni2,
-        grupoHorarioId: grupo === "" ? null : grupo,
       });
       avisar(
         r.estadoTaller === "COMPLETO"
@@ -284,16 +274,9 @@ function AsignarDialogo({
           )}
           {c2.data && dni2 !== dni1 && <Chips c={c2.data} />}
         </Field>
-        <Select label="GRUPO DE HORARIO (OPCIONAL)" value={grupo} onChange={setGrupo}>
-          <option value="">
-            {grupos.length === 0 ? "El asesor aún no creó grupos" : "Sin grupo"}
-          </option>
-          {grupos.map((g) => (
-            <option key={g.id} value={g.id}>
-              {g.nombre} · {g.horaInicio}–{g.horaFin}
-            </option>
-          ))}
-        </Select>
+        <p className="text-xs text-grafito-600">
+          El grupo de horario lo asigna el asesor del taller (Adenda 1.2).
+        </p>
         <p className="text-sm text-grafito-600">
           Cupo: {cupo.asignados} de {cupo.cupo} proyectos.
         </p>

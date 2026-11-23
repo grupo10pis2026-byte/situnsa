@@ -55,8 +55,8 @@ type Dia = { activo: boolean; horaInicio: string; horaFin: string };
 type Sesion = {
   clave: string;
   fecha: string;
-  horaInicio: string;
-  horaFin: string;
+  horaInicio: string | null;
+  horaFin: string | null;
   agregada: boolean;
 };
 type Errores = Record<string, string | undefined>;
@@ -69,21 +69,28 @@ interface Formulario {
   fin: string;
   numeroSesiones: string;
   cupo: string;
-  enlaceSabado: string;
-  enlaceDomingo: string;
+  enlaceReunion: string;
+  /** Adenda 1.2 A2: el horario puede quedar «por definir». */
+  conHorario: boolean;
   montos: [string, string, string];
   fecha2: string;
   fecha3: string;
   dias: Record<number, Dia>;
 }
 
-function diasIniciales(lista?: Array<{ dia: number; horaInicio: string; horaFin: string }>) {
+function diasIniciales(
+  lista?: Array<{ dia: number; horaInicio: string | null; horaFin: string | null }>,
+) {
   const out: Record<number, Dia> = {};
   for (const d of DIAS) {
     const guardado = lista?.find((x) => x.dia === d.dia);
     const defecto = HORARIO_DEFECTO[d.dia] ?? { horaInicio: "08:00", horaFin: "13:00" };
     out[d.dia] = guardado
-      ? { activo: true, horaInicio: guardado.horaInicio, horaFin: guardado.horaFin }
+      ? {
+          activo: true,
+          horaInicio: guardado.horaInicio ?? defecto.horaInicio,
+          horaFin: guardado.horaFin ?? defecto.horaFin,
+        }
       : { activo: lista === undefined && (d.dia === 6 || d.dia === 7), ...defecto };
   }
   return out;
@@ -132,6 +139,8 @@ function FormularioTaller({ taller }: { taller?: TallerDetalleDTO }) {
   const editar = useEditarTaller(taller?.id ?? "");
   const proponer = useProponerCalendario();
   const fechasBloqueadas = editando && !taller.fechasEditables;
+  /** Un taller «por definir» puede recibir su horario aunque ya tenga sesiones dictadas. */
+  const horarioBloqueado = fechasBloqueadas && taller.conHorario;
 
   const [f, setF] = useState<Formulario>(() => ({
     nombre: taller?.nombre ?? "",
@@ -141,8 +150,8 @@ function FormularioTaller({ taller }: { taller?: TallerDetalleDTO }) {
     fin: taller?.fechaFin ?? "",
     numeroSesiones: String(taller?.numeroSesiones ?? 24),
     cupo: String(taller?.cupoProyectos ?? 15),
-    enlaceSabado: taller?.enlaceSabado ?? "",
-    enlaceDomingo: taller?.enlaceDomingo ?? "",
+    enlaceReunion: taller?.enlaceReunion ?? "",
+    conHorario: taller?.conHorario ?? true,
     montos: [
       String(taller?.pensiones[0]?.monto ?? 1000),
       String(taller?.pensiones[1]?.monto ?? 1000),
@@ -190,10 +199,10 @@ function FormularioTaller({ taller }: { taller?: TallerDetalleDTO }) {
     () =>
       DIAS.filter((d) => f.dias[d.dia]?.activo).map((d) => ({
         dia: d.dia,
-        horaInicio: f.dias[d.dia]?.horaInicio ?? "",
-        horaFin: f.dias[d.dia]?.horaFin ?? "",
+        horaInicio: f.conHorario ? (f.dias[d.dia]?.horaInicio ?? "") : null,
+        horaFin: f.conHorario ? (f.dias[d.dia]?.horaFin ?? "") : null,
       })),
-    [f.dias],
+    [f.dias, f.conHorario],
   );
   const objetivo = Number(f.numeroSesiones);
   const entradaCalendario = JSON.stringify({ i: f.inicio, f: f.fin, d: diasActivos, n: objetivo });
@@ -224,12 +233,18 @@ function FormularioTaller({ taller }: { taller?: TallerDetalleDTO }) {
     const datos = JSON.parse(entradaCalendario) as {
       i: string;
       f: string;
-      d: Array<{ dia: number; horaInicio: string; horaFin: string }>;
+      d: Array<{ dia: number; horaInicio: string | null; horaFin: string | null }>;
       n: number;
     };
     if (!FECHA_RE.test(datos.i) || !FECHA_RE.test(datos.f) || datos.f <= datos.i) return;
     if (datos.d.length === 0 || !Number.isInteger(datos.n) || datos.n < 1) return;
-    if (datos.d.some((d) => !/^\d{2}:\d{2}$/.test(d.horaInicio) || d.horaFin <= d.horaInicio))
+    if (
+      datos.d.some(
+        (d) =>
+          d.horaInicio !== null &&
+          (!/^\d{2}:\d{2}$/.test(d.horaInicio) || (d.horaFin ?? "") <= d.horaInicio),
+      )
+    )
       return;
     try {
       const r = await proponer.mutateAsync({
@@ -284,7 +299,9 @@ function FormularioTaller({ taller }: { taller?: TallerDetalleDTO }) {
       avisar("Ya hay una sesión ese día", "error");
       return;
     }
-    const horario = f.dias[diaIso(nuevaFecha)] ?? { horaInicio: "15:00", horaFin: "20:00" };
+    const horario = f.conHorario
+      ? (f.dias[diaIso(nuevaFecha)] ?? { horaInicio: "15:00", horaFin: "20:00" })
+      : { horaInicio: null, horaFin: null };
     ajustar(
       [
         ...sesiones,
@@ -309,8 +326,7 @@ function FormularioTaller({ taller }: { taller?: TallerDetalleDTO }) {
       numeroSesiones: Number(f.numeroSesiones),
       dias: diasActivos,
       cupoProyectos: Number(f.cupo),
-      enlaceSabado: f.enlaceSabado.trim() || null,
-      enlaceDomingo: f.enlaceDomingo.trim() || null,
+      enlaceReunion: f.enlaceReunion.trim() || null,
       pensiones: {
         montos: [Number(f.montos[0]), Number(f.montos[1]), Number(f.montos[2])],
         fecha2: f.fecha2,
@@ -496,34 +512,46 @@ function FormularioTaller({ taller }: { taller?: TallerDetalleDTO }) {
               onChange={(e) => cambiar("cupo", e.target.value, "cupoProyectos")}
             />
           </Field>
-          <Field etiqueta="Enlace del sábado" error={errores.enlaceSabado}>
+          <Field etiqueta="Enlace de reunión" error={errores.enlaceReunion}>
             <input
-              aria-label="Enlace del sábado"
-              className={cn(controlClase, "h-10", errores.enlaceSabado && "border-red-400")}
+              aria-label="Enlace de reunión"
+              className={cn(controlClase, "h-10", errores.enlaceReunion && "border-red-400")}
               placeholder="https://meet.google.com/…"
-              value={f.enlaceSabado}
-              onChange={(e) => cambiar("enlaceSabado", e.target.value, "enlaceSabado")}
+              value={f.enlaceReunion}
+              onChange={(e) => cambiar("enlaceReunion", e.target.value, "enlaceReunion")}
             />
           </Field>
-          <Field etiqueta="Enlace del domingo" error={errores.enlaceDomingo}>
-            <input
-              aria-label="Enlace del domingo"
-              className={cn(controlClase, "h-10", errores.enlaceDomingo && "border-red-400")}
-              placeholder="https://meet.google.com/…"
-              value={f.enlaceDomingo}
-              onChange={(e) => cambiar("enlaceDomingo", e.target.value, "enlaceDomingo")}
-            />
-          </Field>
+          {taller?.enlaceRevisar && (
+            <p className="text-xs font-medium text-aviso-800 sm:col-span-2">
+              Revisa este enlace: el taller tenía otro enlace para el domingo (
+              {taller.enlaceDescartado ?? "—"}). Se conservó el del sábado; al guardar queda
+              revisado.
+            </p>
+          )}
         </div>
       </Card>
 
       <Card>
         <CardEncabezado
           titulo="Días y horario de las sesiones *"
-          descripcion="Sábado y domingo por defecto. Otros días solo en casos especiales; cada día marcado necesita su horario."
+          descripcion="Sábado y domingo por defecto. Otros días solo en casos especiales. El horario puede quedar por definir y completarse después."
         />
         <div className="space-y-2 p-4 md:p-5">
           {errores.dias && <p className="text-xs font-medium text-red-700">{errores.dias}</p>}
+          {errores.horario && <p className="text-xs font-medium text-red-700">{errores.horario}</p>}
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              aria-label="Horario por definir"
+              checked={!f.conHorario}
+              disabled={editando && taller.conHorario}
+              type="checkbox"
+              onChange={(e) => cambiar("conHorario", !e.target.checked, "horario")}
+            />
+            Horario por definir
+            <span className="text-xs text-grafito-600">
+              (las sesiones muestran «Horario por definir» hasta completarlo)
+            </span>
+          </label>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
             {DIAS.map((d) => {
               const dia = f.dias[d.dia] ?? { activo: false, horaInicio: "", horaFin: "" };
@@ -552,12 +580,12 @@ function FormularioTaller({ taller }: { taller?: TallerDetalleDTO }) {
                     />
                     {d.nombre}
                   </label>
-                  {dia.activo && (
+                  {dia.activo && f.conHorario && (
                     <div className="mt-2 flex items-center gap-1.5">
                       <input
                         aria-label={`Hora de inicio del ${d.nombre}`}
                         className={cn(controlClase, "h-8 px-2 text-sm", error && "border-red-400")}
-                        disabled={fechasBloqueadas}
+                        disabled={horarioBloqueado}
                         type="time"
                         value={dia.horaInicio}
                         onChange={(e) =>
@@ -572,7 +600,7 @@ function FormularioTaller({ taller }: { taller?: TallerDetalleDTO }) {
                       <input
                         aria-label={`Hora de fin del ${d.nombre}`}
                         className={cn(controlClase, "h-8 px-2 text-sm", error && "border-red-400")}
-                        disabled={fechasBloqueadas}
+                        disabled={horarioBloqueado}
                         type="time"
                         value={dia.horaFin}
                         onChange={(e) =>
@@ -715,7 +743,7 @@ function FormularioTaller({ taller }: { taller?: TallerDetalleDTO }) {
                                       ? {
                                           ...x,
                                           fecha,
-                                          ...(horario?.activo
+                                          ...(horario?.activo && f.conHorario
                                             ? {
                                                 horaInicio: horario.horaInicio,
                                                 horaFin: horario.horaFin,
@@ -732,7 +760,9 @@ function FormularioTaller({ taller }: { taller?: TallerDetalleDTO }) {
                         <td className="px-3 py-1.5">
                           {nombreDia(s.fecha)}
                           <span className="block text-[11px] text-grafito-600">
-                            {s.horaInicio}–{s.horaFin}
+                            {s.horaInicio && s.horaFin
+                              ? `${s.horaInicio}–${s.horaFin}`
+                              : "Horario por definir"}
                           </span>
                         </td>
                         <td className="px-3 py-1.5 text-xs">

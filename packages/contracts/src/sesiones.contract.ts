@@ -16,8 +16,9 @@ export const SesionTallerDTOSchema = z.object({
   id: z.string().uuid(),
   nro: z.number().int(),
   fecha: z.string(),
-  horaInicio: z.string(),
-  horaFin: z.string(),
+  /** Adenda 1.2 A2: null = «Horario por definir» (cada grupo tiene su horario). */
+  horaInicio: z.string().nullable(),
+  horaFin: z.string().nullable(),
   estado: z.enum(["PROGRAMADA", "REPROGRAMADA", "REALIZADA", "CANCELADA"]),
   fechaOriginal: z.string().nullable(),
   motivo: z.string().nullable(),
@@ -27,11 +28,19 @@ export const SesionTallerDTOSchema = z.object({
   motivoNoRegistrar: z.string().nullable(),
 });
 
+export const HorarioDiaSchema = z.object({
+  dia: z.number().int().min(1).max(7),
+  horaInicio: HoraCorta,
+  horaFin: HoraCorta,
+});
+
 export const GrupoHorarioDTOSchema = z.object({
   id: z.string().uuid(),
   nombre: z.string(),
-  horaInicio: z.string(),
-  horaFin: z.string(),
+  /** Adenda 1.2 A2: horario por día de sesión. */
+  horarios: z.array(HorarioDiaSchema),
+  /** «Sáb 15:00–17:30 · Dom 08:00–10:30». */
+  horario: z.string(),
   proyectos: z.array(
     z.object({ id: z.string().uuid(), codigo: z.string(), tesistas: z.array(z.string()) }),
   ),
@@ -51,6 +60,18 @@ export const SesionesTallerDTOSchema = z.object({
   puedeRegistrar: z.boolean(),
   /** El actor puede reprogramar, cancelar y agregar sesiones. */
   puedeProgramar: z.boolean(),
+  /** El actor puede crear, editar y mover proyectos entre grupos (asesor). */
+  puedeGrupos: z.boolean(),
+  /** Días de sesión del taller con su bloque (null = «Horario por definir»). */
+  dias: z.array(
+    z.object({
+      dia: z.number().int(),
+      horaInicio: z.string().nullable(),
+      horaFin: z.string().nullable(),
+    }),
+  ),
+  /** Nombre sugerido para el siguiente grupo (Grupo A, B, C…). */
+  nombreSugerido: z.string(),
 });
 
 export const AsistenciaSesionDTOSchema = z.object({
@@ -93,8 +114,9 @@ export const GuardarAsistenciaSchema = z.object({
 
 export const ReprogramarSesionSchema = z.object({
   fecha: FechaCorta,
-  horaInicio: HoraCorta,
-  horaFin: HoraCorta,
+  /** Vacías = «Horario por definir» (rige el horario de cada grupo). */
+  horaInicio: HoraCorta.nullable().optional(),
+  horaFin: HoraCorta.nullable().optional(),
   motivo: z.string().max(500),
 });
 
@@ -104,8 +126,8 @@ export const AgregarSesionSchema = ReprogramarSesionSchema;
 
 export const GrupoHorarioInputSchema = z.object({
   nombre: z.string().max(120),
-  horaInicio: HoraCorta,
-  horaFin: HoraCorta,
+  /** Un horario por cada día de sesión del taller. */
+  horarios: z.array(HorarioDiaSchema).min(1).max(7),
   proyectoIds: z.array(z.string().uuid()).max(60),
 });
 

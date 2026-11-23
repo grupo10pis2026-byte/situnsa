@@ -1,3 +1,4 @@
+import { Video } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTalleresAsesor } from "../api/mi-taller.js";
 import { useTaller } from "../api/taller.js";
@@ -6,6 +7,7 @@ import { MatrizHitosCard, PlanTallerCard } from "../components/domain/taller-hit
 import { ProyectosTab } from "../components/domain/taller-proyectos.js";
 import { GruposHorarioTab, SesionesPanel } from "../components/domain/taller-sesiones.js";
 import { AppShell } from "../components/layout/app-shell.js";
+import { botonClases } from "../components/ui/button.js";
 import { Card } from "../components/ui/card.js";
 import { EmptyState } from "../components/ui/empty-state.js";
 import { PageHeader } from "../components/ui/page-header.js";
@@ -34,14 +36,29 @@ export function AsesorTallerPage() {
         descripcion="Asistencia, grupos de horario, plan del taller y seguimiento de hitos."
         insignia={t.data ? <EstadoTaller estado={t.data.estado} /> : undefined}
         acciones={
-          items.length > 1 ? (
-            <Select ariaLabel="Taller" value={tallerId ?? ""} onChange={setTallerId}>
-              {items.map((x) => (
-                <option key={x.id} value={x.id}>
-                  {x.nombre}
-                </option>
-              ))}
-            </Select>
+          items.length > 1 || t.data?.enlaceReunion ? (
+            <span className="flex flex-wrap items-center gap-2">
+              {t.data?.enlaceReunion && (
+                <a
+                  className={botonClases({ variante: "oscuro", tamano: "sm" })}
+                  href={t.data.enlaceReunion}
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  <Video size={14} />
+                  Unirme a la sesión
+                </a>
+              )}
+              {items.length > 1 && (
+                <Select ariaLabel="Taller" value={tallerId ?? ""} onChange={setTallerId}>
+                  {items.map((x) => (
+                    <option key={x.id} value={x.id}>
+                      {x.nombre}
+                    </option>
+                  ))}
+                </Select>
+              )}
+            </span>
           ) : undefined
         }
       />

@@ -38,6 +38,11 @@ const ETIQUETA_SESION: Record<string, string> = {
   CANCELADA: "Cancelada",
 };
 
+/** Adenda 1.2 A2: una sesión sin hora se muestra «Horario por definir». */
+function hora(inicio: string | null, fin: string | null): string {
+  return inicio && fin ? `${inicio}–${fin}` : "Horario por definir";
+}
+
 export function SesionesPanel({
   tallerId,
   modo,
@@ -94,7 +99,7 @@ export function SesionesPanel({
                 </span>
               ),
             },
-            { encabezado: "Hora", celda: (s) => `${s.horaInicio}–${s.horaFin}` },
+            { encabezado: "Hora", celda: (s) => hora(s.horaInicio, s.horaFin) },
             {
               encabezado: "Estado",
               celda: (s) => (
@@ -196,7 +201,7 @@ function AsistenciaDialogo({
       titulo={datos ? `Asistencia · sesión ${datos.sesion.nro}` : "Asistencia"}
       descripcion={
         datos
-          ? `${fechaLarga(datos.sesion.fecha)} · ${datos.sesion.horaInicio}–${datos.sesion.horaFin}`
+          ? `${fechaLarga(datos.sesion.fecha)} · ${hora(datos.sesion.horaInicio, datos.sesion.horaFin)}`
           : undefined
       }
       ancho="max-w-3xl"
@@ -408,8 +413,8 @@ function D2Dialogo({
   const [modo, setModo] = useState<"reprogramar" | "cancelar">("reprogramar");
   const [f, setF] = useState({
     fecha: sesion.fecha,
-    horaInicio: sesion.horaInicio,
-    horaFin: sesion.horaFin,
+    horaInicio: sesion.horaInicio ?? "",
+    horaFin: sesion.horaFin ?? "",
     motivo: "",
   });
   const [errores, setErrores] = useState<Record<string, string | undefined>>({});
@@ -421,7 +426,11 @@ function D2Dialogo({
     }
     try {
       if (modo === "reprogramar")
-        await programar.mutateAsync({ tipo: "reprogramar", sesionId: sesion.id, datos: f });
+        await programar.mutateAsync({
+          tipo: "reprogramar",
+          sesionId: sesion.id,
+          datos: { ...f, horaInicio: f.horaInicio || null, horaFin: f.horaFin || null },
+        });
       else await programar.mutateAsync({ tipo: "cancelar", sesionId: sesion.id, motivo: f.motivo });
       avisar(
         modo === "reprogramar"
@@ -530,12 +539,15 @@ function D2Dialogo({
 function SesionExtraDialogo({ tallerId, onCerrar }: { tallerId: string; onCerrar: () => void }) {
   const avisar = useToast();
   const programar = useProgramarSesion(tallerId);
-  const [f, setF] = useState({ fecha: "", horaInicio: "15:00", horaFin: "20:00", motivo: "" });
+  const [f, setF] = useState({ fecha: "", horaInicio: "", horaFin: "", motivo: "" });
   const [errores, setErrores] = useState<Record<string, string | undefined>>({});
 
   async function confirmar(): Promise<void> {
     try {
-      await programar.mutateAsync({ tipo: "agregar", datos: f });
+      await programar.mutateAsync({
+        tipo: "agregar",
+        datos: { ...f, horaInicio: f.horaInicio || null, horaFin: f.horaFin || null },
+      });
       avisar("Sesión extra agregada al final del calendario");
       onCerrar();
     } catch (e) {
@@ -551,7 +563,7 @@ function SesionExtraDialogo({ tallerId, onCerrar }: { tallerId: string; onCerrar
         if (!v) onCerrar();
       }}
       titulo="Agregar sesión extra"
-      descripcion="Se agrega con el siguiente número, programada, y se avisa a los alumnos."
+      descripcion="Se agrega con el siguiente número, programada, y se avisa a los alumnos. Sin hora queda «Horario por definir»."
     >
       <div className="mt-4 space-y-3">
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -609,6 +621,16 @@ function SesionExtraDialogo({ tallerId, onCerrar }: { tallerId: string; onCerrar
   );
 }
 
+const NOMBRE_DIA: Record<number, string> = {
+  1: "Lunes",
+  2: "Martes",
+  3: "Miércoles",
+  4: "Jueves",
+  5: "Viernes",
+  6: "Sábado",
+  7: "Domingo",
+};
+
 /** P3 (solo lectura) y P5 (el asesor crea, edita, mueve proyectos y elimina). */
 export function GruposHorarioTab({ tallerId, editable }: { tallerId: string; editable: boolean }) {
   const q = useSesionesTaller(tallerId);
@@ -644,7 +666,7 @@ export function GruposHorarioTab({ tallerId, editable }: { tallerId: string; edi
           vacio="El asesor aún no ha creado grupos de horario."
           columnas={[
             { encabezado: "Grupo", celda: (g) => <strong>{g.nombre}</strong> },
-            { encabezado: "Horario", celda: (g) => `${g.horaInicio}–${g.horaFin}` },
+            { encabezado: "Horario", celda: (g) => g.horario },
             {
               encabezado: "Proyectos",
               celda: (g) =>
@@ -703,10 +725,24 @@ function GrupoDialogo({
   const guardar = useGuardarGrupo(tallerId);
   const grupo = datos.grupos.find((g) => g.id === grupoId);
   const [f, setF] = useState({
-    nombre: grupo?.nombre ?? "",
-    horaInicio: grupo?.horaInicio ?? "15:00",
-    horaFin: grupo?.horaFin ?? "17:30",
+    nombre: grupo?.nombre ?? datos.nombreSugerido,
   });
+  /** Un horario por cada día de sesión del taller (Adenda 1.2 A2). */
+  const [horarios, setHorarios] = useState<Record<number, { horaInicio: string; horaFin: string }>>(
+    () =>
+      Object.fromEntries(
+        datos.dias.map((d) => {
+          const guardado = grupo?.horarios.find((h) => h.dia === d.dia);
+          return [
+            d.dia,
+            {
+              horaInicio: guardado?.horaInicio ?? d.horaInicio ?? "",
+              horaFin: guardado?.horaFin ?? d.horaFin ?? "",
+            },
+          ];
+        }),
+      ),
+  );
   const [elegidos, setElegidos] = useState<string[]>(grupo?.proyectos.map((p) => p.id) ?? []);
   const [errores, setErrores] = useState<Record<string, string | undefined>>({});
   const opciones = [
@@ -719,10 +755,17 @@ function GrupoDialogo({
 
   async function confirmar(): Promise<void> {
     try {
+      const cuerpo = {
+        nombre: f.nombre,
+        horarios: datos.dias.map((d) => ({
+          dia: d.dia,
+          horaInicio: horarios[d.dia]?.horaInicio ?? "",
+          horaFin: horarios[d.dia]?.horaFin ?? "",
+        })),
+        proyectoIds: elegidos,
+      };
       await guardar.mutateAsync(
-        grupoId
-          ? { tipo: "editar", grupoId, datos: { ...f, proyectoIds: elegidos } }
-          : { tipo: "crear", datos: { ...f, proyectoIds: elegidos } },
+        grupoId ? { tipo: "editar", grupoId, datos: cuerpo } : { tipo: "crear", datos: cuerpo },
       );
       avisar(grupoId ? "Grupo actualizado" : "Grupo creado");
       onCerrar();
@@ -750,7 +793,7 @@ function GrupoDialogo({
         if (!v) onCerrar();
       }}
       titulo={grupoId ? `Editar ${grupo?.nombre}` : "Crear grupo de horario"}
-      descripcion="El horario debe estar dentro del bloque de algún día del taller."
+      descripcion="Un horario por cada día de sesión, dentro del bloque de ese día. Si el taller no tiene horario, el grupo fija el suyo."
     >
       <div className="mt-4 space-y-3">
         <Field etiqueta="Nombre *" error={errores.nombre}>
@@ -761,26 +804,43 @@ function GrupoDialogo({
             onChange={(e) => setF({ ...f, nombre: e.target.value })}
           />
         </Field>
-        <div className="grid grid-cols-2 gap-2">
-          <Field etiqueta="Desde *" error={errores.horario}>
-            <input
-              aria-label="Hora de inicio del grupo"
-              className={cn(controlClase, "h-10")}
-              type="time"
-              value={f.horaInicio}
-              onChange={(e) => setF({ ...f, horaInicio: e.target.value })}
-            />
-          </Field>
-          <Field etiqueta="Hasta *">
-            <input
-              aria-label="Hora de fin del grupo"
-              className={cn(controlClase, "h-10")}
-              type="time"
-              value={f.horaFin}
-              onChange={(e) => setF({ ...f, horaFin: e.target.value })}
-            />
-          </Field>
-        </div>
+        {errores.horario && <p className="text-xs font-medium text-red-700">{errores.horario}</p>}
+        {datos.dias.map((d) => {
+          const h = horarios[d.dia] ?? { horaInicio: "", horaFin: "" };
+          const cambiarHora = (campo: "horaInicio" | "horaFin", valor: string) => {
+            setHorarios((x) => ({ ...x, [d.dia]: { ...h, [campo]: valor } }));
+            setErrores((e) => ({ ...e, [`horario.${d.dia}`]: undefined, horario: undefined }));
+          };
+          const bloque =
+            d.horaInicio && d.horaFin
+              ? `bloque ${d.horaInicio}–${d.horaFin}`
+              : "horario por definir";
+          return (
+            <div key={d.dia} className="grid grid-cols-2 gap-2">
+              <Field
+                etiqueta={`${NOMBRE_DIA[d.dia] ?? d.dia} desde * (${bloque})`}
+                error={errores[`horario.${d.dia}`]}
+              >
+                <input
+                  aria-label={`Hora de inicio del grupo el ${NOMBRE_DIA[d.dia] ?? d.dia}`}
+                  className={cn(controlClase, "h-10")}
+                  type="time"
+                  value={h.horaInicio}
+                  onChange={(e) => cambiarHora("horaInicio", e.target.value)}
+                />
+              </Field>
+              <Field etiqueta="Hasta *">
+                <input
+                  aria-label={`Hora de fin del grupo el ${NOMBRE_DIA[d.dia] ?? d.dia}`}
+                  className={cn(controlClase, "h-10")}
+                  type="time"
+                  value={h.horaFin}
+                  onChange={(e) => cambiarHora("horaFin", e.target.value)}
+                />
+              </Field>
+            </div>
+          );
+        })}
         <fieldset>
           <legend className="mb-1 text-[11px] font-bold tracking-wider text-grafito-600 uppercase">
             Proyectos

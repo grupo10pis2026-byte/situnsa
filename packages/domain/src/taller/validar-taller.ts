@@ -25,8 +25,8 @@ export interface DatosTaller {
   numeroSesiones: number;
   dias: DiaSesion[];
   cupoProyectos: number;
-  enlaceSabado?: string | null;
-  enlaceDomingo?: string | null;
+  /** Adenda 1.2 A1: un solo enlace de reunión (https). */
+  enlaceReunion?: string | null;
   /** Montos de las 3 pensiones (soles) y fechas de la 2.ª y 3.ª. */
   pensiones: {
     montos: [number, number, number];
@@ -59,6 +59,10 @@ export function erroresTaller(t: DatosTaller): ErrorCampo[] {
     add("numeroSesiones", "El número de sesiones debe ser al menos 1");
 
   if (t.dias.length === 0) add("dias", "Marca al menos un día de sesión");
+  // Adenda 1.2 A2: el horario es opcional, pero todo o nada (no días a medias).
+  const conHora = t.dias.filter((d) => d.horaInicio !== null || d.horaFin !== null).length;
+  if (conHora > 0 && conHora < t.dias.length)
+    add("horario", "Completa el horario de todos los días o déjalo vacío («Horario por definir»)");
   const vistos = new Set<number>();
   for (const d of t.dias) {
     const campo = `horario.${d.dia}`;
@@ -68,9 +72,10 @@ export function erroresTaller(t: DatosTaller): ErrorCampo[] {
     }
     if (vistos.has(d.dia)) add("dias", "Un día está marcado dos veces");
     vistos.add(d.dia);
-    if (!HORA_RE.test(d.horaInicio) || !HORA_RE.test(d.horaFin))
+    if (d.horaInicio === null && d.horaFin === null) continue;
+    if (!HORA_RE.test(d.horaInicio ?? "") || !HORA_RE.test(d.horaFin ?? ""))
       add(campo, "Escribe la hora con el formato HH:MM");
-    else if (d.horaFin <= d.horaInicio)
+    else if ((d.horaFin ?? "") <= (d.horaInicio ?? ""))
       add(campo, "La hora de fin debe ser posterior a la de inicio");
   }
 
@@ -82,8 +87,7 @@ export function erroresTaller(t: DatosTaller): ErrorCampo[] {
       `El cupo no puede ser menor que los proyectos ya asignados (${t.proyectosAsignados})`,
     );
 
-  if (enlaceInvalido(t.enlaceSabado)) add("enlaceSabado", "El enlace debe empezar con https://");
-  if (enlaceInvalido(t.enlaceDomingo)) add("enlaceDomingo", "El enlace debe empezar con https://");
+  if (enlaceInvalido(t.enlaceReunion)) add("enlaceReunion", "El enlace debe empezar con https://");
 
   t.pensiones.montos.forEach((m, i) => {
     if (!Number.isFinite(m) || m <= 0)

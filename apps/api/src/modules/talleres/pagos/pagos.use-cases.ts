@@ -20,9 +20,11 @@ import {
   type Result,
   tocaAvisoPension,
   validarArchivo,
+  validarCodigoComprobante,
+  validarCorreccionCodigo,
   validarObservacionComprobante,
 } from "@pis/domain";
-import { and, eq, isNotNull } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, ne } from "drizzle-orm";
 import { DrizzleUnitOfWork } from "../../../infra/db/unit-of-work.js";
 import type { AlmacenamientoPort } from "../../../infra/storage/almacenamiento.port.js";
 import { leerParametrosTaller } from "../../taller-config/taller-config.repository.js";
@@ -119,7 +121,13 @@ export class SubirComprobanteUseCase {
     pensionAlumnoId: string,
     archivo: ArchivoSubido,
     actor: Actor,
+    codigoIngresado?: string | null,
   ): Promise<Result<true, DomainError>> {
+    // Adenda 1.2 N1: código del comprobante obligatorio, normalizado y único.
+    const cod = validarCodigoComprobante(codigoIngresado);
+    if (!cod.ok) return cod;
+    if (await codigoEnUso(db, cod.value))
+      return fail(new DomainError("DATOS_DUPLICADOS", MENSAJE_DUPLICADO));
     const parametros = await leerParametrosTaller();
     const v = validarArchivo(
       { mime: archivo.mime, bytes: archivo.bytes.byteLength },
@@ -149,8 +157,11 @@ export class SubirComprobanteUseCase {
       if (!gate.ok) return gate;
       const paso = assertTransicionPension(p.pension.estado, "EN_REVISION");
       if (!paso.ok) return paso;
+      if (await codigoEnUso(tx, cod.value))
+        return fail(new DomainError("DATOS_DUPLICADOS", MENSAJE_DUPLICADO));
       await tx.insert(comprobantesPension).values({
         pensionAlumnoId,
+        codigo: cod.value,
         ruta: guardado.ruta,
         sha256: guardado.sha256,
         nombreOriginal: archivo.filename.trim().slice(0, 255) || `comprobante.${EXT[archivo.mime]}`,
@@ -167,7 +178,7 @@ export class SubirComprobanteUseCase {
         actorId: idActor(actor),
         actorDni: actor.dni,
         accion: "SUBIR_COMPROBANTE",
-        detalle: `${p.alumno}: pensión ${p.numero}`,
+        detalle: `${p.alumno}: pensión ${p.numero} (código ${cod.value})`,
       });
       return ok(p);
     });
@@ -180,6 +191,70 @@ export class SubirComprobanteUseCase {
       "Ver pagos",
     );
     return ok(true);
+  }
+}
+
+/** Mensaje al alumno: no revela datos de otras personas (adenda N1). */
+const MENSAJE_DUPLICADO =
+  "Este código de comprobante ya fue registrado. Revisa que sea el correcto";
+
+/**
+ * N1: ¿el código ya está en un comprobante EN REVISIÓN o VALIDADO (de
+ * cualquier alumno)? Los OBSERVADOS no cuentan: se puede volver a subir.
+ * La base de datos lo garantiza también (índice único parcial).
+ */
+async function codigoEnUso(tx: DbExecutor, codigo: string, excepto?: string): Promise<boolean> {
+  const filas = await tx
+    .select({ id: comprobantesPension.id })
+    .from(comprobantesPension)
+    .where(
+      and(
+        eq(comprobantesPension.codigo, codigo),
+        inArray(comprobantesPension.estado, ["EN_REVISION", "VALIDADO"]),
+        ...(excepto ? [ne(comprobantesPension.id, excepto)] : []),
+      ),
+    )
+    .limit(1);
+  return filas.length > 0;
+}
+
+/** N1: el administrador corrige el código (error de tipeo) con motivo; queda en el historial. */
+export class CorregirCodigoUseCase {
+  async execute(
+    comprobanteId: string,
+    input: { codigo: string; motivo: string },
+    actor: Actor,
+  ): Promise<Result<string, DomainError>> {
+    const v = validarCorreccionCodigo(input.codigo, input.motivo);
+    if (!v.ok) return v;
+    return new DrizzleUnitOfWork(db).run(async (tx) => {
+      const [c] = await tx
+        .select()
+        .from(comprobantesPension)
+        .where(eq(comprobantesPension.id, comprobanteId))
+        .limit(1)
+        .for("update");
+      if (!c) return fail(new DomainError("NO_ENCONTRADO", "Comprobante no encontrado"));
+      if (c.codigo === v.value)
+        return fail(new DomainError("VALIDACION_FALLIDA", "El código es el mismo"));
+      if (c.estado !== "OBSERVADO" && (await codigoEnUso(tx, v.value, comprobanteId)))
+        return fail(
+          new DomainError("DATOS_DUPLICADOS", "Ese código ya está en otro comprobante vigente"),
+        );
+      await tx
+        .update(comprobantesPension)
+        .set({ codigo: v.value, updatedAt: new Date() })
+        .where(eq(comprobantesPension.id, comprobanteId));
+      const p = await pensionPorId(tx, c.pensionAlumnoId);
+      await appendAuditoriaTaller(tx, {
+        tallerId: p?.tallerId ?? "",
+        actorId: idActor(actor),
+        actorDni: actor.dni,
+        accion: "CORREGIR_CODIGO_COMPROBANTE",
+        detalle: `${p?.alumno ?? ""}: pensión ${p?.numero ?? "?"} · ${c.codigo ?? "(sin código)"} → ${v.value}. Motivo: ${input.motivo.trim()}`,
+      });
+      return ok(c.pensionAlumnoId);
+    });
   }
 }
 

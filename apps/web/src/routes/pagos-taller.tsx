@@ -20,6 +20,7 @@ import { StatCard } from "../components/ui/stat-card.js";
 import { StatusBadge } from "../components/ui/status-badge.js";
 import { useToast } from "../components/ui/toast.js";
 import { cn } from "../utils/cn.js";
+import { parametroInicial } from "../utils/parametro-url.js";
 
 /**
  * P9 Pagos y deudores (spec v1.0 §9): la Secretaría del Taller valida u
@@ -28,16 +29,17 @@ import { cn } from "../utils/cn.js";
  */
 
 type Estado = "" | "PENDIENTE" | "EN_REVISION" | "VALIDADA" | "OBSERVADA" | "VENCIDA";
-type Dialogos = { tipo: "observar" | "pago"; fila: PensionFilaDTO } | null;
+type Dialogos = { tipo: "observar" | "pago" | "codigo"; fila: PensionFilaDTO } | null;
 
 function mensaje(e: unknown) {
   return e instanceof Error ? e.message : "Ocurrió un error";
 }
 
 export function PagosTallerPage() {
-  const [tallerId, setTallerId] = useState("");
+  // Adenda 1.2 N2: el dashboard enlaza aquí con ?tallerId= (y ?deudores=true).
+  const [tallerId, setTallerId] = useState(() => parametroInicial("tallerId"));
   const [estado, setEstado] = useState<Estado>("");
-  const [deudores, setDeudores] = useState(false);
+  const [deudores, setDeudores] = useState(() => parametroInicial("deudores") === "true");
   const [q, setQ] = useState("");
   const query = usePagosTaller({
     ...(tallerId ? { tallerId } : {}),
@@ -138,6 +140,15 @@ export function PagosTallerPage() {
           },
           { encabezado: "Monto", celda: (f) => `S/ ${f.monto}` },
           {
+            encabezado: "Código",
+            celda: (f) =>
+              f.comprobante?.codigo ? (
+                <span className="font-mono text-xs">{f.comprobante.codigo}</span>
+              ) : (
+                <span className="text-xs text-grafito-600">—</span>
+              ),
+          },
+          {
             encabezado: "Estado",
             celda: (f) => (
               <span>
@@ -209,6 +220,16 @@ export function PagosTallerPage() {
                     </Button>
                   </>
                 )}
+                {f.comprobante?.codigo && (
+                  <Button
+                    tamano="xs"
+                    variante="fantasma"
+                    type="button"
+                    onClick={() => setDialogo({ tipo: "codigo", fila: f })}
+                  >
+                    Corregir código
+                  </Button>
+                )}
                 {f.estado !== "VALIDADA" && f.estado !== "EN_REVISION" && (
                   <Button
                     tamano="xs"
@@ -224,7 +245,16 @@ export function PagosTallerPage() {
           },
         ]}
       />
-      {dialogo && <DialogoPago d={dialogo} onCerrar={() => setDialogo(null)} />}
+      {dialogo?.tipo === "codigo" && dialogo.fila.comprobante ? (
+        <DialogoCodigo
+          fila={dialogo.fila}
+          comprobanteId={dialogo.fila.comprobante.id}
+          actual={dialogo.fila.comprobante.codigo ?? ""}
+          onCerrar={() => setDialogo(null)}
+        />
+      ) : (
+        dialogo && <DialogoPago d={dialogo} onCerrar={() => setDialogo(null)} />
+      )}
     </AppShell>
   );
 }
@@ -276,6 +306,84 @@ function DialogoPago({ d, onCerrar }: { d: NonNullable<Dialogos>; onCerrar: () =
           </Button>
           <Button type="submit" disabled={operar.isPending || (observar && texto.trim() === "")}>
             {observar ? "Observar" : "Registrar pago"}
+          </Button>
+        </div>
+      </form>
+    </Dialogo>
+  );
+}
+
+/** Adenda 1.2 N1: corrige un código mal tipeado; el motivo queda en la auditoría. */
+function DialogoCodigo({
+  fila,
+  comprobanteId,
+  actual,
+  onCerrar,
+}: {
+  fila: PensionFilaDTO;
+  comprobanteId: string;
+  actual: string;
+  onCerrar: () => void;
+}) {
+  const operar = useOperarPago();
+  const toast = useToast();
+  const [codigo, setCodigo] = useState(actual);
+  const [motivo, setMotivo] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <Dialogo
+      abierto
+      onAbierto={(v) => !v && onCerrar()}
+      titulo="Corregir código del comprobante"
+      descripcion={`${fila.alumno} · pensión ${fila.numero} · código actual ${actual}`}
+    >
+      <form
+        className="space-y-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          operar.mutate(
+            { tipo: "corregirCodigo", comprobanteId, codigo: codigo.trim(), motivo: motivo.trim() },
+            {
+              onSuccess: () => {
+                toast("Código corregido", "ok");
+                onCerrar();
+              },
+              onError: (err) => setError(mensaje(err)),
+            },
+          );
+        }}
+      >
+        <Field etiqueta="Código correcto *" error={error ?? undefined}>
+          <input
+            aria-label="Código correcto"
+            className={cn(controlClase, "font-mono")}
+            maxLength={40}
+            value={codigo}
+            onChange={(e) => {
+              setCodigo(e.target.value);
+              setError(null);
+            }}
+            required
+          />
+        </Field>
+        <Field etiqueta="Motivo de la corrección *">
+          <textarea
+            aria-label="Motivo de la corrección"
+            className={cn(controlClase, "min-h-20")}
+            value={motivo}
+            onChange={(e) => setMotivo(e.target.value)}
+            required
+          />
+        </Field>
+        <div className="flex justify-end gap-2">
+          <Button variante="contorno" type="button" onClick={onCerrar}>
+            Cancelar
+          </Button>
+          <Button
+            type="submit"
+            disabled={operar.isPending || codigo.trim() === "" || motivo.trim().length < 3}
+          >
+            Guardar corrección
           </Button>
         </div>
       </form>

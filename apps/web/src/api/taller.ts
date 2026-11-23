@@ -120,7 +120,7 @@ export function useProponerCalendario() {
     mutationFn: (input: {
       inicio: string;
       fin: string;
-      dias: Array<{ dia: number; horaInicio: string; horaFin: string }>;
+      dias: Array<{ dia: number; horaInicio: string | null; horaFin: string | null }>;
       numeroSesiones: number;
     }) =>
       send(
@@ -279,7 +279,7 @@ export function useCandidato(tallerId: string, dni: string) {
 export function useAsignarProyecto(tallerId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: { dni1: string; dni2: string | null; grupoHorarioId: string | null }) =>
+    mutationFn: (input: { dni1: string; dni2: string | null }) =>
       send(
         `/api/talleres/${tallerId}/proyectos`,
         "POST",
@@ -354,7 +354,12 @@ export function useGuardarAsistencia(sesionId: string, tallerId: string) {
   });
 }
 
-type CuerpoSesion = { fecha: string; horaInicio: string; horaFin: string; motivo: string };
+type CuerpoSesion = {
+  fecha: string;
+  horaInicio: string | null;
+  horaFin: string | null;
+  motivo: string;
+};
 
 export function useProgramarSesion(tallerId: string) {
   const qc = useQueryClient();
@@ -404,7 +409,11 @@ export function useGuardarGrupo(tallerId: string) {
         | {
             tipo: "crear" | "editar";
             grupoId?: string;
-            datos: { nombre: string; horaInicio: string; horaFin: string; proyectoIds: string[] };
+            datos: {
+              nombre: string;
+              horarios: Array<{ dia: number; horaInicio: string; horaFin: string }>;
+              proyectoIds: string[];
+            };
           }
         | { tipo: "eliminar"; grupoId: string },
     ) => {

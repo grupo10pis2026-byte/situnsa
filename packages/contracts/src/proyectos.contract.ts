@@ -9,6 +9,7 @@ import { ErrorEnvelopeSchema } from "./api-conventions.js";
  * La asignación habitual la hace la validación de la inscripción (otro
  * módulo): debe llamar a la misma operación `asignar` al validar una
  * inscripción por la vía Taller. D1 sirve para agregar o corregir.
+ * Adenda 1.2 A2: la Secretaría no asigna grupos de horario (lo hace el asesor).
  */
 
 export const TesistaProyectoDTOSchema = z.object({
@@ -26,8 +27,8 @@ export const TesistaProyectoDTOSchema = z.object({
 export const GrupoHorarioResumenSchema = z.object({
   id: z.string().uuid(),
   nombre: z.string(),
-  horaInicio: z.string(),
-  horaFin: z.string(),
+  /** «Sáb 15:00–17:30 · Dom 08:00–10:30» (adenda 1.2 A2). */
+  horario: z.string(),
 });
 
 export const ProyectoTallerDTOSchema = z.object({
@@ -63,7 +64,6 @@ export const CandidatoTallerDTOSchema = z.object({
 export const AsignarProyectoSchema = z.object({
   dni1: z.string().max(20),
   dni2: z.string().max(20).nullable().optional(),
-  grupoHorarioId: z.string().uuid().nullable().optional(),
   titulo: z.string().max(500).nullable().optional(),
   /** Programa de segunda especialidad (lo trae la inscripción; lo pide el expediente). */
   programa: z.string().max(160).nullable().optional(),

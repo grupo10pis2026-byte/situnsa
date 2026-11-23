@@ -30,8 +30,9 @@ export const tallerSesiones = pgTable(
       .references(() => talleres.id),
     nro: integer("nro").notNull(),
     fecha: date("fecha").notNull(),
-    horaInicio: varchar("hora_inicio", { length: 5 }).notNull(),
-    horaFin: varchar("hora_fin", { length: 5 }).notNull(),
+    /** Adenda 1.2 A2: null = «Horario por definir» (cada grupo tiene su horario). */
+    horaInicio: varchar("hora_inicio", { length: 5 }),
+    horaFin: varchar("hora_fin", { length: 5 }),
     estado: estadoSesionEnum("estado").notNull().default("PROGRAMADA"),
     motivo: text("motivo"),
     /** v1.0 D2: fecha antes de reprogramar (la primera vez; no se pisa). */

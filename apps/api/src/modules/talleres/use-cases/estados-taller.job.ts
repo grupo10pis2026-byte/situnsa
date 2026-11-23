@@ -1,10 +1,11 @@
-import { db, talleres } from "@pis/db";
-import { estadoPorFechaFin, estadoPorFechaInicio } from "@pis/domain";
+import { auditoriaTaller, db, talleres } from "@pis/db";
+import { estadoPorFechaFin, estadoPorFechaInicio, ok } from "@pis/domain";
 import { and, eq, inArray, isNotNull, lt, lte } from "drizzle-orm";
 import { DrizzleUnitOfWork } from "../../../infra/db/unit-of-work.js";
 import { enviarReportesProgramados, procesarHitosVencidos } from "../alertas/alertas.service.js";
 import { procesarPensiones } from "../pagos/pagos.use-cases.js";
 import { appendAuditoriaTaller } from "../taller-auditoria.js";
+import { avisar, correosSecretaria } from "../taller-avisos.js";
 
 function hoyLima(): string {
   return new Date().toLocaleDateString("en-CA", { timeZone: "America/Lima" });
@@ -65,6 +66,7 @@ export async function procesoDiarioTaller(
   await procesarHitosVencidos(hoy);
   await finalizarTalleres(hoy);
   await enviarReportesProgramados(hoy);
+  await avisarEnlacesPorRevisar();
 }
 
 /** §8 paso 13: EN_CURSO → FINALIZADO tras la fecha de fin (historial con actor SISTEMA). */
@@ -99,6 +101,53 @@ export async function finalizarTalleres(hoy: string = hoyLima()): Promise<number
       });
       n += 1;
     });
+  }
+  return n;
+}
+
+/**
+ * Adenda 1.2 A1: tras la migración a un solo enlace, avisa una vez a la
+ * Secretaría por cada taller cuyos enlaces de sábado y domingo diferían.
+ * El aviso queda en el historial y no se repite; se apaga al guardar el taller.
+ */
+export async function avisarEnlacesPorRevisar(): Promise<number> {
+  const pendientes = await db
+    .select({
+      id: talleres.id,
+      nombre: talleres.nombre,
+      enlace: talleres.enlaceReunion,
+      descartado: talleres.enlaceDescartado,
+    })
+    .from(talleres)
+    .where(eq(talleres.enlaceRevisar, true));
+  let n = 0;
+  for (const t of pendientes) {
+    const ya = await db
+      .select({ id: auditoriaTaller.id })
+      .from(auditoriaTaller)
+      .where(
+        and(eq(auditoriaTaller.tallerId, t.id), eq(auditoriaTaller.accion, "AVISO_REVISAR_ENLACE")),
+      )
+      .limit(1);
+    if (ya.length > 0) continue;
+    await new DrizzleUnitOfWork(db).run(async (tx) => {
+      await appendAuditoriaTaller(tx, {
+        tallerId: t.id,
+        actorId: null,
+        actorDni: "SISTEMA",
+        accion: "AVISO_REVISAR_ENLACE",
+        detalle: `Se conservó ${t.enlace ?? "—"}; el enlace del domingo era ${t.descartado ?? "—"}`,
+      });
+      return ok(true);
+    });
+    await avisar(
+      await correosSecretaria(),
+      `${t.nombre}: revisa el enlace de reunión`,
+      `El taller tenía un enlace para el sábado (${t.enlace ?? "—"}) y otro para el domingo (${t.descartado ?? "—"}). Ahora hay un solo enlace de reunión y se conservó el del sábado. Revísalo y guárdalo desde Editar taller.`,
+      `/talleres/${t.id}/editar`,
+      "Revisar el enlace",
+    );
+    n += 1;
   }
   return n;
 }

@@ -23,6 +23,7 @@ import {
   entregasHito,
   feriados,
   fichaRegistros,
+  grupoHorarioDias,
   gruposHorario,
   hitosProyecto,
   pensionesAlumno,
@@ -40,9 +41,9 @@ import { ADMIN_ID, ASESOR_ID } from "./demo.js";
  * Flujo demo del Taller de Tesis con el modelo v1.0 (idempotente, SOLO
  * dev/e2e). TALLER 06 empezó hace tres semanas (fechas relativas a hoy en
  * Lima: el demo no envejece):
- * - P-01 María y Jorge (Grupo 1): plan entregado, listo para aprobar (D3).
- * - P-02 Carlos (Grupo 1): plan v1 observado y v2 corregida por revisar.
- * - P-03 Lucía (Grupo 2): no presentó el plan y tiene 2 faltas seguidas
+ * - P-01 María y Jorge (Grupo A): plan entregado, listo para aprobar (D3).
+ * - P-02 Carlos (Grupo A): plan v1 observado y v2 corregida por revisar.
+ * - P-03 Lucía (Grupo B): no presentó el plan y tiene 2 faltas seguidas
  *   (dos alertas activas para P12).
  * Pensiones: la 2.ª de María en revisión, la de Carlos observada y la de
  * Jorge validada. El DNI 12345678 queda libre para probar D1.
@@ -157,19 +158,19 @@ const PROYECTOS = [
     codigo: "P-01",
     titulo: "Gestión de pensiones en talleres de tesis con trazabilidad",
     dnis: ["11223344", "44556677"],
-    grupo: "Grupo 1",
+    grupo: "Grupo A",
   },
   {
     codigo: "P-02",
     titulo: "Prevención de riesgos ergonómicos en oficinas administrativas",
     dnis: ["22334455"],
-    grupo: "Grupo 1",
+    grupo: "Grupo A",
   },
   {
     codigo: "P-03",
     titulo: "Seguridad de la información en una entidad pública regional",
     dnis: ["33445566"],
-    grupo: "Grupo 2",
+    grupo: "Grupo B",
   },
 ] as const;
 
@@ -207,8 +208,7 @@ export async function seedTallerFlujo(db: Db): Promise<void> {
       fechaFin: fin,
       numeroSesiones: 24,
       cupoProyectos: 15,
-      enlaceSabado: "https://meet.google.com/abc-defg-hij",
-      enlaceDomingo: "https://meet.google.com/xyz-uvwx-rst",
+      enlaceReunion: "https://meet.google.com/abc-defg-hij",
       creadoPor: ADMIN_ID,
     })
     .returning({ id: talleres.id });
@@ -239,14 +239,35 @@ export async function seedTallerFlujo(db: Db): Promise<void> {
     ])
     .returning({ id: pensionesTaller.id, numero: pensionesTaller.numero });
 
-  // Grupos de horario (los crea el asesor dentro del bloque del sábado).
+  // Grupos de horario (adenda 1.2 A2): el Grupo A nace del horario del taller y el
+  // asesor lo partió en dos; cada grupo tiene su horario por día de sesión.
   const grupos = await db
     .insert(gruposHorario)
     .values([
-      { tallerId, nombre: "Grupo 1", horaInicio: "15:00", horaFin: "17:30", creadoPor: ASESOR_ID },
-      { tallerId, nombre: "Grupo 2", horaInicio: "17:30", horaFin: "20:00", creadoPor: ASESOR_ID },
+      { tallerId, nombre: "Grupo A", creadoPor: ASESOR_ID },
+      { tallerId, nombre: "Grupo B", creadoPor: ASESOR_ID },
     ])
     .returning({ id: gruposHorario.id, nombre: gruposHorario.nombre });
+  const horarioGrupo: Record<string, Array<[number, string, string]>> = {
+    "Grupo A": [
+      [6, "15:00", "17:30"],
+      [7, "08:00", "10:30"],
+    ],
+    "Grupo B": [
+      [6, "17:30", "20:00"],
+      [7, "10:30", "13:00"],
+    ],
+  };
+  await db.insert(grupoHorarioDias).values(
+    grupos.flatMap((g) =>
+      (horarioGrupo[g.nombre] ?? []).map(([dia, horaInicio, horaFin]) => ({
+        grupoHorarioId: g.id,
+        dia,
+        horaInicio,
+        horaFin,
+      })),
+    ),
+  );
   const grupoId = (n: string) => grupos.find((g) => g.nombre === n)?.id ?? null;
 
   // Sesiones: las pasadas, realizadas (la asistencia la registró el asesor).

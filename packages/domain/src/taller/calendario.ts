@@ -126,8 +126,16 @@ export function reportesProgramados(inicio: string): ReporteProgramado[] {
 export interface DiaSesion {
   /** Día ISO 1 (lunes) … 7 (domingo). */
   dia: number;
-  horaInicio: string;
-  horaFin: string;
+  /** Adenda 1.2 A2: null = «Horario por definir» (lo fija cada grupo). */
+  horaInicio: string | null;
+  horaFin: string | null;
+}
+
+/** Adenda 1.2 A2: ¿el taller tiene horario? (todos sus días tienen horas). */
+export function tieneHorario(
+  dias: ReadonlyArray<{ horaInicio: string | null; horaFin: string | null }>,
+): boolean {
+  return dias.length > 0 && dias.every((d) => d.horaInicio !== null && d.horaFin !== null);
 }
 
 export interface ProponerSesionesInput {
@@ -144,8 +152,8 @@ export interface SesionPropuesta {
   nro: number;
   fecha: string;
   dia: string;
-  horaInicio: string;
-  horaFin: string;
+  horaInicio: string | null;
+  horaFin: string | null;
 }
 
 export interface FechaOmitida {
@@ -232,8 +240,9 @@ export function textoContador(n: number, objetivo: number): string {
 
 export interface SesionEditada {
   fecha: string;
-  horaInicio: string;
-  horaFin: string;
+  /** null en ambas = «Horario por definir» (adenda 1.2 A2). */
+  horaInicio: string | null;
+  horaFin: string | null;
 }
 
 export interface SesionNumerada extends SesionEditada {
@@ -266,12 +275,18 @@ export function normalizarCalendario(
   for (const s of sesiones) {
     if (!esFechaCivilValida(s.fecha))
       return fail(new DomainError("VALIDACION_FALLIDA", `Fecha de sesión inválida: ${s.fecha}`));
-    if (!HORA_RE.test(s.horaInicio) || !HORA_RE.test(s.horaFin))
-      return fail(new DomainError("VALIDACION_FALLIDA", "Escribe la hora con el formato HH:MM"));
-    if (s.horaFin <= s.horaInicio)
-      return fail(
-        new DomainError("VALIDACION_FALLIDA", `La sesión del ${s.fecha} termina antes de empezar`),
-      );
+    const sinHora = s.horaInicio === null && s.horaFin === null;
+    if (!sinHora) {
+      if (!HORA_RE.test(s.horaInicio ?? "") || !HORA_RE.test(s.horaFin ?? ""))
+        return fail(new DomainError("VALIDACION_FALLIDA", "Escribe la hora con el formato HH:MM"));
+      if ((s.horaFin ?? "") <= (s.horaInicio ?? ""))
+        return fail(
+          new DomainError(
+            "VALIDACION_FALLIDA",
+            `La sesión del ${s.fecha} termina antes de empezar`,
+          ),
+        );
+    }
     if (vistas.has(s.fecha))
       return fail(
         new DomainError("VALIDACION_FALLIDA", `Hay dos sesiones el mismo día (${s.fecha})`),
@@ -288,4 +303,49 @@ export function normalizarCalendario(
         horaFin: s.horaFin,
       })),
   );
+}
+
+// ── Horario efectivo de una sesión (adenda 1.2 A2) ─────────────────────
+
+export interface HorarioDia {
+  dia: number;
+  horaInicio: string;
+  horaFin: string;
+}
+
+/**
+ * Hora que ve el alumno en una sesión: la de su grupo para ese día de la
+ * semana; si la sesión se reprogramó (o cae en un día sin horario del grupo),
+ * la propia de la sesión; si no hay ninguna, null («Horario por definir»).
+ */
+export function horarioDeSesion(
+  sesion: {
+    fecha: string;
+    horaInicio: string | null;
+    horaFin: string | null;
+    reprogramada: boolean;
+  },
+  horarioGrupo: readonly HorarioDia[] | null,
+): { horaInicio: string; horaFin: string } | null {
+  const propio =
+    sesion.horaInicio !== null && sesion.horaFin !== null
+      ? { horaInicio: sesion.horaInicio, horaFin: sesion.horaFin }
+      : null;
+  if (sesion.reprogramada && propio) return propio;
+  const delGrupo = horarioGrupo?.find((h) => h.dia === diaIso(sesion.fecha));
+  if (delGrupo) return { horaInicio: delGrupo.horaInicio, horaFin: delGrupo.horaFin };
+  return propio;
+}
+
+const DIA_CORTO = ["", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
+
+/** «Sáb 15:00–17:30 · Dom 08:00–10:30» (o «Horario por definir»). */
+export function textoHorario(
+  horarios: ReadonlyArray<{ dia: number; horaInicio: string | null; horaFin: string | null }>,
+): string {
+  const con = [...horarios]
+    .filter((h) => h.horaInicio && h.horaFin)
+    .sort((a, b) => a.dia - b.dia)
+    .map((h) => `${DIA_CORTO[h.dia] ?? h.dia} ${h.horaInicio}–${h.horaFin}`);
+  return con.length ? con.join(" · ") : "Horario por definir";
 }

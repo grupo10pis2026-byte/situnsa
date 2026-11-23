@@ -1,4 +1,5 @@
 import {
+  boolean,
   date,
   integer,
   pgTable,
@@ -32,9 +33,12 @@ export const talleres = pgTable(
     numeroSesiones: integer("numero_sesiones").notNull().default(24),
     /** P2 v1.0: cupo en proyectos (1 o 2 tesistas cuentan 1). */
     cupoProyectos: integer("cupo_proyectos").notNull().default(15),
-    /** P2 v1.0: enlaces de Meet del sábado y del domingo (https, opcionales). */
-    enlaceSabado: varchar("enlace_sabado", { length: 512 }),
-    enlaceDomingo: varchar("enlace_domingo", { length: 512 }),
+    /** Adenda 1.2 A1: un solo enlace de reunión (https) para todas las sesiones. */
+    enlaceReunion: varchar("enlace_reunion", { length: 512 }),
+    /** A1 migración: los enlaces de sábado y domingo diferían; la Secretaría debe revisarlo. */
+    enlaceRevisar: boolean("enlace_revisar").notNull().default(false),
+    /** A1 migración: el enlace que no se conservó (para que la Secretaría lo compare). */
+    enlaceDescartado: varchar("enlace_descartado", { length: 512 }),
     motivoCancelacion: text("motivo_cancelacion"),
     creadoPor: uuid("creado_por").references(() => usuarios.id),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
@@ -52,8 +56,9 @@ export const tallerDias = pgTable(
       .references(() => talleres.id),
     /** Día ISO 1 (lunes) … 7 (domingo). */
     dia: integer("dia").notNull(),
-    horaInicio: varchar("hora_inicio", { length: 5 }).notNull(),
-    horaFin: varchar("hora_fin", { length: 5 }).notNull(),
+    /** Adenda 1.2 A2: el horario es opcional (null = «Horario por definir»). */
+    horaInicio: varchar("hora_inicio", { length: 5 }),
+    horaFin: varchar("hora_fin", { length: 5 }),
   },
   (t) => [primaryKey({ columns: [t.tallerId, t.dia] })],
 );

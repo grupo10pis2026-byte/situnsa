@@ -20,6 +20,8 @@ export const EstadoPensionSchema = z.enum([
 
 export const ComprobanteDTOSchema = z.object({
   id: z.string().uuid(),
+  /** Adenda 1.2 N1: código del comprobante (null en los anteriores a la adenda). */
+  codigo: z.string().nullable(),
   nombreArchivo: z.string(),
   mime: z.string(),
   estado: z.enum(["EN_REVISION", "VALIDADO", "OBSERVADO"]),
@@ -90,6 +92,12 @@ export const ObservarComprobanteSchema = z.object({
   motivo: z.string().trim().min(1, "Escribe el motivo").max(1000),
 });
 
+/** Adenda 1.2 N1: corregir el código (error de tipeo) con motivo obligatorio. */
+export const CorregirCodigoSchema = z.object({
+  codigo: z.string().max(64),
+  motivo: z.string().max(500),
+});
+
 export const PagoDirectoSchema = z.object({
   observacion: z.string().max(1000).nullable().optional(),
 });
@@ -136,6 +144,14 @@ export const pagosTallerContract = c.router({
     body: ObservarComprobanteSchema,
     responses: { 200: PensionFilaDTOSchema, ...errores },
     summary: "P9 Observar comprobante (con motivo; el alumno sube otro)",
+  },
+  corregirCodigo: {
+    method: "PATCH",
+    path: "/api/comprobantes/:id/codigo",
+    pathParams: id,
+    body: CorregirCodigoSchema,
+    responses: { 200: PensionFilaDTOSchema, ...errores },
+    summary: "Adenda N1: corregir el código del comprobante (motivo obligatorio)",
   },
   pagoDirecto: {
     method: "POST",

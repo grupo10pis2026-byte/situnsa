@@ -21,6 +21,7 @@ import { hoyLima } from "../sesiones/sesiones.repository.js";
 import { respuestaDominio } from "../taller-http.js";
 import { filaPension, misPagos, pagosTaller } from "./pagos.repository.js";
 import {
+  CorregirCodigoUseCase,
   pensionDeComprobante,
   RegistrarPagoDirectoUseCase,
   RevisarComprobanteUseCase,
@@ -88,6 +89,15 @@ export function registerPagosTallerRoutes(app: FastifyInstance): void {
       if (!r.ok) return respuestaDominio(r.error);
       return respuestaFila(r.value);
     },
+    corregirCodigo: async ({ params, body, request }) => {
+      const a = await autorizar(request.actor, { permiso: ["pagos", "ver"] });
+      if (!a.ok) return denegado(a);
+      if (!gestionaPagos(a.perfil))
+        return prohibido("El código lo corrige la Secretaría del Taller o Pagos");
+      const r = await new CorregirCodigoUseCase().execute(params.id, body, actorDe(request));
+      if (!r.ok) return respuestaDominio(r.error);
+      return respuestaFila(r.value);
+    },
     pagoDirecto: async ({ params, body, request }) => {
       const a = await autorizar(request.actor, { permiso: ["pagos", "ver"] });
       if (!a.ok) return denegado(a);
@@ -151,10 +161,17 @@ export function registerPagosTallerRoutes(app: FastifyInstance): void {
             `Sube una imagen o PDF de hasta ${parametros.maxMbComprobante} MB`,
           ),
         );
+      // Adenda 1.2 N1: el campo `codigo` va antes del archivo en el formulario.
+      const campo = archivo.fields.codigo;
+      const codigo =
+        campo && !Array.isArray(campo) && campo.type === "field" && typeof campo.value === "string"
+          ? campo.value
+          : null;
       const r = await new SubirComprobanteUseCase(storage).execute(
         req.params.id,
         { filename: archivo.filename, mime: archivo.mimetype, bytes },
         actorDe(req),
+        codigo,
       );
       if (!r.ok)
         return enviar(

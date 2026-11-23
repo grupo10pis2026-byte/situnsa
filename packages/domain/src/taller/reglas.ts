@@ -542,12 +542,19 @@ export function validarDnisProyecto(
 
 const HORA_HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 
-/** Nombre y horario del grupo, dentro del bloque de algún día del taller. */
+/**
+ * Adenda 1.2 A2: nombre del grupo y su horario POR DÍA. Debe traer un
+ * horario para cada día del taller; si el taller tiene horario, cada uno
+ * debe caber en el bloque de su día.
+ */
 export function validarGrupoHorario(
-  input: { nombre: string; horaInicio: string; horaFin: string },
-  diasTaller: ReadonlyArray<{ horaInicio: string; horaFin: string }>,
+  input: {
+    nombre: string;
+    horarios: ReadonlyArray<{ dia: number; horaInicio: string; horaFin: string }>;
+  },
+  diasTaller: ReadonlyArray<{ dia: number; horaInicio: string | null; horaFin: string | null }>,
 ): Result<
-  { nombre: string; horaInicio: string; horaFin: string },
+  { nombre: string; horarios: Array<{ dia: number; horaInicio: string; horaFin: string }> },
   DomainError & { errores: Array<{ campo: string; mensaje: string }> }
 > {
   const errores: Array<{ campo: string; mensaje: string }> = [];
@@ -555,38 +562,68 @@ export function validarGrupoHorario(
   if (nombre.length < 2) errores.push({ campo: "nombre", mensaje: "Escribe el nombre del grupo" });
   if (nombre.length > 80)
     errores.push({ campo: "nombre", mensaje: "El nombre es demasiado largo" });
-  if (!HORA_HHMM.test(input.horaInicio) || !HORA_HHMM.test(input.horaFin))
-    errores.push({ campo: "horario", mensaje: "Escribe la hora con el formato HH:MM" });
-  else if (input.horaFin <= input.horaInicio)
-    errores.push({ campo: "horario", mensaje: "La hora de fin debe ser posterior a la de inicio" });
-  else if (
-    diasTaller.length > 0 &&
-    !diasTaller.some((d) => input.horaInicio >= d.horaInicio && input.horaFin <= d.horaFin)
-  )
-    errores.push({
-      campo: "horario",
-      mensaje: "El horario debe estar dentro del bloque de algún día del taller",
-    });
+  const porDia = new Map(input.horarios.map((h) => [h.dia, h]));
+  if (porDia.size !== input.horarios.length)
+    errores.push({ campo: "horario", mensaje: "Un día está repetido en el horario" });
+  for (const d of diasTaller) {
+    const h = porDia.get(d.dia);
+    const campo = `horario.${d.dia}`;
+    if (!h) {
+      errores.push({ campo, mensaje: "Indica el horario del grupo para cada día del taller" });
+      continue;
+    }
+    if (!HORA_HHMM.test(h.horaInicio) || !HORA_HHMM.test(h.horaFin))
+      errores.push({ campo, mensaje: "Escribe la hora con el formato HH:MM" });
+    else if (h.horaFin <= h.horaInicio)
+      errores.push({ campo, mensaje: "La hora de fin debe ser posterior a la de inicio" });
+    else if (d.horaInicio && d.horaFin && (h.horaInicio < d.horaInicio || h.horaFin > d.horaFin))
+      errores.push({
+        campo,
+        mensaje: `El horario debe estar dentro del bloque del día (${d.horaInicio}–${d.horaFin})`,
+      });
+  }
+  if (input.horarios.some((h) => !diasTaller.some((d) => d.dia === h.dia)))
+    errores.push({ campo: "horario", mensaje: "Hay un día que no es de sesión del taller" });
   if (errores.length > 0)
     return fail(
       Object.assign(new DomainError("VALIDACION_FALLIDA", errores[0]?.mensaje ?? ""), { errores }),
     );
-  return ok({ nombre, horaInicio: input.horaInicio, horaFin: input.horaFin });
+  return ok({
+    nombre,
+    horarios: diasTaller.flatMap((d) => {
+      const h = porDia.get(d.dia);
+      return h ? [{ dia: d.dia, horaInicio: h.horaInicio, horaFin: h.horaFin }] : [];
+    }),
+  });
+}
+
+/** Adenda 1.2 A2: nombre por defecto del siguiente grupo (Grupo A, Grupo B, …). */
+export function siguienteNombreGrupo(existentes: readonly string[]): string {
+  const usados = new Set(existentes.map((n) => n.trim().toUpperCase()));
+  for (let i = 0; i < 26; i += 1) {
+    const nombre = `Grupo ${String.fromCharCode(65 + i)}`;
+    if (!usados.has(nombre.toUpperCase())) return nombre;
+  }
+  return `Grupo ${existentes.length + 1}`;
 }
 
 /** §10 D2 y "Agregar sesión extra": fecha, horario y motivo obligatorios. */
 export function validarSesionNueva(input: {
   fecha: string;
-  horaInicio: string;
-  horaFin: string;
+  /** Adenda 1.2 A2: ambas vacías = «Horario por definir» (rige el horario de cada grupo). */
+  horaInicio: string | null;
+  horaFin: string | null;
   motivo: string;
 }): Result<true, DomainError & { errores: Array<{ campo: string; mensaje: string }> }> {
   const errores: Array<{ campo: string; mensaje: string }> = [];
+  const sinHora = !input.horaInicio && !input.horaFin;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.fecha))
     errores.push({ campo: "fecha", mensaje: "Elige la fecha" });
-  if (!HORA_HHMM.test(input.horaInicio) || !HORA_HHMM.test(input.horaFin))
+  if (sinHora) {
+    // válido: cada grupo pone su horario
+  } else if (!HORA_HHMM.test(input.horaInicio ?? "") || !HORA_HHMM.test(input.horaFin ?? ""))
     errores.push({ campo: "hora", mensaje: "Escribe la hora con el formato HH:MM" });
-  else if (input.horaFin <= input.horaInicio)
+  else if ((input.horaFin ?? "") <= (input.horaInicio ?? ""))
     errores.push({ campo: "hora", mensaje: "La hora de fin debe ser posterior a la de inicio" });
   if (input.motivo.trim().length < 3)
     errores.push({ campo: "motivo", mensaje: "Escribe el motivo" });
@@ -595,4 +632,34 @@ export function validarSesionNueva(input: {
       Object.assign(new DomainError("VALIDACION_FALLIDA", errores[0]?.mensaje ?? ""), { errores }),
     );
   return ok(true);
+}
+
+// ── Código del comprobante (adenda 1.2 N1) ─────────────────────────────
+
+/** Sin espacios y en mayúsculas: «ab 123» y «AB123» son el mismo código. */
+export function normalizarCodigoComprobante(codigo: string): string {
+  return codigo.replace(/\s+/g, "").toUpperCase();
+}
+
+export function validarCodigoComprobante(
+  codigo: string | null | undefined,
+): Result<string, DomainError> {
+  const c = normalizarCodigoComprobante(codigo ?? "");
+  if (c === "")
+    return negar("VALIDACION_FALLIDA", "Escribe el código del comprobante (número de operación)");
+  if (c.length < 3 || c.length > 40)
+    return negar("VALIDACION_FALLIDA", "El código debe tener entre 3 y 40 caracteres");
+  if (!/^[A-Z0-9\-_./#]+$/.test(c))
+    return negar("VALIDACION_FALLIDA", "El código solo puede tener letras, números y - _ . / #");
+  return ok(c);
+}
+
+/** El administrador corrige un código (error de tipeo): motivo obligatorio. */
+export function validarCorreccionCodigo(
+  codigo: string,
+  motivo: string | null | undefined,
+): Result<string, DomainError> {
+  if ((motivo ?? "").trim().length < 3)
+    return negar("VALIDACION_FALLIDA", "Escribe el motivo de la corrección");
+  return validarCodigoComprobante(codigo);
 }

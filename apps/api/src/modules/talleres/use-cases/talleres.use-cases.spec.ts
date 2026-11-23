@@ -26,8 +26,7 @@ const base = {
     { dia: 7, horaInicio: "08:00", horaFin: "13:00" },
   ],
   cupoProyectos: 15,
-  enlaceSabado: "https://meet.google.com/abc",
-  enlaceDomingo: null,
+  enlaceReunion: "https://meet.google.com/abc",
   pensiones: {
     montos: [1000, 1000, 1000] as [number, number, number],
     fecha2: "2026-10-31",
@@ -46,13 +45,13 @@ describe("CrearTallerUseCase (P2)", () => {
       {
         ...base,
         fin: "2026-10-01",
-        enlaceDomingo: "http://meet.local/x",
+        enlaceReunion: "http://meet.local/x",
         pensiones: { ...base.pensiones, fecha3: "2026-10-30" },
       },
       actor,
     );
     expect(r.ok).toBe(false);
-    expect(campos(r)).toEqual(["fin", "enlaceDomingo", "pension.3.fecha"]);
+    expect(campos(r)).toEqual(["fin", "enlaceReunion", "pension.3.fecha"]);
   });
 
   it("rechaza dos sesiones el mismo día (campo calendario)", async () => {

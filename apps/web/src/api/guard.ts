@@ -23,6 +23,7 @@ const REGLAS: Array<{ prefijo: string; roles: Set<string> | "*" }> = [
   { prefijo: "/asesores", roles: STAFF },
   { prefijo: "/pagos-taller", roles: STAFF },
   { prefijo: "/reportes-taller", roles: STAFF },
+  { prefijo: "/dashboard-taller", roles: STAFF },
   { prefijo: "/encuestas-resultados", roles: new Set(["ASESOR", ...STAFF]) },
   { prefijo: "/encuesta", roles: new Set(["TESISTA", ...STAFF]) },
   { prefijo: "/expedientes/nuevo", roles: STAFF },

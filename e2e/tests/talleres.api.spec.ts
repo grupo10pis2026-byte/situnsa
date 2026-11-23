@@ -26,12 +26,12 @@ type Detalle = {
   fechaInicio: string;
   fechaFin: string;
   cupoProyectos: number;
-  dias: Array<{ dia: number; horaInicio: string; horaFin: string }>;
+  dias: Array<{ dia: number; horaInicio: string | null; horaFin: string | null }>;
   sesiones: { realizadas: number; total: number };
   calendario: Array<{ nro: number; fecha: string; estado: string }>;
   pensiones: Array<{ numero: number; semana: number | null; fecha: string | null; monto: number }>;
   planSemanas: number;
-  enlaceDomingo: string | null;
+  enlaceReunion: string | null;
   motivoCancelacion: string | null;
   fechasEditables: boolean;
 };
@@ -108,8 +108,7 @@ function datos(extra: Record<string, unknown> = {}) {
     numeroSesiones: 24,
     dias: DIAS,
     cupoProyectos: 15,
-    enlaceSabado: "https://meet.google.com/sab-e2e",
-    enlaceDomingo: null,
+    enlaceReunion: "https://meet.google.com/sab-e2e",
     pensiones: { montos: [1000, 1000, 1000], fecha2: "2026-10-31", fecha3: "2026-11-28" },
     sesiones,
     ...extra,
@@ -176,11 +175,11 @@ test("solo la Secretaría crea y gestiona talleres", async () => {
 
 test("nuevo taller: errores por campo y aceptación #1 (asesor con taller activo)", async () => {
   const malo = await llamar("POST", "/api/talleres", admin, {
-    ...datos({ fin: "2026-10-01", enlaceDomingo: "http://x.local" }),
+    ...datos({ fin: "2026-10-01", enlaceReunion: "http://x.local" }),
     asesorId: asesorA,
   });
   expect(malo.status).toBe(400);
-  expect(malo.json.error?.detalles?.map((d) => d.campo)).toEqual(["fin", "enlaceDomingo"]);
+  expect(malo.json.error?.detalles?.map((d) => d.campo)).toEqual(["fin", "enlaceReunion"]);
 
   const ocupado = await llamar("POST", "/api/talleres", admin, {
     ...datos(),
@@ -244,7 +243,7 @@ test("editar: cupo, enlaces, pensiones y calendario sin sesiones realizadas", as
   const r = await llamar<Detalle>("PATCH", `/api/talleres/${taller.id}`, admin, {
     ...datos({
       cupoProyectos: 12,
-      enlaceDomingo: "https://meet.google.com/dom-e2e",
+      enlaceReunion: "https://meet.google.com/dom-e2e",
       pensiones: { montos: [1000, 900, 900], fecha2: "2026-11-07", fecha3: "2026-12-05" },
     }),
     sesiones: sinUltima,
@@ -252,7 +251,7 @@ test("editar: cupo, enlaces, pensiones y calendario sin sesiones realizadas", as
   expect(r.status, JSON.stringify(r.json)).toBe(200);
   expect(r.json).toMatchObject({
     cupoProyectos: 12,
-    enlaceDomingo: "https://meet.google.com/dom-e2e",
+    enlaceReunion: "https://meet.google.com/dom-e2e",
   });
   expect(r.json.sesiones.total).toBe(22);
   expect(r.json.pensiones[1]).toMatchObject({ fecha: "2026-11-07", monto: 900 });

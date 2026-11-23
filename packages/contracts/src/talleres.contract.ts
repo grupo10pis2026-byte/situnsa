@@ -17,8 +17,9 @@ const HoraCorta = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Hora HH:MM");
 export const DiaSesionSchema = z.object({
   /** Día ISO: 1 = lunes … 7 = domingo. */
   dia: z.number().int().min(1).max(7),
-  horaInicio: HoraCorta,
-  horaFin: HoraCorta,
+  /** Adenda 1.2 A2: null = «Horario por definir» (cada grupo pone su horario). */
+  horaInicio: HoraCorta.nullable(),
+  horaFin: HoraCorta.nullable(),
 });
 
 /**
@@ -40,8 +41,14 @@ export const TallerDTOSchema = z.object({
   cupoProyectos: z.number().int(),
   /** Proyectos asignados (cuentan en el cupo). */
   proyectos: z.number().int(),
-  enlaceSabado: z.string().nullable(),
-  enlaceDomingo: z.string().nullable(),
+  /** Adenda 1.2 A1: un solo enlace de reunión para todas las sesiones. */
+  enlaceReunion: z.string().nullable(),
+  /** A1 migración: los enlaces de sábado y domingo diferían; revisar. */
+  enlaceRevisar: z.boolean(),
+  /** A1 migración: el enlace que no se conservó (para comparar). */
+  enlaceDescartado: z.string().nullable(),
+  /** Adenda 1.2 A2: el taller tiene horario (si no, «Horario por definir»). */
+  conHorario: z.boolean(),
   sesiones: z.object({ realizadas: z.number(), total: z.number() }),
 });
 
@@ -60,8 +67,8 @@ export const PensionTallerDTOSchema = z.object({
 export const SesionTallerResumenSchema = z.object({
   nro: z.number().int(),
   fecha: z.string(),
-  horaInicio: z.string(),
-  horaFin: z.string(),
+  horaInicio: z.string().nullable(),
+  horaFin: z.string().nullable(),
   estado: z.string(),
 });
 
@@ -74,6 +81,15 @@ export const TallerDetalleDTOSchema = TallerDTOSchema.extend({
   planSemanas: z.number().int(),
   /** P2: inicio, fin, días y calendario se bloquean con sesiones realizadas. */
   fechasEditables: z.boolean(),
+  /** Adenda 1.2 A2: distribución de proyectos por grupo de horario (solo lectura). */
+  grupos: z.array(
+    z.object({
+      id: z.string().uuid(),
+      nombre: z.string(),
+      horario: z.string(),
+      proyectos: z.number().int(),
+    }),
+  ),
 });
 
 export type TallerDetalleDTO = z.infer<typeof TallerDetalleDTOSchema>;
@@ -93,8 +109,7 @@ export const DatosTallerSchema = z.object({
   numeroSesiones: z.number().int(),
   dias: z.array(DiaSesionSchema).max(7),
   cupoProyectos: z.number().int(),
-  enlaceSabado: enlace,
-  enlaceDomingo: enlace,
+  enlaceReunion: enlace,
   pensiones: z.object({
     montos: z.tuple([z.number().int(), z.number().int(), z.number().int()]),
     fecha2: FechaCorta,
@@ -102,7 +117,13 @@ export const DatosTallerSchema = z.object({
   }),
   /** Calendario final (propuesto y ajustado a mano). */
   sesiones: z
-    .array(z.object({ fecha: FechaCorta, horaInicio: HoraCorta, horaFin: HoraCorta }))
+    .array(
+      z.object({
+        fecha: FechaCorta,
+        horaInicio: HoraCorta.nullable(),
+        horaFin: HoraCorta.nullable(),
+      }),
+    )
     .max(60),
 });
 
@@ -129,8 +150,8 @@ export const CalendarioPropuestoDTOSchema = z.object({
       nro: z.number().int(),
       fecha: z.string(),
       dia: z.string(),
-      horaInicio: z.string(),
-      horaFin: z.string(),
+      horaInicio: z.string().nullable(),
+      horaFin: z.string().nullable(),
     }),
   ),
   omitidas: z.array(z.object({ fecha: z.string(), dia: z.string(), nota: z.string() })),

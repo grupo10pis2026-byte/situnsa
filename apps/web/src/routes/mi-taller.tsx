@@ -80,7 +80,9 @@ export function MiTallerPage() {
                     Sesión {d.proximaSesion.nro} · {fechaLarga(d.proximaSesion.fecha)}
                   </p>
                   <p className="text-sm">
-                    {d.proximaSesion.horaInicio}–{d.proximaSesion.horaFin}
+                    {d.proximaSesion.horaInicio && d.proximaSesion.horaFin
+                      ? `${d.proximaSesion.horaInicio}–${d.proximaSesion.horaFin}`
+                      : "Horario por definir"}
                     {d.proyecto.grupo ? ` · ${d.proyecto.grupo}` : ""}
                   </p>
                   {d.proximaSesion.enlace && (
@@ -161,7 +163,13 @@ export function MiTallerPage() {
                         celda: (s) => <strong className="tabular-nums">{s.nro}</strong>,
                       },
                       { encabezado: "Fecha", celda: (s) => fechaLarga(s.fecha) },
-                      { encabezado: "Hora", celda: (s) => `${s.horaInicio}–${s.horaFin}` },
+                      {
+                        encabezado: "Hora",
+                        celda: (s) =>
+                          s.horaInicio && s.horaFin
+                            ? `${s.horaInicio}–${s.horaFin}`
+                            : "Horario por definir",
+                      },
                       {
                         encabezado: "Sesión",
                         celda: (s) => (

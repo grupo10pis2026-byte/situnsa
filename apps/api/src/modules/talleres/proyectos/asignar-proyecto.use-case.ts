@@ -3,7 +3,6 @@ import {
   type DbExecutor,
   db,
   fichaRegistros,
-  gruposHorario,
   hitosProyecto,
   pensionesAlumno,
   pensionesTaller,
@@ -153,29 +152,8 @@ export class AsignarProyectoUseCase {
           alumnos.push({ id: a.id, nombre: a.nombre, email: a.email });
         }
 
-        let grupoHorarioId: string | null = null;
-        if (input.grupoHorarioId) {
-          const [g] = await tx
-            .select({ id: gruposHorario.id })
-            .from(gruposHorario)
-            .where(
-              and(
-                eq(gruposHorario.id, input.grupoHorarioId),
-                eq(gruposHorario.tallerId, tallerId),
-                eq(gruposHorario.activo, true),
-              ),
-            )
-            .limit(1);
-          if (!g)
-            return fail(
-              errorCampo(
-                "NO_ENCONTRADO",
-                "grupoHorarioId",
-                "El grupo de horario no es de este taller",
-              ),
-            );
-          grupoHorarioId = g.id;
-        }
+        // Adenda 1.2 A2: la Secretaría no asigna grupos; el asesor los distribuye.
+        const grupoHorarioId: string | null = null;
 
         const codigos = await tx
           .select({ codigo: proyectosTaller.codigo })

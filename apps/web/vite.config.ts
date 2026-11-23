@@ -8,7 +8,8 @@ export default defineConfig({
     port: 5173,
     host: "0.0.0.0",
     proxy: {
-      "/api": "http://localhost:3001",
+      // API_PROXY permite apuntar a otra API (p. ej. la de pruebas e2e).
+      "/api": process.env.API_PROXY ?? "http://localhost:3001",
     },
   },
   build: { outDir: "dist" },

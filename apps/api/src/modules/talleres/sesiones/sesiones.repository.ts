@@ -19,9 +19,12 @@ import {
   porcentajeAsistenciaCurso,
   puedeRegistrarAsistencia,
   type RegistroAsistenciaCurso,
+  siguienteNombreGrupo,
+  textoHorario,
 } from "@pis/domain";
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { leerParametrosTaller } from "../../taller-config/taller-config.repository.js";
+import { diasDelTaller, horariosDeGrupos } from "../grupos-horario.js";
 
 /** Lecturas de P4/P5: sesiones, grupos de horario y asistencia por grupo. */
 
@@ -93,7 +96,7 @@ function aDto(
 export async function sesionesDelTaller(
   tx: DbExecutor,
   tallerId: string,
-  permisos: { puedeRegistrar: boolean; puedeProgramar: boolean },
+  permisos: { puedeRegistrar: boolean; puedeProgramar: boolean; puedeGrupos: boolean },
 ): Promise<SesionesTallerDTO> {
   const hoy = hoyLima();
   const filas = await tx
@@ -113,6 +116,11 @@ export async function sesionesDelTaller(
         )
     : [];
   const { grupos, sinGrupo } = await gruposDelTaller(tx, tallerId);
+  const dias = await diasDelTaller(tx, tallerId);
+  const nombres = await tx
+    .select({ nombre: gruposHorario.nombre })
+    .from(gruposHorario)
+    .where(eq(gruposHorario.tallerId, tallerId));
   return {
     sesiones: filas.map((s) =>
       aDto(
@@ -125,6 +133,8 @@ export async function sesionesDelTaller(
     total: filas.filter((s) => s.estado !== "CANCELADA").length,
     grupos,
     proyectosSinGrupo: sinGrupo,
+    dias,
+    nombreSugerido: siguienteNombreGrupo(nombres.map((n) => n.nombre)),
     ...permisos,
   };
 }
@@ -181,6 +191,10 @@ export async function gruposDelTaller(
           )
       : [];
   const p = await leerParametrosTaller(tx);
+  const horarios = await horariosDeGrupos(
+    tx,
+    grupos.map((g) => g.id),
+  );
   const pct = (alumnoId: string) => {
     const registros: RegistroAsistenciaCurso[] = sesiones.map((s) => ({
       sesion: s.estado,
@@ -198,8 +212,8 @@ export async function gruposDelTaller(
       return {
         id: g.id,
         nombre: g.nombre,
-        horaInicio: g.horaInicio,
-        horaFin: g.horaFin,
+        horarios: horarios.get(g.id) ?? [],
+        horario: textoHorario(horarios.get(g.id) ?? []),
         proyectos: suyos.map((x) => ({
           id: x.id,
           codigo: x.codigo,

@@ -17,6 +17,7 @@ import { AsesorPerfilPage } from "./routes/asesor-perfil.js";
 import { AsesorTallerPage } from "./routes/asesor-taller.js";
 import { AsesoresPage } from "./routes/asesores.js";
 import { ConfiguracionPage } from "./routes/configuracion.js";
+import { DashboardTallerPage } from "./routes/dashboard-taller.js";
 import { EncuestaPage, EncuestasResultadosPage } from "./routes/encuesta.js";
 import { ExpedienteDetallePage } from "./routes/expedientes.$id.js";
 import { NuevoExpedientePage } from "./routes/expedientes-nuevo.js";
@@ -173,6 +174,12 @@ const reportesTallerRoute = createRoute({
   beforeLoad: guard("/reportes-taller"),
   component: ReportesTallerPage,
 });
+const dashboardTallerRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/dashboard-taller",
+  beforeLoad: guard("/dashboard-taller"),
+  component: DashboardTallerPage,
+});
 const encuestaRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/encuesta",
@@ -219,6 +226,7 @@ const routeTree = rootRoute.addChildren([
   pagosTallerRoute,
   misPagosRoute,
   reportesTallerRoute,
+  dashboardTallerRoute,
   encuestaRoute,
   encuestasResultadosRoute,
   asesorTallerRoute,

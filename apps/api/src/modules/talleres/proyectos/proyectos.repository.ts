@@ -17,9 +17,11 @@ import {
   esAsistenciaBaja,
   porcentajeAsistenciaCurso,
   type RegistroAsistenciaCurso,
+  textoHorario,
 } from "@pis/domain";
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { leerParametrosTaller } from "../../taller-config/taller-config.repository.js";
+import { horariosDeGrupos } from "../grupos-horario.js";
 
 /**
  * P3 pestaña Alumnos (spec v1.0 §9): proyectos con sus tesistas, grupo de
@@ -38,16 +40,20 @@ export async function listarProyectos(
   if (!t) return null;
   const p = await leerParametrosTaller(tx);
 
-  const grupos = await tx
-    .select({
-      id: gruposHorario.id,
-      nombre: gruposHorario.nombre,
-      horaInicio: gruposHorario.horaInicio,
-      horaFin: gruposHorario.horaFin,
-    })
+  const filasGrupos = await tx
+    .select({ id: gruposHorario.id, nombre: gruposHorario.nombre })
     .from(gruposHorario)
     .where(and(eq(gruposHorario.tallerId, tallerId), eq(gruposHorario.activo, true)))
     .orderBy(asc(gruposHorario.nombre));
+  const horarios = await horariosDeGrupos(
+    tx,
+    filasGrupos.map((g) => g.id),
+  );
+  const grupos = filasGrupos.map((g) => ({
+    id: g.id,
+    nombre: g.nombre,
+    horario: textoHorario(horarios.get(g.id) ?? []),
+  }));
 
   const proyectos = await tx
     .select({

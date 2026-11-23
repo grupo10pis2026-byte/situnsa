@@ -19,6 +19,7 @@ import { registerSeguimientoRoutes } from "./modules/seguimiento/seguimiento.rou
 import { registerSeguridadRoutes } from "./modules/seguridad/seguridad.routes.js";
 import { registerTallerConfigRoutes } from "./modules/taller-config/taller-config.routes.js";
 import { registerAlertasTallerRoutes } from "./modules/talleres/alertas/alertas.routes.js";
+import { registerDashboardTallerRoutes } from "./modules/talleres/dashboard/dashboard.routes.js";
 import { registerEncuestasTallerRoutes } from "./modules/talleres/encuestas/encuestas.js";
 import { registerFichaCierreRoutes } from "./modules/talleres/ficha/ficha-cierre.routes.js";
 import { registerHitosRoutes } from "./modules/talleres/hitos/hitos.routes.js";
@@ -72,6 +73,7 @@ export async function buildServer() {
   registerAlertasTallerRoutes(app);
   registerEncuestasTallerRoutes(app);
   registerMiTallerRoutes(app);
+  registerDashboardTallerRoutes(app);
   registerAsesoresRoutes(app);
   registerReportesTitulacionRoutes(app);
   registerConfiguracionRoutes(app);

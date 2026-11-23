@@ -33,6 +33,7 @@ import {
   puedeRecibirTaller,
   type Result,
   type SesionNumerada,
+  tieneHorario,
 } from "@pis/domain";
 import { and, asc, count, eq, inArray, ne, sql } from "drizzle-orm";
 import { DrizzleUnitOfWork } from "../../../infra/db/unit-of-work.js";
@@ -42,6 +43,7 @@ import {
   feriadosActivos,
   leerParametrosTaller,
 } from "../../taller-config/taller-config.repository.js";
+import { completarHorarioSesiones, crearGrupoASiCorresponde } from "../grupos-horario.js";
 import { appendAuditoriaTaller } from "../taller-auditoria.js";
 import { detalleTaller, type TallerDetalle } from "../talleres.repository.js";
 
@@ -78,8 +80,7 @@ function aDatosTaller(input: DatosTallerInput, proyectosAsignados?: number): Dat
     numeroSesiones: input.numeroSesiones,
     dias: input.dias,
     cupoProyectos: input.cupoProyectos,
-    enlaceSabado: input.enlaceSabado ?? null,
-    enlaceDomingo: input.enlaceDomingo ?? null,
+    enlaceReunion: input.enlaceReunion ?? null,
     pensiones: input.pensiones,
     ...(proyectosAsignados !== undefined ? { proyectosAsignados } : {}),
   };
@@ -249,7 +250,7 @@ function idActor(actor: Actor): string | null {
 export async function proponerCalendario(input: {
   inicio: string;
   fin: string;
-  dias: Array<{ dia: number; horaInicio: string; horaFin: string }>;
+  dias: Array<{ dia: number; horaInicio: string | null; horaFin: string | null }>;
   numeroSesiones: number;
 }): Promise<Result<CalendarioPropuestoDTO, DomainError>> {
   const feriados = await feriadosActivos(input.inicio, input.fin);
@@ -300,8 +301,7 @@ export class CrearTallerUseCase {
             fechaFin: input.fin,
             numeroSesiones: input.numeroSesiones,
             cupoProyectos: input.cupoProyectos,
-            enlaceSabado: limpiarEnlace(input.enlaceSabado),
-            enlaceDomingo: limpiarEnlace(input.enlaceDomingo),
+            enlaceReunion: limpiarEnlace(input.enlaceReunion),
             creadoPor: idActor(actor),
           })
           .returning({ id: talleres.id });
@@ -310,12 +310,16 @@ export class CrearTallerUseCase {
         await guardarSesiones(tx, t.id, cal.value);
         await tx.insert(pensionesTaller).values(filasPensiones(t.id, input, idActor(actor)));
         const semanas = await copiarPlan(tx, t.id, idActor(actor));
+        // Adenda 1.2 A2: con horario, el sistema crea el Grupo A con ese horario.
+        const grupoA = await crearGrupoASiCorresponde(tx, t.id, idActor(actor));
         await appendAuditoriaTaller(tx, {
           tallerId: t.id,
           actorId: idActor(actor),
           actorDni: actor.dni,
           accion: "CREAR_TALLER",
-          detalle: `Taller «${nombre}» con ${cal.value.length} sesiones, 3 pensiones y plan de ${semanas} semanas`,
+          detalle: `Taller «${nombre}» con ${cal.value.length} sesiones, 3 pensiones y plan de ${semanas} semanas${
+            grupoA ? `; ${grupoA} creado con el horario del taller` : "; horario por definir"
+          }`,
         });
         return ok({ id: t.id, asesor: asesor.value });
       },
@@ -338,16 +342,16 @@ export class CrearTallerUseCase {
 // ── P2 Editar taller ───────────────────────────────────────────────────
 
 function mismoCalendario(
-  actual: Array<{ fecha: string; horaInicio: string; horaFin: string }>,
+  actual: Array<{ fecha: string; horaInicio: string | null; horaFin: string | null }>,
   nuevo: SesionNumerada[],
+  soloFechas = false,
 ): boolean {
   if (actual.length !== nuevo.length) return false;
   const a = [...actual].sort((x, y) => x.fecha.localeCompare(y.fecha));
   return a.every(
     (s, i) =>
       s.fecha === nuevo[i]?.fecha &&
-      s.horaInicio === nuevo[i]?.horaInicio &&
-      s.horaFin === nuevo[i]?.horaFin,
+      (soloFechas || (s.horaInicio === nuevo[i]?.horaInicio && s.horaFin === nuevo[i]?.horaFin)),
   );
 }
 
@@ -375,12 +379,20 @@ export class EditarTallerUseCase {
           return fail(
             errorCampo("DATOS_DUPLICADOS", "nombre", `Ya existe un taller llamado «${nombre}»`),
           );
-        const cambiaCalendario = !mismoCalendario(d.calendario, cal.value);
+        // Adenda 1.2 A2: agregar el horario a un taller creado sin él se permite
+        // aunque ya tenga sesiones realizadas (solo cambian las horas por definir).
+        const agregaHorario = !d.conHorario && tieneHorario(input.dias);
+        const mismosDias =
+          JSON.stringify(d.dias.map((x) => x.dia)) ===
+          JSON.stringify([...input.dias].map((x) => x.dia).sort((a, b) => a - b));
+        const cambiaCalendario = !mismoCalendario(d.calendario, cal.value, agregaHorario);
         const cambianFechas =
           d.fechaInicio !== input.inicio ||
           d.fechaFin !== input.fin ||
-          JSON.stringify(d.dias) !==
-            JSON.stringify([...input.dias].sort((a, b) => a.dia - b.dia)) ||
+          (agregaHorario
+            ? !mismosDias
+            : JSON.stringify(d.dias) !==
+              JSON.stringify([...input.dias].sort((a, b) => a.dia - b.dia))) ||
           cambiaCalendario;
         if (cambianFechas && !d.fechasEditables)
           return fail(
@@ -431,13 +443,23 @@ export class EditarTallerUseCase {
             fechaFin: input.fin,
             numeroSesiones: input.numeroSesiones,
             cupoProyectos: input.cupoProyectos,
-            enlaceSabado: limpiarEnlace(input.enlaceSabado),
-            enlaceDomingo: limpiarEnlace(input.enlaceDomingo),
+            enlaceReunion: limpiarEnlace(input.enlaceReunion),
+            // A1: al guardar el enlace la Secretaría ya lo revisó.
+            enlaceRevisar: false,
+            enlaceDescartado: null,
             estado: estadoPorCupo(d.estado, d.proyectos, input.cupoProyectos),
             updatedAt: new Date(),
           })
           .where(eq(talleres.id, id));
         await guardarDias(tx, id, input);
+        let notaHorario = "";
+        if (agregaHorario) {
+          const n = await completarHorarioSesiones(tx, id);
+          const grupoA = await crearGrupoASiCorresponde(tx, id, idActor(actor));
+          notaHorario = `; horario agregado a ${n} sesiones${
+            grupoA ? ` y ${grupoA} creado` : " (los grupos existentes no cambian)"
+          }`;
+        }
         // §9 P3: un cambio de fechas o montos afecta solo a las pensiones no pagadas
         // (el monto pagado queda en la pensión del alumno; corte 3.8).
         for (const fila of filasPensiones(id, input, idActor(actor))) {
@@ -451,9 +473,11 @@ export class EditarTallerUseCase {
           actorId: idActor(actor),
           actorDni: actor.dni,
           accion: "EDITAR_TALLER",
-          detalle: cambiaCalendario
-            ? `Datos y calendario (${cal.value.length} sesiones)`
-            : "Datos del taller",
+          detalle: `${
+            cambiaCalendario && !agregaHorario
+              ? `Datos y calendario (${cal.value.length} sesiones)`
+              : "Datos del taller"
+          }${notaHorario}`,
         });
         const nuevo = await detalleTaller(tx, id);
         return nuevo ? ok(nuevo) : fail(new DomainError("NO_ENCONTRADO", "Taller no encontrado"));

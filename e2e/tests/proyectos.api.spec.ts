@@ -115,8 +115,7 @@ test.beforeAll(async ({ playwright, baseURL }) => {
     numeroSesiones: 2,
     dias,
     cupoProyectos: 2,
-    enlaceSabado: null,
-    enlaceDomingo: null,
+    enlaceReunion: null,
     pensiones: { montos: [1000, 1000, 1000], fecha2: "2027-04-24", fecha3: "2027-05-22" },
     sesiones: [
       { fecha: "2027-04-03", horaInicio: "15:00", horaFin: "20:00" },

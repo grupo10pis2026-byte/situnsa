@@ -30,6 +30,7 @@ type FilaComprobante = typeof comprobantesPension.$inferSelect;
 function comprobanteDto(c: FilaComprobante): ComprobanteDTO {
   return {
     id: c.id,
+    codigo: c.codigo,
     nombreArchivo: c.nombreOriginal,
     mime: c.mime,
     estado: c.estado,

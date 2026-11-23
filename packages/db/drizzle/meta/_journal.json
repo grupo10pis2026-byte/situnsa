@@ -127,6 +127,27 @@
       "when": 1794168005523,
       "tag": "0017_taller_v1_sin_modelo_anterior",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1795472184003,
+      "tag": "0018_adenda12_agregados",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1795472199277,
+      "tag": "0019_adenda12_datos",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1795472241601,
+      "tag": "0020_adenda12_sin_columnas_anteriores",
+      "breakpoints": true
     }
   ]
 }

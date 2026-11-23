@@ -92,6 +92,7 @@ function listado(tallerId: string, c: Capacidades) {
   return sesionesDelTaller(db, tallerId, {
     puedeRegistrar: c.registrar,
     puedeProgramar: c.programar,
+    puedeGrupos: c.grupos,
   });
 }
 

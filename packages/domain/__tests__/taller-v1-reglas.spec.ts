@@ -343,21 +343,22 @@ describe("encuestas y parámetros", () => {
 
 describe("grupos de horario y sesiones (P5, D2)", () => {
   const dias = [
-    { horaInicio: "15:00", horaFin: "20:00" },
-    { horaInicio: "08:00", horaFin: "13:00" },
+    { dia: 6, horaInicio: "15:00", horaFin: "20:00" },
+    { dia: 7, horaInicio: "08:00", horaFin: "13:00" },
   ];
-  it("el horario del grupo cae dentro del bloque de un día", () => {
-    expect(
-      validarGrupoHorario({ nombre: "Grupo 1", horaInicio: "15:00", horaFin: "17:30" }, dias).ok,
-    ).toBe(true);
+  it("el horario del grupo, por día, cae dentro del bloque de cada día", () => {
+    const sab = { dia: 6, horaInicio: "15:00", horaFin: "17:30" };
+    const dom = { dia: 7, horaInicio: "08:00", horaFin: "10:30" };
+    expect(validarGrupoHorario({ nombre: "Grupo A", horarios: [sab, dom] }, dias).ok).toBe(true);
     const r = validarGrupoHorario(
-      { nombre: "Grupo 1", horaInicio: "14:00", horaFin: "16:00" },
+      { nombre: "Grupo A", horarios: [{ dia: 6, horaInicio: "14:00", horaFin: "16:00" }, dom] },
       dias,
     );
-    expect(!r.ok && r.error.errores[0]?.campo).toBe("horario");
-    expect(
-      validarGrupoHorario({ nombre: " ", horaInicio: "15:00", horaFin: "16:00" }, dias).ok,
-    ).toBe(false);
+    expect(!r.ok && r.error.errores[0]?.campo).toBe("horario.6");
+    expect(validarGrupoHorario({ nombre: " ", horarios: [sab, dom] }, dias).ok).toBe(false);
+    // Falta el domingo.
+    const sinDom = validarGrupoHorario({ nombre: "Grupo A", horarios: [sab] }, dias);
+    expect(!sinDom.ok && sinDom.error.errores[0]?.campo).toBe("horario.7");
   });
   it("reprogramar o agregar exige fecha, horario y motivo", () => {
     expect(

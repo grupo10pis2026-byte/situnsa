@@ -143,8 +143,7 @@ describe("erroresTaller (§9 P2)", () => {
     numeroSesiones: 24,
     dias: [...DIAS_SESION_DEFECTO],
     cupoProyectos: 15,
-    enlaceSabado: "https://meet.google.com/abc",
-    enlaceDomingo: null,
+    enlaceReunion: "https://meet.google.com/abc",
     pensiones: {
       montos: [1000, 1000, 1000] as [number, number, number],
       fecha2: "2026-10-31",
@@ -164,7 +163,7 @@ describe("erroresTaller (§9 P2)", () => {
       dias: [{ dia: 6, horaInicio: "20:00", horaFin: "15:00" }],
       cupoProyectos: 0,
       numeroSesiones: 0,
-      enlaceDomingo: "http://meet.google.com/x",
+      enlaceReunion: "http://meet.google.com/x",
       pensiones: { ...valido.pensiones, fecha3: "2026-10-30" },
     }).map((e) => e.campo);
     expect(campos).toEqual([
@@ -172,7 +171,7 @@ describe("erroresTaller (§9 P2)", () => {
       "numeroSesiones",
       "horario.6",
       "cupoProyectos",
-      "enlaceDomingo",
+      "enlaceReunion",
       "pension.3.fecha",
     ]);
   });

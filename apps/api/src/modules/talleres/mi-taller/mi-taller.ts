@@ -14,10 +14,11 @@ import {
 } from "@pis/db";
 import {
   avisoAsistenciaAlumno,
-  diaIso,
   diasAtraso,
+  horarioDeSesion,
   porcentajeAsistenciaCurso,
   type RegistroAsistenciaCurso,
+  textoHorario,
 } from "@pis/domain";
 import { initServer } from "@ts-rest/fastify";
 import { and, asc, desc, eq, sql } from "drizzle-orm";
@@ -26,6 +27,7 @@ import { autorizar, denegado } from "../../../infra/auth/autorizacion.js";
 import { OPCIONES_TS_REST } from "../../../infra/http/manejador-errores.js";
 import { requireAuth } from "../../../middleware/require-auth.js";
 import { leerParametrosTaller } from "../../taller-config/taller-config.repository.js";
+import { enlaceReunion, horariosDeGrupos } from "../grupos-horario.js";
 import { hoyLima } from "../sesiones/sesiones.repository.js";
 
 /** P7 Mi Taller del alumno y P5 lista de talleres del asesor. */
@@ -53,8 +55,7 @@ export async function miTaller(
       asesorId: talleres.asesorId,
       inicio: talleres.fechaInicio,
       fin: talleres.fechaFin,
-      enlaceSabado: talleres.enlaceSabado,
-      enlaceDomingo: talleres.enlaceDomingo,
+      enlaceReunion: talleres.enlaceReunion,
       proyectoId: proyectosTaller.id,
       codigo: proyectosTaller.codigo,
       titulo: proyectosTaller.titulo,
@@ -78,15 +79,16 @@ export async function miTaller(
     : [];
   const [grupo] = f.grupoId
     ? await tx
-        .select({
-          nombre: gruposHorario.nombre,
-          horaInicio: gruposHorario.horaInicio,
-          horaFin: gruposHorario.horaFin,
-        })
+        .select({ id: gruposHorario.id, nombre: gruposHorario.nombre })
         .from(gruposHorario)
-        .where(eq(gruposHorario.id, f.grupoId))
+        .where(and(eq(gruposHorario.id, f.grupoId), eq(gruposHorario.activo, true)))
         .limit(1)
     : [];
+  const horarioGrupo = grupo
+    ? ((await horariosDeGrupos(tx, [grupo.id])).get(grupo.id) ?? [])
+    : null;
+  // A1: un solo enlace de reunión, leído con la función única.
+  const enlace = enlaceReunion(f);
   const sesiones = await tx
     .select({ s: tallerSesiones, marca: tallerAsistencias.estado })
     .from(tallerSesiones)
@@ -101,23 +103,25 @@ export async function miTaller(
     .orderBy(asc(tallerSesiones.fecha), asc(tallerSesiones.nro));
   const retirado = f.estadoTesista === "RETIRADO";
   const dtos: SesionAlumnoDTO[] = sesiones.map(({ s, marca }) => {
-    const d = diaIso(s.fecha);
-    // El grupo del alumno tiene su propio horario dentro del día (P5).
+    // A2: el horario es el del grupo del alumno para ese día (o «por definir»).
+    const h = horarioDeSesion(
+      {
+        fecha: s.fecha,
+        horaInicio: s.horaInicio,
+        horaFin: s.horaFin,
+        reprogramada: s.estado === "REPROGRAMADA",
+      },
+      horarioGrupo,
+    );
     return {
       id: s.id,
       nro: s.nro,
       fecha: s.fecha,
-      horaInicio: grupo?.horaInicio ?? s.horaInicio,
-      horaFin: grupo?.horaFin ?? s.horaFin,
+      horaInicio: h?.horaInicio ?? null,
+      horaFin: h?.horaFin ?? null,
       estado: s.estado,
       marca: marca ?? null,
-      enlace: retirado
-        ? null
-        : d === 6
-          ? f.enlaceSabado
-          : d === 7
-            ? f.enlaceDomingo
-            : (f.enlaceSabado ?? f.enlaceDomingo),
+      enlace: retirado ? null : enlace,
       motivo: s.motivo,
     };
   });
@@ -144,7 +148,7 @@ export async function miTaller(
       id: f.proyectoId,
       codigo: f.codigo,
       titulo: f.titulo,
-      grupo: grupo ? `${grupo.nombre} (${grupo.horaInicio}–${grupo.horaFin})` : null,
+      grupo: grupo ? `${grupo.nombre} (${textoHorario(horarioGrupo ?? [])})` : null,
     },
     estadoTesista: f.estadoTesista,
     asistencia: {
@@ -153,10 +157,12 @@ export async function miTaller(
       aviso: retirado ? null : avisoAsistenciaAlumno(registros, parametros),
     },
     sesiones: dtos,
-    proximaSesion:
-      dtos.find(
-        (s) => s.fecha >= hoy && (s.estado === "PROGRAMADA" || s.estado === "REPROGRAMADA"),
-      ) ?? null,
+    // Un retirado ya no tiene próximas sesiones (observación 7 del informe de pruebas).
+    proximaSesion: retirado
+      ? null
+      : (dtos.find(
+          (s) => s.fecha >= hoy && (s.estado === "PROGRAMADA" || s.estado === "REPROGRAMADA"),
+        ) ?? null),
     pensiones: {
       pagadas: pensiones.filter((p) => p.estado === "VALIDADA").length,
       total: pensiones.length,

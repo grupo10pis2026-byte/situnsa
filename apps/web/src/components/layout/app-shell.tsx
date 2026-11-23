@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
   AlertTriangle,
+  BarChart3,
   ClipboardCheck,
   FilePlus,
   GraduationCap,
@@ -53,6 +54,7 @@ function navPorRol(rol: string | undefined): Item[] {
     { to: "/talleres", etiqueta: "Taller de Tesis", icono: <GraduationCap size={18} /> },
     { to: "/pagos-taller", etiqueta: "Pagos Taller", icono: <ClipboardCheck size={18} /> },
     { to: "/reportes-taller", etiqueta: "Alertas y Reportes", icono: <AlertTriangle size={18} /> },
+    { to: "/dashboard-taller", etiqueta: "Dashboard del taller", icono: <BarChart3 size={18} /> },
     { to: "/encuestas-resultados", etiqueta: "Encuestas", icono: <MessageSquareHeart size={18} /> },
     { to: "/asesores", etiqueta: "Asesores", icono: <Users size={18} /> },
     // HU-0052: el proceso configurable es solo de administración del sistema.

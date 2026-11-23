@@ -48,13 +48,29 @@ export function ResumenTaller({ t }: { t: TallerDetalleDTO }) {
         {t.periodo ?? "—"}
       </p>
       <p className="text-xs text-grafito-600">
-        {t.dias.map((d) => `${CORTO[d.dia]} ${d.horaInicio}–${d.horaFin}`).join(" · ") ||
-          "Sin días de sesión"}
+        {t.dias
+          .map((d) =>
+            d.horaInicio && d.horaFin
+              ? `${CORTO[d.dia]} ${d.horaInicio}–${d.horaFin}`
+              : `${CORTO[d.dia]}`,
+          )
+          .join(" · ") || "Sin días de sesión"}
+        {t.dias.length > 0 && !t.conHorario ? " · Horario por definir" : ""}
         {" · "}Sesiones {t.sesiones.realizadas}/{t.sesiones.total}
-        {t.enlaceSabado || t.enlaceDomingo
-          ? " · Con enlace de reunión"
-          : " · Sin enlace de reunión"}
+        {t.enlaceReunion ? " · Con enlace de reunión" : " · Sin enlace de reunión"}
       </p>
+      {t.grupos.length > 0 && (
+        <p className="text-xs text-grafito-600">
+          <span className="font-semibold">Grupos:</span>{" "}
+          {t.grupos.map((g) => `${g.nombre} (${g.horario}) · ${g.proyectos} proy.`).join(" | ")}
+        </p>
+      )}
+      {t.enlaceRevisar && (
+        <p className="text-xs font-medium text-amber-800">
+          Revisa el enlace de reunión: el taller tenía dos enlaces distintos y se conservó el del
+          sábado. Enlace descartado: {t.enlaceDescartado ?? "—"}
+        </p>
+      )}
       {t.estado === "CANCELADO" && t.motivoCancelacion && (
         <p className="text-xs font-medium text-red-700">Cancelado: {t.motivoCancelacion}</p>
       )}
