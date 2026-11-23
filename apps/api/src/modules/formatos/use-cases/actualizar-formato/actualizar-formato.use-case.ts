@@ -3,7 +3,7 @@ import { db, formatosCatalogo } from "@pis/db";
 import { DomainError, fail, ok, type Result } from "@pis/domain";
 import { and, eq, sql } from "drizzle-orm";
 import { DrizzleUnitOfWork } from "../../../../infra/db/unit-of-work.js";
-import { esEtapaFormato } from "../../catalogo-formatos.js";
+import { esDeMesaDePartes, esEtapaFormato } from "../../catalogo-formatos.js";
 import { buscarFormatoVigente, catalogoVigente, formatoActual } from "../../formatos.repository.js";
 import { nombreNormalizado } from "../agregar-formato/agregar-formato.use-case.js";
 import type { Actor } from "../subir-formato/subir-formato.use-case.js";
@@ -20,7 +20,8 @@ export interface ActualizarFormatoInput {
  * Mueve un formato (del sistema o agregado) a otra etapa de su variante y/o
  * renombra un formato agregado. Devolver un formato del sistema a su etapa
  * original borra el ajuste. Los documentos ya generados no se tocan: el
- * expediente los muestra en la etapa vigente.
+ * expediente los muestra en la etapa vigente. Mesa de Partes es una categoría
+ * aparte (formatos en blanco del postulante): nada entra ni sale de ella.
  */
 export class ActualizarFormatoUseCase {
   async execute(input: ActualizarFormatoInput): Promise<Result<FormatoDTO, DomainError>> {
@@ -28,7 +29,12 @@ export class ActualizarFormatoUseCase {
       return fail(new DomainError("VALIDACION_FALLIDA", "Indique la etapa o el nombre"));
     }
     if (input.etapa !== undefined && !esEtapaFormato(input.etapa)) {
-      return fail(new DomainError("VALIDACION_FALLIDA", "La etapa debe ser Etapa 01 o Etapa 02"));
+      return fail(
+        new DomainError(
+          "VALIDACION_FALLIDA",
+          "La categoría debe ser Etapa 01, Etapa 02 o Mesa de Partes",
+        ),
+      );
     }
     const nombre =
       input.nombre === undefined ? undefined : NombreFormatoSchema.safeParse(input.nombre);
@@ -68,6 +74,14 @@ export class ActualizarFormatoUseCase {
       }
       const etapa =
         input.etapa !== undefined && esEtapaFormato(input.etapa) ? input.etapa : f.etapa;
+      if (esDeMesaDePartes(f) !== esDeMesaDePartes({ etapa })) {
+        return fail(
+          new DomainError(
+            "VALIDACION_FALLIDA",
+            "Los formatos de Mesa de Partes no se generan con datos del expediente: no se pueden mover a una etapa ni traer formatos de una etapa",
+          ),
+        );
+      }
       const clave = and(
         eq(formatosCatalogo.tipo, f.tipo),
         eq(formatosCatalogo.variante, f.variante),

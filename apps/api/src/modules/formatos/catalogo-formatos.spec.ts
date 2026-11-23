@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs";
+import { FORMATOS_MESA_DE_PARTES } from "@pis/contracts";
 import { describe, expect, it } from "vitest";
 import { rutaPlantillaBase } from "../../infra/docx/render-docx.js";
 import {
@@ -7,6 +8,7 @@ import {
   archivoDeNombre,
   buscarFormato,
   CATALOGO_FORMATOS,
+  esDeMesaDePartes,
   etapaEnExpediente,
   nombreAgregado,
   tipoFormatoCanonico,
@@ -14,19 +16,54 @@ import {
 } from "./catalogo-formatos.js";
 
 describe("catálogo de formatos gestionables", () => {
-  it("cubre 23 formatos de 1 tesista y 25 archivos de 2 tesistas", () => {
-    expect(CATALOGO_FORMATOS.filter((f) => f.variante === 1)).toHaveLength(23);
-    expect(CATALOGO_FORMATOS.filter((f) => f.variante === 2)).toHaveLength(25);
+  it("cubre 23 formatos de 1 tesista y 25 archivos de 2 tesistas en las etapas", () => {
+    const enEtapas = CATALOGO_FORMATOS.filter((f) => !esDeMesaDePartes(f));
+    expect(enEtapas.filter((f) => f.variante === 1)).toHaveLength(23);
+    expect(enEtapas.filter((f) => f.variante === 2)).toHaveLength(25);
   });
 
-  it("cada formato tiene su plantilla base en disco y un nombre legible", () => {
-    for (const f of CATALOGO_FORMATOS) {
+  it("cada formato de etapa tiene su plantilla base en disco y un nombre legible", () => {
+    for (const f of CATALOGO_FORMATOS.filter((x) => !esDeMesaDePartes(x))) {
       expect(f.etapaBase).toBe(f.etapa);
       expect(f.agregado).toBe(false);
       const ruta = rutaPlantillaBase(f.tipo, f.etapaBase ?? f.etapa, f.variante);
       expect(ruta && existsSync(ruta), `${f.variante}/${f.tipo}`).toBe(true);
       expect(f.nombre.length).toBeGreaterThan(3);
     }
+  });
+
+  it("agrega la categoría Mesa de Partes en ambas variantes, ligada a los requisitos del wizard", () => {
+    for (const variante of [1, 2] as const) {
+      const mp = CATALOGO_FORMATOS.filter((f) => f.variante === variante && esDeMesaDePartes(f));
+      expect(mp.map((f) => f.tipo)).toEqual(FORMATOS_MESA_DE_PARTES.map((f) => f.tipo));
+      for (const f of mp) {
+        expect(f.etapaBase).toBe("MP");
+        expect(f.requisito).toBe(f.tipo.replace(/^MP_/, ""));
+        expect(f.archivoBase.endsWith(".docx")).toBe(true);
+      }
+    }
+  });
+
+  it("los formatos de Mesa de Partes con base la tienen en MESA_DE_PARTES (Anexo 18 y autorización: sin base)", () => {
+    const conBase = ["MP_ANEXO_17", "MP_PLAN_TESIS", "MP_PLAN_TRABAJO_ACADEMICO"];
+    for (const f of CATALOGO_FORMATOS.filter(esDeMesaDePartes)) {
+      const ruta = rutaPlantillaBase(f.tipo, "MP", f.variante);
+      if (conBase.includes(f.tipo)) {
+        expect(ruta).toContain("MESA_DE_PARTES");
+        expect(ruta && existsSync(ruta), `${f.variante}/${f.tipo}`).toBe(true);
+      } else {
+        expect(ruta).toBeNull();
+      }
+    }
+  });
+
+  it("un formato de Mesa de Partes no pertenece a ninguna etapa del expediente", () => {
+    expect(etapaEnExpediente(CATALOGO_FORMATOS, "MP_ANEXO_17", 1)).toBeNull();
+    const conAgregado = aplicarAjustes(CATALOGO_FORMATOS, [
+      ajuste({ tipo: "AREA_CONSTANCIA", etapa: "MP", nombre: "Constancia", agregado: true }),
+    ]);
+    expect(conAgregado.find((f) => f.tipo === "AREA_CONSTANCIA")?.etapa).toBe("MP");
+    expect(etapaEnExpediente(conAgregado, "AREA_CONSTANCIA", 1)).toBeNull();
   });
 
   it("resuelve alias y anexos por participante al formato que se edita", () => {

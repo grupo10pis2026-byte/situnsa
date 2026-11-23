@@ -1,3 +1,4 @@
+import type { FormatoPublicoDTO } from "@pis/contracts";
 import { PROGRAMAS_OFICIALES } from "@pis/domain/dist/expediente/seguimiento-catalogo.js";
 import { Link } from "@tanstack/react-router";
 import {
@@ -5,6 +6,7 @@ import {
   ArrowLeft,
   ArrowRight,
   CheckCircle,
+  Download,
   ExternalLink,
   FileText,
   GraduationCap,
@@ -17,6 +19,7 @@ import {
   Users,
 } from "lucide-react";
 import { useState } from "react";
+import { formatoMesaDePartesUrl, useFormatosMesaDePartes } from "../api/formatos.js";
 import { crearSolicitudPublica } from "../api/solicitudes.js";
 import { Button } from "../components/ui/button.js";
 import { Card } from "../components/ui/card.js";
@@ -90,7 +93,11 @@ export function MesaDePartesPage() {
   const [p1, setP1] = useState<DatosParticipante>({ ...participanteInicial });
   const [p2, setP2] = useState<DatosParticipante>({ ...participanteInicial });
 
-  // Paso 3: Documentos
+  // Paso 3: Documentos (formatos en blanco gestionados en «Gestión de formatos» › Mesa de Partes)
+  const formatosMP = useFormatosMesaDePartes(cantidadTesistas);
+  const formatoDe = (clave: string): FormatoPublicoDTO | null =>
+    formatosMP.data?.formatos.find((f) => f.requisito === clave) ?? null;
+  const formatosAdicionales = formatosMP.data?.formatos.filter((f) => f.requisito === null) ?? [];
   const [archivos, setArchivos] = useState<Record<string, File>>({});
   const [erroresArchivo, setErroresArchivo] = useState<Record<string, string>>({});
 
@@ -974,6 +981,17 @@ export function MesaDePartesPage() {
                 total={docsRequeridos.filter((d) => d.requerido).length}
               />
 
+              {formatosAdicionales.length > 0 && (
+                <div className="space-y-1.5 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs">
+                  <p className="font-semibold text-navy-950">Otros formatos de la Unidad</p>
+                  <div className="flex flex-wrap gap-2">
+                    {formatosAdicionales.map((f) => (
+                      <EnlaceFormato formato={f} key={f.tipo} texto={f.nombre} />
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {[
                 {
                   titulo: "Documentos del trámite",
@@ -1003,7 +1021,11 @@ export function MesaDePartesPage() {
                     <Dropzone
                       aceptar={doc.formatos ?? "application/pdf,.pdf"}
                       archivo={archivos[doc.clave] ?? null}
-                      ayuda={tieneGuia(doc) ? <GuiaDocumento doc={doc} /> : undefined}
+                      ayuda={
+                        tieneGuia(doc) || formatoDe(doc.clave) ? (
+                          <GuiaDocumento doc={doc} formato={formatoDe(doc.clave)} />
+                        ) : undefined
+                      }
                       error={erroresArchivo[doc.clave] ?? null}
                       etiqueta={doc.nombre}
                       key={doc.clave}
@@ -1179,8 +1201,35 @@ function ProgresoDocumentos({ cargados, total }: { cargados: number; total: numb
   );
 }
 
-/** Guía de formato, enlaces y soporte de un requisito documental. */
-function GuiaDocumento({ doc }: { doc: RequisitoDoc }) {
+/** Enlace de descarga directa del formato vigente de Mesa de Partes (ruta pública). */
+function EnlaceFormato({ formato, texto }: { formato: FormatoPublicoDTO; texto: string }) {
+  return (
+    <a
+      className="inline-flex items-center gap-1 rounded border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-navy-800 shadow-sm hover:bg-slate-100"
+      download={formato.nombreArchivo}
+      href={formatoMesaDePartesUrl(formato)}
+    >
+      <Download size={12} className="text-blue-600" />
+      {texto}
+    </a>
+  );
+}
+
+/**
+ * Guía de formato, enlaces y soporte de un requisito documental. Si el área
+ * publicó el formato en «Gestión de formatos», su descarga reemplaza al
+ * enlace externo de Google Docs.
+ */
+function GuiaDocumento({
+  doc,
+  formato = null,
+}: {
+  doc: RequisitoDoc;
+  formato?: FormatoPublicoDTO | null;
+}) {
+  const enlaces = formato
+    ? doc.guiaEnlaces?.filter((e) => !e.url.includes("docs.google.com"))
+    : doc.guiaEnlaces;
   return (
     <>
       {doc.guiaTexto && (
@@ -1190,9 +1239,10 @@ function GuiaDocumento({ doc }: { doc: RequisitoDoc }) {
         </div>
       )}
 
-      {doc.guiaEnlaces && (
+      {(formato || (enlaces && enlaces.length > 0)) && (
         <div className="flex flex-wrap gap-2 pt-0.5 pl-5">
-          {doc.guiaEnlaces.map((enl) => (
+          {formato && <EnlaceFormato formato={formato} texto="Descargar formato oficial (Word)" />}
+          {enlaces?.map((enl) => (
             <a
               key={enl.url}
               href={enl.url}

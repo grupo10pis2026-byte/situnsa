@@ -20,7 +20,7 @@ import type { AlmacenamientoPort } from "../../../../infra/storage/almacenamient
 import { LocalStorageService } from "../../../../infra/storage/local-storage.service.js";
 import { appendAuditoria } from "../../../expedientes/expedientes.auditoria.js";
 import { leerChecklist, subetapaActivaDe } from "../../../expedientes/expedientes.repository.js";
-import { PREFIJO_AGREGADO } from "../../../formatos/catalogo-formatos.js";
+import { esDeMesaDePartes, PREFIJO_AGREGADO } from "../../../formatos/catalogo-formatos.js";
 import { catalogoVigente } from "../../../formatos/formatos.repository.js";
 
 const MAX_BYTES = 50 * 1024 * 1024; // R2: tesis de 20–50MB
@@ -103,7 +103,9 @@ export class SubirDocumentoUseCase {
     const agregado =
       plantilla || enCodigo || !input.tipo.startsWith(PREFIJO_AGREGADO)
         ? null
-        : ((await catalogoVigente()).find((f) => f.agregado && f.tipo === input.tipo) ?? null);
+        : ((await catalogoVigente()).find(
+            (f) => f.agregado && !esDeMesaDePartes(f) && f.tipo === input.tipo,
+          ) ?? null);
     if (
       this.catalogo &&
       !this.catalogo.some((d) => d.tipo === input.tipo) &&

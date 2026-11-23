@@ -55,6 +55,25 @@ describe("ActualizarFormatoUseCase", () => {
     expect(tx.execute).not.toHaveBeenCalled();
   });
 
+  it("no mueve formatos hacia ni desde Mesa de Partes", async () => {
+    const uc = new ActualizarFormatoUseCase();
+    repo.buscarFormatoVigente.mockResolvedValue(delSistema);
+    const haciaMp = await uc.execute({ tipo: "ANEXO_27", variante: 2, etapa: "MP", actor });
+    expect(haciaMp.ok ? null : haciaMp.error.code).toBe("VALIDACION_FALLIDA");
+    repo.buscarFormatoVigente.mockResolvedValue({
+      tipo: "MP_ANEXO_17",
+      variante: 1,
+      etapa: "MP",
+      etapaBase: "MP",
+      agregado: false,
+    });
+    const desdeMp = await uc.execute({ tipo: "MP_ANEXO_17", variante: 1, etapa: "E1", actor });
+    expect(desdeMp.ok ? null : desdeMp.error.code).toBe("VALIDACION_FALLIDA");
+    expect(tx.insert).not.toHaveBeenCalled();
+    expect(tx.update).not.toHaveBeenCalled();
+    expect(tx.delete).not.toHaveBeenCalled();
+  });
+
   it("responde NO_ENCONTRADO si el formato no existe", async () => {
     repo.buscarFormatoVigente.mockResolvedValue(null);
     const r = await new ActualizarFormatoUseCase().execute({

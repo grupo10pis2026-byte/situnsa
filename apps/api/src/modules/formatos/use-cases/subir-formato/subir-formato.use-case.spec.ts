@@ -10,6 +10,7 @@ vi.mock("../../formatos.repository.js", async (original) => ({
 }));
 
 const {
+  advertenciasDeFormato,
   advertenciasPlantilla,
   etiquetasConocidas,
   SubirFormatoUseCase,
@@ -43,6 +44,14 @@ describe("SubirFormatoUseCase", () => {
 
   it("advierte cuando la plantilla no tiene etiquetas", () => {
     expect(advertenciasPlantilla([], new Set(), [], 0)[0]).toContain("no tiene etiquetas");
+  });
+
+  it("en Mesa de Partes no exige etiquetas y advierte las que quedarían visibles", () => {
+    expect(advertenciasDeFormato("MP", [], [], 0)).toEqual([]);
+    const avisos = advertenciasDeFormato("MP", ["NOMBRES"], [], 0);
+    expect(avisos).toHaveLength(1);
+    expect(avisos[0]).toContain("<<NOMBRES>>");
+    expect(advertenciasDeFormato("E1", [], [], 0)[0]).toContain("no tiene etiquetas");
   });
 
   it("rechaza formatos fuera del catálogo", async () => {
