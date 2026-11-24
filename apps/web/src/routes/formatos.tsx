@@ -358,7 +358,7 @@ export function FormatosPage() {
                       }
                       descripcion={`${enEtapa.length} formato(s) · ${v === "1" ? "1 tesista" : "2 tesistas"}${
                         etapa === "MP"
-                          ? " · el postulante los descarga en el wizard público; no se generan con datos del expediente"
+                          ? " · el postulante los descarga, llena y adjunta en el wizard público (los que agregue el área son opcionales); no se generan con datos del expediente"
                           : ""
                       }`}
                       titulo={titulo}
@@ -914,7 +914,7 @@ function DialogoAgregar({
       ancho="max-w-lg"
       descripcion={`${variantes} · ${
         mp
-          ? "el postulante lo descargará en blanco en la Mesa de Partes"
+          ? "el postulante podrá descargarlo, llenarlo y adjuntarlo en la Mesa de Partes"
           : "se generará con «Insertar datos en documentos» de la etapa elegida"
       }`}
       onAbierto={(v) => !v && onCerrar()}
@@ -924,7 +924,7 @@ function DialogoAgregar({
         <div className="space-y-3">
           <p className="text-sm text-grafito-900">
             {esMesaDePartes(resultado.formato)
-              ? `«${resultado.formato.nombre}» ya está en la Mesa de Partes de ${variantes}.`
+              ? `«${resultado.formato.nombre}» ya está en la Mesa de Partes de ${variantes}: el postulante puede descargarlo, llenarlo y adjuntarlo (opcional).`
               : `«${resultado.formato.nombre}» ya está en la ${etiquetaEtapa(resultado.formato.etapa)} de ${variantes} (${resultado.version.etiquetas.length} etiqueta(s) detectada(s)). Los expedientes lo verán al insertar datos en esa etapa.`}
           </p>
           <ListaAvisos avisos={resultado.version.advertencias} />
@@ -936,8 +936,8 @@ function DialogoAgregar({
         <div className="space-y-3">
           {mp ? (
             <p className="text-xs text-grafito-600">
-              Suba el formato en blanco que el postulante debe descargar, llenar y adjuntar en la
-              Mesa de Partes (no se rellena con datos del expediente).
+              Suba el formato en blanco que el postulante podrá descargar, llenar y adjuntar en la
+              Mesa de Partes como documento opcional (no se rellena con datos del expediente).
             </p>
           ) : (
             <p className="text-xs text-grafito-600">

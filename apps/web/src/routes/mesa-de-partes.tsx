@@ -95,9 +95,18 @@ export function MesaDePartesPage() {
 
   // Paso 3: Documentos (formatos en blanco gestionados en «Gestión de formatos» › Mesa de Partes)
   const formatosMP = useFormatosMesaDePartes(cantidadTesistas);
+  // Requisito del wizard → su formato; los agregados por el área son su propio requisito (tipo).
   const formatoDe = (clave: string): FormatoPublicoDTO | null =>
-    formatosMP.data?.formatos.find((f) => f.requisito === clave) ?? null;
-  const formatosAdicionales = formatosMP.data?.formatos.filter((f) => f.requisito === null) ?? [];
+    formatosMP.data?.formatos.find((f) => (f.requisito ?? f.tipo) === clave) ?? null;
+  // Formatos que el área agregó a Mesa de Partes: documentos opcionales del trámite.
+  const requisitosDelArea: RequisitoDoc[] = (formatosMP.data?.formatos ?? [])
+    .filter((f) => f.requisito === null)
+    .map((f) => ({
+      clave: f.tipo,
+      nombre: f.nombre,
+      requerido: false,
+      guiaTexto: "Descargue el formato, complételo, fírmelo y adjúntelo en PDF.",
+    }));
   const [archivos, setArchivos] = useState<Record<string, File>>({});
   const [erroresArchivo, setErroresArchivo] = useState<Record<string, string>>({});
 
@@ -269,6 +278,7 @@ export function MesaDePartesPage() {
               ],
             },
           ]),
+    ...requisitosDelArea,
     // Fotografías obligatorias para todas las modalidades
     {
       clave: "FOTO_ESTUDIANTE",
@@ -980,17 +990,6 @@ export function MesaDePartesPage() {
                 cargados={docsRequeridos.filter((d) => d.requerido && archivos[d.clave]).length}
                 total={docsRequeridos.filter((d) => d.requerido).length}
               />
-
-              {formatosAdicionales.length > 0 && (
-                <div className="space-y-1.5 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs">
-                  <p className="font-semibold text-navy-950">Otros formatos de la Unidad</p>
-                  <div className="flex flex-wrap gap-2">
-                    {formatosAdicionales.map((f) => (
-                      <EnlaceFormato formato={f} key={f.tipo} texto={f.nombre} />
-                    ))}
-                  </div>
-                </div>
-              )}
 
               {[
                 {
