@@ -145,8 +145,14 @@ describe("DocumentoCard: un solo aviso por tarjeta, por prioridad", () => {
     expect(resolverAvisoDocumento({ ...base, requiereFirma: true, puedeCargar: false })).toBeNull();
   });
 
-  it("no muestra aviso cuando el archivo ya está cargado y no hay pendientes", () => {
-    expect(resolverAvisoDocumento({ ...base, requiereFirma: true, tieneArchivo: true })).toBeNull();
-    expect(resolverAvisoDocumento({ ...base, faltaAdjuntar: true, tieneFormato: true })).toBeNull();
+  it("muestra recuadro verde 'Todo conforme: sin datos faltantes' cuando el archivo o formato está cargado y no hay pendientes", () => {
+    expect(resolverAvisoDocumento({ ...base, requiereFirma: true, tieneArchivo: true })).toEqual({
+      tono: "exito",
+      texto: "Todo conforme: sin datos faltantes",
+    });
+    expect(resolverAvisoDocumento({ ...base, faltaAdjuntar: true, tieneFormato: true })).toEqual({
+      tono: "exito",
+      texto: "Todo conforme: sin datos faltantes",
+    });
   });
 });

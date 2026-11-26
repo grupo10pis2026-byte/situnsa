@@ -16,12 +16,16 @@ import {
   Eye,
   FileDown,
   FileText,
+  Loader2,
   MessageSquare,
   PenTool,
+  RefreshCw,
+  Search,
   Stamp,
   UploadCloud,
 } from "lucide-react";
 import { useRef, useState } from "react";
+import { useAnalizarDocumento } from "../../api/analisis-documental.js";
 import {
   descargarArchivoProtegido,
   documentoDescargaUrl,
@@ -42,7 +46,6 @@ import { Dialogo } from "../ui/dialog.js";
 import { StatusBadge } from "../ui/status-badge.js";
 import { useToast } from "../ui/toast.js";
 import { Tooltip } from "../ui/tooltip.js";
-import { AnalisisDocumentalPanel } from "./analisis-documental-panel.js";
 import { ItemHallazgo } from "./item-hallazgo.js";
 import { ModalObservacionesDocumento } from "./modal-observaciones-documento.js";
 import { ModalVisorDocumento } from "./modal-visor-documento.js";
@@ -195,14 +198,14 @@ export function requiereFirma(tipo: string): boolean {
 }
 
 export type AvisoDocumento = {
-  tono: "peligro" | "aviso" | "info";
+  tono: "peligro" | "aviso" | "info" | "exito";
   texto: string;
   detalle?: string[];
 };
 
 /**
  * Elige el ÚNICO aviso visible de la tarjeta, por prioridad:
- * observaciones pendientes > campos por completar > paso de firma/adjunto.
+ * observaciones pendientes > campos por completar > todo conforme (si cargado/generado) > paso de firma/adjunto.
  * El paso de firma/adjunto solo se muestra a quien puede cargar el archivo;
  * para el resto el estado (StatusBadge) ya comunica que falta.
  */
@@ -230,6 +233,16 @@ export function resolverAvisoDocumento(e: {
       detalle: e.camposPendientes,
     };
   }
+  if (
+    (e.tieneArchivo || e.tieneFormato) &&
+    e.camposPendientes.length === 0 &&
+    e.observacionesPendientes === 0
+  ) {
+    return {
+      tono: "exito",
+      texto: "Todo conforme: sin datos faltantes",
+    };
+  }
   if (!e.tieneArchivo && e.puedeCargar) {
     if (e.requiereFirma) {
       return { tono: "info", texto: "Descarga el formato, fírmalo y súbelo con Adjuntar." };
@@ -253,6 +266,7 @@ export function DocumentoCard(p: Props) {
   const vistoBueno = useVistoBueno(p.expedienteId);
   const generar = useGenerarDocumentos(p.expedienteId);
   const [analisisResultado, setAnalisisResultado] = useState<AnalisisDocumentoDTO | null>(null);
+  const analizar = useAnalizarDocumento(p.documentoId ?? "");
   const { sesion } = useSession();
   const avisar = useToast();
   const [error, setError] = useState<string | null>(null);
@@ -322,6 +336,57 @@ export function DocumentoCard(p: Props) {
   ]
     .filter(Boolean)
     .join(" · ");
+
+  async function onVerMasDetalle(): Promise<void> {
+    if (analisisResultado) {
+      setRevisionAbierta(true);
+      return;
+    }
+    if (p.documentoId) {
+      try {
+        const res = await analizar.mutateAsync(false);
+        setAnalisisResultado(res);
+        setRevisionAbierta(true);
+      } catch (e) {
+        avisar(e instanceof Error ? e.message : "Error al analizar el documento", "error");
+      }
+      return;
+    }
+    if (p.formato && p.onModificar) {
+      p.onModificar({
+        tipo: p.tipo,
+        nombre: p.nombre,
+        version: p.formato.version,
+        pendientes: p.formato.pendientes,
+      });
+    }
+  }
+
+  const puedeVerMasDetalle = !!p.documentoId || (!!p.formato && !!p.onModificar);
+  const accionAviso =
+    puedeVerMasDetalle && aviso?.tono === "aviso" ? (
+      <Button
+        tamano="xs"
+        variante="contorno"
+        type="button"
+        disabled={analizar.isPending}
+        onClick={() => void onVerMasDetalle()}
+        className="mt-1 border-amber-300 bg-white/90 text-amber-950 hover:bg-white hover:text-amber-900 text-xs font-semibold gap-1.5 shadow-2xs"
+        title="Ver cotejo y análisis detallado de datos"
+      >
+        {analizar.isPending ? (
+          <>
+            <Loader2 size={12} className="animate-spin" />
+            Analizando datos…
+          </>
+        ) : (
+          <>
+            <Search size={12} />
+            Ver más a detalle
+          </>
+        )}
+      </Button>
+    ) : null;
 
   async function onDescargar(): Promise<void> {
     setDescargando(true);
@@ -451,6 +516,7 @@ export function DocumentoCard(p: Props) {
         <Aviso
           tono={aviso.tono}
           className="mt-2.5"
+          accion={accionAviso}
           {...(aviso.detalle ? { detalle: aviso.detalle } : {})}
         >
           {aviso.texto}
@@ -676,46 +742,64 @@ export function DocumentoCard(p: Props) {
                 </div>
               )}
             </div>
+          ) : analizar.isPending ? (
+            <div className="flex items-center justify-center gap-2 p-8 text-sm text-slate-600">
+              <Loader2 size={18} className="animate-spin text-navy-700" />
+              <span>Verificando y analizando datos del documento…</span>
+            </div>
           ) : (
             <p className="text-sm text-grafito-600">
-              Todavía no hay revisión disponible para este documento. Haga clic en «Verificar» o
-              «Volver a analizar».
+              Todavía no hay revisión disponible para este documento. Haga clic en «Volver a
+              analizar».
             </p>
           )}
-          <div className="mt-5 flex justify-end gap-2">
-            <Button
-              tamano="sm"
-              variante="contorno"
-              type="button"
-              onClick={() => setRevisionAbierta(false)}
-            >
-              Cerrar
-            </Button>
-            <Button
-              tamano="sm"
-              variante="oscuro"
-              type="button"
-              onClick={() => {
-                setRevisionAbierta(false);
-                inputRef.current?.click();
-              }}
-            >
-              <UploadCloud size={14} />
-              Volver a subir documento corregido
-            </Button>
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 pt-3">
+            {p.documentoId && (
+              <Button
+                tamano="sm"
+                variante="contorno"
+                disabled={analizar.isPending}
+                onClick={async () => {
+                  if (!p.documentoId) return;
+                  try {
+                    const res = await analizar.mutateAsync(false);
+                    setAnalisisResultado(res);
+                    avisar("Análisis actualizado con éxito");
+                  } catch (e) {
+                    avisar(e instanceof Error ? e.message : "Error al re-analizar", "error");
+                  }
+                }}
+                type="button"
+                className="gap-1.5"
+              >
+                <RefreshCw size={13} className={analizar.isPending ? "animate-spin" : ""} />
+                Volver a analizar
+              </Button>
+            )}
+            <div className="flex items-center gap-2 ml-auto">
+              <Button
+                tamano="sm"
+                variante="contorno"
+                type="button"
+                onClick={() => setRevisionAbierta(false)}
+              >
+                Cerrar
+              </Button>
+              <Button
+                tamano="sm"
+                variante="oscuro"
+                type="button"
+                onClick={() => {
+                  setRevisionAbierta(false);
+                  inputRef.current?.click();
+                }}
+              >
+                <UploadCloud size={14} />
+                Volver a subir documento corregido
+              </Button>
+            </div>
           </div>
         </Dialogo>
-      )}
-      {p.documentoId && (
-        <AnalisisDocumentalPanel
-          key={p.documentoId}
-          documentoId={p.documentoId}
-          tipo={p.tipo}
-          onVerDetalles={(res) => {
-            setAnalisisResultado(res);
-            setRevisionAbierta(true);
-          }}
-        />
       )}
       {pendiente && (
         <ConfirmDialog
