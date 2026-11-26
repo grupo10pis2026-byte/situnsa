@@ -8,8 +8,7 @@ import { esEtapaFormato, tipoParaNombre } from "../../catalogo-formatos.js";
 import { catalogoVigente, formatoActual, versionDTO } from "../../formatos.repository.js";
 import {
   type Actor,
-  advertenciasPlantilla,
-  etiquetasConocidas,
+  advertenciasDeFormato,
   registrarVersionFormato,
   validarDocxFormato,
 } from "../subir-formato/subir-formato.use-case.js";
@@ -32,7 +31,8 @@ export function nombreNormalizado(nombre: string): string {
 /**
  * Agrega un formato nuevo a la Etapa 01 o 02 de una variante (1|2
  * tesistas) con su primera versión activa. Desde ese momento se genera con
- * «Insertar datos en documentos» en los expedientes de esa variante.
+ * «Insertar datos en documentos» en los expedientes de esa variante. En la
+ * categoría Mesa de Partes queda como formato en blanco para el postulante.
  */
 export class AgregarFormatoUseCase {
   constructor(private readonly storage = new LocalStorageService()) {}
@@ -45,7 +45,12 @@ export class AgregarFormatoUseCase {
     }
     const variante = input.variante;
     if (!esEtapaFormato(input.etapa)) {
-      return fail(new DomainError("VALIDACION_FALLIDA", "La etapa debe ser Etapa 01 o Etapa 02"));
+      return fail(
+        new DomainError(
+          "VALIDACION_FALLIDA",
+          "La categoría debe ser Etapa 01, Etapa 02 o Mesa de Partes",
+        ),
+      );
     }
     const etapa = input.etapa;
     const nombre = NombreFormatoSchema.safeParse(input.nombre);
@@ -57,12 +62,7 @@ export class AgregarFormatoUseCase {
     const validado = validarDocxFormato(input.nombreArchivo, input.bytes);
     if (!validado.ok) return validado;
     const analisis = validado.value;
-    const advertencias = advertenciasPlantilla(
-      analisis.etiquetas,
-      etiquetasConocidas(),
-      [],
-      analisis.reparadas,
-    );
+    const advertencias = advertenciasDeFormato(etapa, analisis.etiquetas, [], analisis.reparadas);
 
     const uow = new DrizzleUnitOfWork(db);
     let rutaGuardada: string | null = null;

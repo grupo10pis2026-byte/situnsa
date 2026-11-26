@@ -43,6 +43,8 @@ import { appendAuditoria } from "../../../expedientes/expedientes.auditoria.js";
 import { type DetalleRow, getDetalleById } from "../../../expedientes/expedientes.repository.js";
 import {
   archivoDeNombre,
+  type EtapaExpediente,
+  esDeMesaDePartes,
   type FormatoCatalogo,
   tipoFormatoCanonico,
   type Variante,
@@ -150,7 +152,11 @@ export function itemsDeEtapa(
   variante: Variante,
   etapa: EtapaPlantilla,
 ): ItemGeneracion[] {
-  const propios = catalogo.filter((f) => f.variante === variante);
+  // Mesa de Partes = formatos en blanco del postulante: nunca se generan.
+  const propios = catalogo.filter(
+    (f): f is FormatoCatalogo & { readonly etapa: EtapaExpediente } =>
+      f.variante === variante && !esDeMesaDePartes(f),
+  );
   const etapaVigente = new Map(propios.map((f) => [f.tipo, f.etapa]));
   const eliminados = new Set(propios.filter((f) => f.archivado).map((f) => f.tipo));
   const delSistema = plantillas
@@ -449,9 +455,7 @@ export class GenerarDocumentosUseCase {
               p.tipo.includes("SUSTENTACION") || p.tipo.includes("SECRETARIA");
             const datosDocx: Record<string, string> = {
               ...baseDatos,
-              FECHA:
-                baseDatos.FECHA ||
-                (!esActaSustentacion ? baseDatos.FECHA_EMISION || "" : ""),
+              FECHA: baseDatos.FECHA || (!esActaSustentacion ? baseDatos.FECHA_EMISION || "" : ""),
             };
 
             const res = procesarDocxBuffer(plantillaDocx, datosDocx);
@@ -621,10 +625,7 @@ export class GenerarDocumentosUseCase {
             await tx
               .delete(documentos)
               .where(
-                and(
-                  eq(documentos.expedienteId, expedienteId),
-                  inArray(documentos.tipo, tiposSet),
-                ),
+                and(eq(documentos.expedienteId, expedienteId), inArray(documentos.tipo, tiposSet)),
               );
           }
 
@@ -643,13 +644,13 @@ export class GenerarDocumentosUseCase {
             sha256: pdfGuardado.sha256,
             estado: "CARGADO",
             origen: "SISTEMA",
-            driveSyncEstado: process.env.GOOGLE_DRIVE_ENABLED === "true" ? "PENDIENTE" : "NO_APLICA",
+            driveSyncEstado:
+              process.env.GOOGLE_DRIVE_ENABLED === "true" ? "PENDIENTE" : "NO_APLICA",
             archivoContenido: bytesPdf,
             tamanoBytes: bytesPdf.length,
             createdAt: ahora,
           });
         }
-
 
         generados.push({
           id,

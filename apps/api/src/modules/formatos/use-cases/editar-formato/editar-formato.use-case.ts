@@ -19,9 +19,8 @@ import {
 } from "../../formatos.repository.js";
 import {
   type Actor,
-  advertenciasPlantilla,
+  advertenciasDeFormato,
   bloquearFormato,
-  etiquetasConocidas,
   registrarVersionFormato,
   validarDocxFormato,
 } from "../subir-formato/subir-formato.use-case.js";
@@ -148,9 +147,9 @@ export class EditarFormatoUseCase {
         : `${formato.tipo}.docx`;
       const validado = validarDocxFormato(nombre, sim.value.buffer);
       if (!validado.ok) return validado;
-      const advertencias = advertenciasPlantilla(
+      const advertencias = advertenciasDeFormato(
+        formato.etapa,
         validado.value.etiquetas,
-        etiquetasConocidas(),
         etiquetasBase,
         validado.value.reparadas,
       );

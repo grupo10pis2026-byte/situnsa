@@ -3,7 +3,12 @@
  * descargas (rutas nativas Fastify, ver AGENTS.md §6).
  */
 import { createReadStream, existsSync, statSync } from "node:fs";
-import { formatosContract, TipoFormatoSchema, VarianteFormatoSchema } from "@pis/contracts";
+import {
+  type FormatoPublicoDTO,
+  formatosContract,
+  TipoFormatoSchema,
+  VarianteFormatoSchema,
+} from "@pis/contracts";
 import { initServer } from "@ts-rest/fastify";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { autorizar, denegado } from "../../infra/auth/autorizacion.js";
@@ -18,10 +23,13 @@ import {
 import { OPCIONES_TS_REST } from "../../infra/http/manejador-errores.js";
 import { LocalStorageService } from "../../infra/storage/local-storage.service.js";
 import { requireAuth } from "../../middleware/require-auth.js";
+import { esDeMesaDePartes, type FormatoCatalogo } from "./catalogo-formatos.js";
 import {
   buscarFormatoVigente,
+  catalogoVigente,
   listarFormatos,
   listarVersiones,
+  tieneBase,
   versionDTO,
   versionPorId,
 } from "./formatos.repository.js";
@@ -76,6 +84,26 @@ async function enviarBase(reply: FastifyReply, ruta: string, nombre: string): Pr
     .header("Cache-Control", "private, no-store")
     .status(200)
     .send(createReadStream(ruta));
+}
+
+/** Entrega la plantilla vigente del formato: versión activa (volumen) o base del repositorio. */
+async function enviarVigente(reply: FastifyReply, formato: FormatoCatalogo): Promise<void> {
+  const activa = (await listarVersiones(undefined, formato)).find((v) => v.activa);
+  if (activa) {
+    await entregarArchivo(reply, storage, activa.ruta, {
+      nombre: formato.archivoBase,
+      contentType: MIME_DOCX,
+    });
+    return;
+  }
+  const ruta = formato.etapaBase
+    ? rutaPlantillaBase(formato.tipo, formato.etapaBase, formato.variante)
+    : null;
+  if (!ruta) {
+    await reply.status(404).send(errorEnvelope("NO_ENCONTRADO", "Plantilla base no disponible"));
+    return;
+  }
+  await enviarBase(reply, ruta, formato.archivoBase);
 }
 
 /** Entrega la vista previa (PDF cacheado en el volumen) o el error correspondiente. */
@@ -317,24 +345,57 @@ export function registerFormatosRoutes(app: FastifyInstance): void {
         await reply.status(a.status).send(a.body);
         return;
       }
-      const activa = (await listarVersiones(undefined, formato)).find((v) => v.activa);
-      if (activa) {
-        await entregarArchivo(reply, storage, activa.ruta, {
-          nombre: formato.archivoBase,
-          contentType: MIME_DOCX,
-        });
+      await enviarVigente(reply, formato);
+    },
+  );
+
+  /**
+   * GET /api/v1/public/formatos-mesa-de-partes?variante=1|2 (sin sesión):
+   * formatos de Mesa de Partes con archivo disponible, para el wizard público.
+   */
+  app.get<{ Querystring: { variante?: string } }>(
+    "/api/v1/public/formatos-mesa-de-partes",
+    async (req, reply) => {
+      const variante = VarianteFormatoSchema.safeParse(req.query.variante ?? "1");
+      if (!variante.success) {
+        await reply.status(400).send(errorEnvelope("VALIDACION_FALLIDA", "Variante inválida"));
         return;
       }
-      const ruta = formato.etapaBase
-        ? rutaPlantillaBase(formato.tipo, formato.etapaBase, formato.variante)
-        : null;
-      if (!ruta) {
-        await reply
-          .status(404)
-          .send(errorEnvelope("NO_ENCONTRADO", "Plantilla base no disponible"));
+      const candidatos = (await catalogoVigente()).filter(
+        (f) => f.variante === variante.data && esDeMesaDePartes(f),
+      );
+      const activas = new Set(
+        (await listarVersiones()).filter((v) => v.activa).map((v) => `${v.variante}:${v.tipo}`),
+      );
+      const formatos: FormatoPublicoDTO[] = candidatos
+        .filter((f) => activas.has(`${f.variante}:${f.tipo}`) || tieneBase(f))
+        .map((f) => ({
+          tipo: f.tipo,
+          variante: f.variante,
+          nombre: f.nombre,
+          requisito: f.requisito,
+          nombreArchivo: f.archivoBase,
+        }));
+      await reply.header("Cache-Control", "no-cache").status(200).send({ formatos });
+    },
+  );
+
+  /** GET /api/v1/public/formatos-mesa-de-partes/:variante/:tipo/descargar (sin sesión, solo `MP`). */
+  app.get<{ Params: { variante: string; tipo: string } }>(
+    "/api/v1/public/formatos-mesa-de-partes/:variante/:tipo/descargar",
+    async (req, reply) => {
+      const variante = VarianteFormatoSchema.safeParse(req.params.variante);
+      const tipo = TipoFormatoSchema.safeParse(req.params.tipo);
+      const formato =
+        variante.success && tipo.success
+          ? await buscarFormatoVigente(tipo.data, variante.data)
+          : null;
+      // Solo los formatos de Mesa de Partes son públicos; el resto responde igual que inexistente.
+      if (!formato || !esDeMesaDePartes(formato)) {
+        await reply.status(404).send(errorEnvelope("NO_ENCONTRADO", "Formato no encontrado"));
         return;
       }
-      await enviarBase(reply, ruta, formato.archivoBase);
+      await enviarVigente(reply, formato);
     },
   );
 

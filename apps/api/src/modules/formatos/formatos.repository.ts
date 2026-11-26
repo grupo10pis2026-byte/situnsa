@@ -1,8 +1,9 @@
+import { existsSync } from "node:fs";
 import type { FormatoDTO, FormatoVersionDTO } from "@pis/contracts";
 import { type DbExecutor, db, formatosCatalogo, plantillasFormato, usuarios } from "@pis/db";
 import { VERSION_PLANTILLAS } from "@pis/domain";
 import { and, desc, eq } from "drizzle-orm";
-import { obtenerPlantillaDocx } from "../../infra/docx/render-docx.js";
+import { obtenerPlantillaDocx, rutaPlantillaBase } from "../../infra/docx/render-docx.js";
 import { LocalStorageService } from "../../infra/storage/local-storage.service.js";
 import {
   aplicarAjustes,
@@ -142,6 +143,12 @@ export function versionDTO(v: VersionRow): FormatoVersionDTO {
   };
 }
 
+/** Hay plantilla base del repositorio para el formato (los agregados no tienen). */
+export function tieneBase(f: FormatoCatalogo): boolean {
+  const ruta = f.etapaBase ? rutaPlantillaBase(f.tipo, f.etapaBase, f.variante) : null;
+  return ruta !== null && existsSync(ruta);
+}
+
 export function formatoDTO(f: FormatoCatalogo, versiones: readonly VersionRow[]): FormatoDTO {
   const propias = versiones.filter((v) => v.tipo === f.tipo && v.variante === f.variante);
   const activa = propias.find((v) => v.activa) ?? null;
@@ -157,6 +164,7 @@ export function formatoDTO(f: FormatoCatalogo, versiones: readonly VersionRow[])
     origen: activa ? "PERSONALIZADO" : "BASE",
     versionActiva: activa ? versionDTO(activa) : null,
     totalVersiones: propias.length,
+    disponible: activa !== null || tieneBase(f),
   };
 }
 

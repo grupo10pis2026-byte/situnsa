@@ -158,6 +158,24 @@ describe("itemsDeEtapa (formatos agrupados por etapa en «Gestión de formatos»
     expect(tipos(itemsDeEtapa(PLANTILLAS, catalogo, 1, "E1"))).not.toContain("AREA_CONSTANCIA");
   });
 
+  it("nunca genera los formatos de Mesa de Partes (del sistema ni agregados)", () => {
+    const catalogo = aplicarAjustes(CATALOGO_FORMATOS, [
+      {
+        tipo: "AREA_REQUISITO",
+        variante: 1,
+        etapa: "MP",
+        nombre: "Requisito extra",
+        agregado: true,
+        archivado: false,
+      },
+    ]);
+    for (const etapa of ["E1", "E2", "E6"] as const) {
+      const ts = tipos(itemsDeEtapa(PLANTILLAS, catalogo, 1, etapa));
+      expect(ts.some((t) => t.startsWith("MP_"))).toBe(false);
+      expect(ts).not.toContain("AREA_REQUISITO");
+    }
+  });
+
   it("no genera los formatos que el área eliminó", () => {
     const catalogo = aplicarAjustes(
       CATALOGO_FORMATOS,

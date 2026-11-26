@@ -73,10 +73,20 @@ function etiquetaVariante(f: Pick<FormatoDTO, "variante">): string {
 const ETAPAS: Array<{ etapa: EtapaFormato; titulo: string; corto: string }> = [
   { etapa: "E1", titulo: "Etapa 01 · Plan", corto: "Etapa 01" },
   { etapa: "E2", titulo: "Etapa 02 · Borrador y sustentación", corto: "Etapa 02" },
+  { etapa: "MP", titulo: "Mesa de Partes · Formatos para el postulante", corto: "Mesa de Partes" },
 ];
 
 function etiquetaEtapa(etapa: EtapaFormato): string {
   return ETAPAS.find((e) => e.etapa === etapa)?.corto ?? etapa;
+}
+
+/** Mesa de Partes = formatos en blanco que descarga el postulante (no se generan). */
+function esMesaDePartes(f: Pick<FormatoDTO, "etapa">): boolean {
+  return f.etapa === "MP";
+}
+
+function aEtapa(v: string): EtapaFormato {
+  return ETAPAS.find((e) => e.etapa === v)?.etapa ?? "E1";
 }
 
 /** Vista previa de la plantilla vigente de un formato (versión activa o base). */
@@ -85,7 +95,11 @@ function previaVigente(f: FormatoDTO): VistaPrevia {
     titulo: f.nombre,
     subtitulo: `${etiquetaVariante(f)} · ${
       f.versionActiva ? `Versión ${f.versionActiva.version} en uso` : "Plantilla base del sistema"
-    } · las etiquetas <<CAMPO>> se rellenan al generar`,
+    } · ${
+      esMesaDePartes(f)
+        ? "se entrega en blanco al postulante en la Mesa de Partes"
+        : "las etiquetas <<CAMPO>> se rellenan al generar"
+    }`,
     pdfUrl: formatoVistaPreviaUrl(f),
     docxUrl: formatoVigenteUrl(f),
     nombre: f.archivoBase.replace(/\.docx$/i, ""),
@@ -117,7 +131,8 @@ function fecha(iso: string): string {
  * Gestión de formatos: el área reemplaza las plantillas DOCX institucionales
  * (por ejemplo, al cambiar el año o el reglamento) sin esperar un despliegue,
  * y organiza los formatos por etapa en cada variante (1|2 tesistas): agrega
- * formatos nuevos a la Etapa 01 o 02 y mueve cualquiera de etapa.
+ * formatos nuevos a la Etapa 01 o 02 y mueve cualquiera de etapa. La sección
+ * Mesa de Partes guarda los formatos en blanco que ofrece el wizard público.
  */
 export function FormatosPage() {
   const formatos = useFormatos();
@@ -193,7 +208,9 @@ export function FormatosPage() {
     {
       encabezado: "Plantilla vigente",
       celda: (f: Fila) =>
-        f.versionActiva ? (
+        !f.disponible ? (
+          <StatusBadge estado="PENDIENTE" etiqueta="Falta subir el archivo" />
+        ) : f.versionActiva ? (
           <div className="space-y-1">
             <StatusBadge estado="VALIDADO" etiqueta={`Versión ${f.versionActiva.version}`} />
             <p className="text-xs text-grafito-600">
@@ -249,6 +266,7 @@ export function FormatosPage() {
           </Button>
           <Button
             aria-label={`Vista previa de ${f.nombre}`}
+            disabled={!f.disponible}
             onClick={() => setPrevia(previaVigente(f))}
             tamano="sm"
             title="Ver la plantilla vigente"
@@ -258,6 +276,7 @@ export function FormatosPage() {
           </Button>
           <Button
             aria-label={`Descargar ${f.nombre}`}
+            disabled={!f.disponible}
             onClick={() => void descargar(f)}
             tamano="sm"
             title="Descargar la plantilla vigente"
@@ -270,6 +289,7 @@ export function FormatosPage() {
             {f.totalVersiones > 0 ? f.totalVersiones : ""}
           </Button>
           <Button
+            disabled={!f.disponible}
             onClick={() => setEditar(f)}
             tamano="sm"
             title="Buscar y reemplazar texto en la plantilla vigente"
@@ -278,7 +298,7 @@ export function FormatosPage() {
             <Replace size={14} /> Editar texto
           </Button>
           <Button onClick={() => setSubir(f)} tamano="sm" variante="contorno">
-            <Upload size={14} /> Subir versión
+            <Upload size={14} /> {f.disponible ? "Subir versión" : "Subir formato"}
           </Button>
         </div>
       ),
@@ -289,7 +309,7 @@ export function FormatosPage() {
     <AppShell activo="/formatos">
       <PageHeader
         titulo="Gestión de formatos"
-        descripcion="Plantillas Word que usa «Insertar datos en documentos», agrupadas por etapa para 1 y 2 tesistas. Puede agregar formatos nuevos a una etapa, eliminarlos y subir versiones; las anteriores quedan en el historial."
+        descripcion="Plantillas Word que usa «Insertar datos en documentos», agrupadas por etapa para 1 y 2 tesistas, y los formatos en blanco que el postulante descarga en la Mesa de Partes. Puede agregar formatos nuevos, eliminarlos y subir versiones; las anteriores quedan en el historial."
         migas={[{ etiqueta: "Inicio", href: "/admin" }, { etiqueta: "Gestión de formatos" }]}
         insignia={
           personalizados > 0 ? (
@@ -336,7 +356,11 @@ export function FormatosPage() {
                           <FilePlus size={14} /> Agregar formato
                         </Button>
                       }
-                      descripcion={`${enEtapa.length} formato(s) · ${v === "1" ? "1 tesista" : "2 tesistas"}`}
+                      descripcion={`${enEtapa.length} formato(s) · ${v === "1" ? "1 tesista" : "2 tesistas"}${
+                        etapa === "MP"
+                          ? " · el postulante los descarga, llena y adjunta en el wizard público (los que agregue el área son opcionales); no se generan con datos del expediente"
+                          : ""
+                      }`}
                       titulo={titulo}
                     />
                     <div className="p-3 md:p-4">
@@ -350,8 +374,10 @@ export function FormatosPage() {
                     {eliminados.length > 0 && (
                       <div className="space-y-2 border-t border-slate-200/80 px-4 py-3 md:px-5">
                         <p className="text-xs font-semibold text-grafito-600">
-                          Formatos eliminados ({eliminados.length}): no se generan en los
-                          expedientes
+                          Formatos eliminados ({eliminados.length}):{" "}
+                          {etapa === "MP"
+                            ? "no se ofrecen en la Mesa de Partes"
+                            : "no se generan en los expedientes"}
                         </p>
                         <ul className="space-y-1.5">
                           {eliminados.map((f) => (
@@ -394,7 +420,11 @@ export function FormatosPage() {
       {quitar && (
         <ConfirmDialog
           confirmar="Eliminar formato"
-          mensaje={`«${quitar.nombre}» dejará de generarse en los expedientes de ${etiquetaVariante(quitar)}. Los documentos ya generados se conservan y podrá restaurarlo desde la lista de eliminados.`}
+          mensaje={
+            esMesaDePartes(quitar)
+              ? `«${quitar.nombre}» dejará de ofrecerse en la Mesa de Partes para ${etiquetaVariante(quitar)}. Podrá restaurarlo desde la lista de eliminados.`
+              : `«${quitar.nombre}» dejará de generarse en los expedientes de ${etiquetaVariante(quitar)}. Los documentos ya generados se conservan y podrá restaurarlo desde la lista de eliminados.`
+          }
           onCancelar={() => setQuitar(null)}
           onConfirmar={() => void confirmarQuitar()}
           peligroso
@@ -454,9 +484,9 @@ function DialogoSubir({ formato, onCerrar }: { formato: FormatoDTO; onCerrar: ()
       {resultado ? (
         <div className="space-y-3">
           <p className="text-sm text-grafito-900">
-            La versión {resultado.version.version} ya está activa. Los documentos que se generen
-            desde ahora usarán esta plantilla ({resultado.version.etiquetas.length} etiqueta(s)
-            detectada(s)).
+            {esMesaDePartes(formato)
+              ? `La versión ${resultado.version.version} ya está activa: la Mesa de Partes la ofrece desde ahora a los postulantes.`
+              : `La versión ${resultado.version.version} ya está activa. Los documentos que se generen desde ahora usarán esta plantilla (${resultado.version.etiquetas.length} etiqueta(s) detectada(s)).`}
           </p>
           <ListaAvisos avisos={resultado.version.advertencias} />
           <div className="flex justify-end">
@@ -465,11 +495,18 @@ function DialogoSubir({ formato, onCerrar }: { formato: FormatoDTO; onCerrar: ()
         </div>
       ) : (
         <div className="space-y-3">
-          <p className="text-xs text-grafito-600">
-            Descargue la plantilla vigente, modifíquela en Word conservando las etiquetas{" "}
-            <code>{"<<CAMPO>>"}</code> y súbala aquí. Si Word partió alguna etiqueta, el sistema la
-            repara.
-          </p>
+          {esMesaDePartes(formato) ? (
+            <p className="text-xs text-grafito-600">
+              Suba el formato en blanco tal como lo descargará el postulante en la Mesa de Partes.
+              No se rellena con datos: no use etiquetas <code>{"<<CAMPO>>"}</code>.
+            </p>
+          ) : (
+            <p className="text-xs text-grafito-600">
+              Descargue la plantilla vigente, modifíquela en Word conservando las etiquetas{" "}
+              <code>{"<<CAMPO>>"}</code> y súbala aquí. Si Word partió alguna etiqueta, el sistema
+              la repara.
+            </p>
+          )}
           <Field etiqueta="Archivo Word (.docx)">
             <input
               accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -858,6 +895,7 @@ function DialogoAgregar({
   const [resultado, setResultado] = useState<SubirFormatoResultadoDTO | null>(null);
   const variantes = variante === 1 ? "1 tesista" : "2 tesistas";
   const nombreValido = nombre.trim().length >= 3;
+  const mp = etapa === "MP";
 
   async function enviar() {
     if (!archivo || !nombreValido) return;
@@ -874,16 +912,20 @@ function DialogoAgregar({
     <Dialogo
       abierto
       ancho="max-w-lg"
-      descripcion={`${variantes} · se generará con «Insertar datos en documentos» de la etapa elegida`}
+      descripcion={`${variantes} · ${
+        mp
+          ? "el postulante podrá descargarlo, llenarlo y adjuntarlo en la Mesa de Partes"
+          : "se generará con «Insertar datos en documentos» de la etapa elegida"
+      }`}
       onAbierto={(v) => !v && onCerrar()}
       titulo={resultado ? "Formato agregado" : "Agregar formato"}
     >
       {resultado ? (
         <div className="space-y-3">
           <p className="text-sm text-grafito-900">
-            «{resultado.formato.nombre}» ya está en la {etiquetaEtapa(resultado.formato.etapa)} de{" "}
-            {variantes} ({resultado.version.etiquetas.length} etiqueta(s) detectada(s)). Los
-            expedientes lo verán al insertar datos en esa etapa.
+            {esMesaDePartes(resultado.formato)
+              ? `«${resultado.formato.nombre}» ya está en la Mesa de Partes de ${variantes}: el postulante puede descargarlo, llenarlo y adjuntarlo (opcional).`
+              : `«${resultado.formato.nombre}» ya está en la ${etiquetaEtapa(resultado.formato.etapa)} de ${variantes} (${resultado.version.etiquetas.length} etiqueta(s) detectada(s)). Los expedientes lo verán al insertar datos en esa etapa.`}
           </p>
           <ListaAvisos avisos={resultado.version.advertencias} />
           <div className="flex justify-end">
@@ -892,12 +934,24 @@ function DialogoAgregar({
         </div>
       ) : (
         <div className="space-y-3">
-          <p className="text-xs text-grafito-600">
-            Prepare el documento en Word con las etiquetas <code>{"<<CAMPO>>"}</code> que deben
-            rellenarse con los datos del expediente (por ejemplo <code>{"<<NOMBRES>>"}</code>,{" "}
-            <code>{"<<TESIS>>"}</code>).
-          </p>
-          <Field ayuda="Como aparecerá en el expediente." etiqueta="Nombre del formato">
+          {mp ? (
+            <p className="text-xs text-grafito-600">
+              Suba el formato en blanco que el postulante podrá descargar, llenar y adjuntar en la
+              Mesa de Partes como documento opcional (no se rellena con datos del expediente).
+            </p>
+          ) : (
+            <p className="text-xs text-grafito-600">
+              Prepare el documento en Word con las etiquetas <code>{"<<CAMPO>>"}</code> que deben
+              rellenarse con los datos del expediente (por ejemplo <code>{"<<NOMBRES>>"}</code>,{" "}
+              <code>{"<<TESIS>>"}</code>).
+            </p>
+          )}
+          <Field
+            ayuda={
+              mp ? "Como lo verá el área en este catálogo." : "Como aparecerá en el expediente."
+            }
+            etiqueta="Nombre del formato"
+          >
             <input
               className={controlClase}
               maxLength={120}
@@ -906,7 +960,7 @@ function DialogoAgregar({
               value={nombre}
             />
           </Field>
-          <Select label="Etapa" onChange={(v) => setEtapa(v === "E2" ? "E2" : "E1")} value={etapa}>
+          <Select label="Categoría" onChange={(v) => setEtapa(aEtapa(v))} value={etapa}>
             {ETAPAS.map((e) => (
               <option key={e.etapa} value={e.etapa}>
                 {e.titulo}

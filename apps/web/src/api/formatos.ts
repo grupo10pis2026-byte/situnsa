@@ -6,10 +6,13 @@ import {
   type EtapaFormato,
   type FormatoDTO,
   FormatoDTOSchema,
+  type FormatoPublicoDTO,
   type FormatoVersionDTO,
   FormatoVersionDTOSchema,
   type ListaFormatosDTO,
   ListaFormatosDTOSchema,
+  type ListaFormatosPublicosDTO,
+  ListaFormatosPublicosDTOSchema,
   type SubirFormatoResultadoDTO,
   SubirFormatoResultadoDTOSchema,
 } from "@pis/contracts";
@@ -240,4 +243,28 @@ export function formatoVistaPreviaUrl(f: Pick<FormatoDTO, "variante" | "tipo">):
 
 export function versionVistaPreviaUrl(versionId: string): string {
   return `${apiBaseUrl}/api/formatos/versiones/${versionId}/vista-previa`;
+}
+
+/**
+ * Formatos de Mesa de Partes con archivo disponible (ruta pública, sin
+ * sesión): el wizard ofrece su descarga junto a cada requisito.
+ */
+export function useFormatosMesaDePartes(variante: 1 | 2) {
+  return useQuery({
+    queryKey: ["formatos", "mesa-de-partes", variante] as const,
+    staleTime: 5 * 60_000,
+    retry: 1,
+    queryFn: async (): Promise<ListaFormatosPublicosDTO> => {
+      const res = await fetch(
+        `${apiBaseUrl}/api/v1/public/formatos-mesa-de-partes?variante=${variante}`,
+      );
+      if (!res.ok) throw await errorDeRespuesta(res, "No se pudo cargar los formatos");
+      return ListaFormatosPublicosDTOSchema.parse(await res.json());
+    },
+  });
+}
+
+/** Descarga pública del formato vigente de Mesa de Partes (enlace directo, sin Bearer). */
+export function formatoMesaDePartesUrl(f: Pick<FormatoPublicoDTO, "variante" | "tipo">): string {
+  return `${apiBaseUrl}/api/v1/public/formatos-mesa-de-partes/${f.variante}/${f.tipo}/descargar`;
 }

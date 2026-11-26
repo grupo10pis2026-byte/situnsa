@@ -94,6 +94,38 @@ export function advertenciasPlantilla(
   return avisos;
 }
 
+/**
+ * Advertencias de un formato de Mesa de Partes: se entrega tal cual al
+ * postulante, así que cualquier etiqueta `<<CAMPO>>` quedaría visible.
+ */
+export function advertenciasMesaDePartes(
+  etiquetas: readonly string[],
+  reparadas: number,
+): string[] {
+  const avisos: string[] = [];
+  if (etiquetas.length > 0) {
+    avisos.push(
+      `Los formatos de Mesa de Partes se entregan en blanco al postulante: estas etiquetas no se rellenan y quedarán visibles: ${etiquetas.map((e) => `<<${e}>>`).join(", ")}.`,
+    );
+  }
+  if (reparadas > 0) {
+    avisos.push(`Se unieron ${reparadas} etiqueta(s) que Word había partido en fragmentos.`);
+  }
+  return avisos;
+}
+
+/** Advertencias según la categoría del formato (etapa del expediente o Mesa de Partes). */
+export function advertenciasDeFormato(
+  etapa: string,
+  etiquetas: readonly string[],
+  etiquetasBase: readonly string[],
+  reparadas: number,
+): string[] {
+  return etapa === "MP"
+    ? advertenciasMesaDePartes(etiquetas, reparadas)
+    : advertenciasPlantilla(etiquetas, etiquetasConocidas(), etiquetasBase, reparadas);
+}
+
 /** DOCX ya validado y con sus etiquetas reparadas (`analizarPlantillaDocx`). */
 export type AnalisisFormato = NonNullable<ReturnType<typeof analizarPlantillaDocx>>;
 
@@ -212,9 +244,9 @@ export class SubirFormatoUseCase {
     const base = formato.etapaBase
       ? obtenerPlantillaDocx(formato.tipo, formato.etapaBase, formato.variante)
       : null;
-    const advertencias = advertenciasPlantilla(
+    const advertencias = advertenciasDeFormato(
+      formato.etapa,
       analisis.etiquetas,
-      etiquetasConocidas(),
       base ? etiquetasDeDocx(base) : [],
       analisis.reparadas,
     );

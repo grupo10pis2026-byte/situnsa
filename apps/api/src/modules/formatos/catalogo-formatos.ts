@@ -2,19 +2,25 @@
  * Catálogo de formatos gestionables: un formato = plantilla DOCX física
  * (tipo canónico × variante 1|2 tesistas). Se arma desde el catálogo
  * canónico de `@pis/contracts` y los nombres de `@pis/domain` (PLANTILLAS).
+ * La categoría Mesa de Partes (`MP`) agrupa formatos en blanco para el
+ * postulante: no se generan con datos del expediente.
  */
 import {
   DOCUMENTOS_1_TESISTA_ETAPA_01,
   DOCUMENTOS_1_TESISTA_ETAPA_02,
   DOCUMENTOS_2_TESISTAS_ETAPA_01,
   DOCUMENTOS_2_TESISTAS_ETAPA_02,
+  ETAPA_MESA_DE_PARTES,
+  FORMATOS_MESA_DE_PARTES,
   METADATA_DOCUMENTOS_2_TESISTAS_E2,
 } from "@pis/contracts";
 import { PLANTILLAS } from "@pis/domain";
 import { archivoBasePlantilla } from "../../infra/docx/render-docx.js";
 
 export type Variante = 1 | 2;
-export type EtapaFormato = "E1" | "E2";
+export type EtapaFormato = "E1" | "E2" | "MP";
+/** Etapas del expediente (las que se generan con «Insertar datos en documentos»). */
+export type EtapaExpediente = "E1" | "E2";
 
 export interface FormatoCatalogo {
   readonly tipo: string;
@@ -23,7 +29,7 @@ export interface FormatoCatalogo {
   readonly etapa: EtapaFormato;
   /**
    * Etapa de la plantilla base del repositorio (ubica el archivo en
-   * `ETAPA01/ETAPA02`); `null` en un formato agregado por el área.
+   * `ETAPA01/ETAPA02/MESA_DE_PARTES`); `null` en un formato agregado por el área.
    */
   readonly etapaBase: EtapaFormato | null;
   /** true = formato nuevo agregado por el área (sin plantilla base). */
@@ -32,6 +38,8 @@ export interface FormatoCatalogo {
   readonly archivado: boolean;
   readonly nombre: string;
   readonly archivoBase: string;
+  /** Requisito del wizard de Mesa de Partes que cubre (solo formatos `MP` del sistema). */
+  readonly requisito: string | null;
 }
 
 /** Fila de `formatos_catalogo` que importa al catálogo (ver `@pis/db`). */
@@ -84,6 +92,24 @@ function entrada(tipo: string, variante: Variante, etapa: EtapaFormato): Formato
     archivado: false,
     nombre: nombreDe(tipo),
     archivoBase: archivoBasePlantilla(tipo, variante) ?? `${tipo}.docx`,
+    requisito: null,
+  };
+}
+
+function entradaMesaDePartes(
+  f: (typeof FORMATOS_MESA_DE_PARTES)[number],
+  variante: Variante,
+): FormatoCatalogo {
+  return {
+    tipo: f.tipo,
+    variante,
+    etapa: ETAPA_MESA_DE_PARTES,
+    etapaBase: ETAPA_MESA_DE_PARTES,
+    agregado: false,
+    archivado: false,
+    nombre: f.nombre,
+    archivoBase: archivoBasePlantilla(f.tipo, variante) ?? archivoDeNombre(f.nombre),
+    requisito: f.requisito,
   };
 }
 
@@ -97,6 +123,9 @@ function construir(): FormatoCatalogo[] {
     const tipos = meta.alcance === "participante" && meta.subdocumentos ? meta.subdocumentos : [t];
     for (const sub of tipos) lista.push(entrada(sub, 2, "E2"));
   }
+  for (const variante of [1, 2] as const) {
+    for (const f of FORMATOS_MESA_DE_PARTES) lista.push(entradaMesaDePartes(f, variante));
+  }
   return lista;
 }
 
@@ -104,7 +133,12 @@ function construir(): FormatoCatalogo[] {
 export const CATALOGO_FORMATOS: readonly FormatoCatalogo[] = construir();
 
 export function esEtapaFormato(v: unknown): v is EtapaFormato {
-  return v === "E1" || v === "E2";
+  return v === "E1" || v === "E2" || v === ETAPA_MESA_DE_PARTES;
+}
+
+/** true = formato de Mesa de Partes (en blanco para el postulante, no se genera). */
+export function esDeMesaDePartes(f: { readonly etapa: EtapaFormato }): boolean {
+  return f.etapa === ETAPA_MESA_DE_PARTES;
 }
 
 /** Nombre del archivo que se descarga para un formato agregado (sin caracteres de ruta). */
@@ -157,6 +191,7 @@ export function aplicarAjustes(
       archivado: a.archivado,
       nombre,
       archivoBase: archivoDeNombre(nombre),
+      requisito: null,
     });
   }
   return lista;
@@ -176,15 +211,16 @@ function formatoDeTipo(
  * de su variante. `soloAjustes` = solo si el área lo movió o lo agregó (el
  * checklist conserva su etapa configurada); sin él, la etapa vigente del
  * formato (documentos ya generados, aunque el formato se haya movido después).
+ * Los formatos de Mesa de Partes no pertenecen a ninguna etapa del expediente.
  */
 export function etapaEnExpediente(
   catalogo: readonly FormatoCatalogo[],
   tipo: string,
   variante: Variante,
   opciones: { soloAjustes?: boolean } = {},
-): EtapaFormato | null {
+): EtapaExpediente | null {
   const f = formatoDeTipo(catalogo, tipo, variante);
-  if (!f) return null;
+  if (!f || f.etapa === ETAPA_MESA_DE_PARTES) return null;
   if (opciones.soloAjustes && !f.agregado && f.etapa === f.etapaBase) return null;
   return f.etapa;
 }

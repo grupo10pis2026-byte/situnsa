@@ -245,6 +245,17 @@ const MAPA_ARCHIVOS: Record<string, { 1: string; 2: string }> = {
     1: "RESOLUCIÓN DECANAL - 01 TESISTA.docx",
     2: "RESOLUCIÓN DECANAL - 02 TESISTA.docx",
   },
+  // Mesa de Partes (formatos en blanco para el postulante, carpeta MESA_DE_PARTES).
+  // MP_ANEXO_18 y MP_AUTORIZACION_EMPRESA no tienen base: el área sube la primera versión.
+  MP_ANEXO_17: {
+    1: "ANEXO 17 - SOLICITUD DE INSCRIPCION - 01 TESISTA.docx",
+    2: "ANEXO 17 - SOLICITUD DE INSCRIPCION - 02 TESISTA.docx",
+  },
+  MP_PLAN_TESIS: { 1: "ESQUEMA PLAN DE TESIS.docx", 2: "ESQUEMA PLAN DE TESIS.docx" },
+  MP_PLAN_TRABAJO_ACADEMICO: {
+    1: "ESQUEMA PLAN DE TRABAJO ACADEMICO.docx",
+    2: "ESQUEMA PLAN DE TRABAJO ACADEMICO.docx",
+  },
 };
 
 const ETAPAS_E1 = new Set([
@@ -271,7 +282,12 @@ export function rutaPlantillaBase(tipo: string, etapa: string, numTesistas = 1):
   const archivo = archivoBasePlantilla(tipo, numTesistas);
   if (!archivo) return null;
   const subcarpeta = numTesistas > 1 ? "2tesistas" : "1tesista";
-  const etapaDir = ETAPAS_E1.has(tipo) || etapa === "E1" ? "ETAPA01" : "ETAPA02";
+  const etapaDir =
+    etapa === "MP"
+      ? "MESA_DE_PARTES"
+      : ETAPAS_E1.has(tipo) || etapa === "E1"
+        ? "ETAPA01"
+        : "ETAPA02";
   return join(DIR_MAESTRAS, subcarpeta, etapaDir, archivo);
 }
 
