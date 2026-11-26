@@ -1,5 +1,5 @@
 import { db, sesiones, usuarios } from "@pis/db";
-import { and, eq, isNull, or } from "drizzle-orm";
+import { and, eq, isNull, or, sql } from "drizzle-orm";
 
 /** Cuenta mínima para autenticar (evita exponer la fila completa). */
 export interface CuentaAuth {
@@ -71,12 +71,19 @@ export const repositorioCuentasDb: RepositorioCuentas = {
     return normalizar(rows[0]);
   },
   async buscarPorGoogle(email, sub) {
-    const rows = await db
+    // Primero la identidad ya vinculada (`sub` estable); si no, por correo.
+    const porSub = await db
       .select(COLUMNAS)
       .from(usuarios)
-      .where(or(eq(usuarios.googleSub, sub), eq(usuarios.email, email)))
+      .where(eq(usuarios.googleSub, sub))
       .limit(1);
-    return normalizar(rows[0]);
+    if (porSub[0]) return normalizar(porSub[0]);
+    const porCorreo = await db
+      .select(COLUMNAS)
+      .from(usuarios)
+      .where(sql`lower(${usuarios.email}) = ${email.toLowerCase()}`)
+      .limit(1);
+    return normalizar(porCorreo[0]);
   },
   async guardarIntento(usuarioId, fallidos, bloqueadoHasta) {
     await db

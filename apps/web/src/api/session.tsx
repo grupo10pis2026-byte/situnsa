@@ -8,7 +8,14 @@ import {
   useState,
 } from "react";
 import type { SesionDTO } from "../api/auth.js";
-import { loginRequest, logoutRequest, refreshRequest, sesionRequest } from "../api/auth.js";
+import {
+  loginGoogleRequest,
+  loginRequest,
+  logoutRequest,
+  type ParSesion,
+  refreshRequest,
+  sesionRequest,
+} from "../api/auth.js";
 
 interface Sesion extends SesionDTO {
   identificador: string;
@@ -17,6 +24,8 @@ interface Sesion extends SesionDTO {
 interface ValorSesion {
   sesion: Sesion | null;
   entrar: (identificador: string, password: string) => Promise<Sesion>;
+  /** Login con el ID token de Google (cuenta institucional). */
+  entrarConGoogle: (idToken: string) => Promise<Sesion>;
   salir: () => void;
 }
 
@@ -42,6 +51,7 @@ const CLAVE = "pis-sesion";
 const Ctx = createContext<ValorSesion>({
   sesion: null,
   entrar: () => Promise.reject(new Error("SessionProvider ausente")),
+  entrarConGoogle: () => Promise.reject(new Error("SessionProvider ausente")),
   salir: () => {},
 });
 
@@ -88,14 +98,24 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const entrar = useCallback(async (identificador: string, password: string): Promise<Sesion> => {
-    const par = await loginRequest(identificador, password);
+  const aplicarPar = useCallback((par: ParSesion): Sesion => {
     tokenAcceso = par.accessToken;
     const s: Sesion = { ...par.usuario, identificador: par.usuario.dni };
     localStorage.setItem(CLAVE, JSON.stringify(s));
     setSesion(s);
     return s;
   }, []);
+
+  const entrar = useCallback(
+    async (identificador: string, password: string): Promise<Sesion> =>
+      aplicarPar(await loginRequest(identificador, password)),
+    [aplicarPar],
+  );
+
+  const entrarConGoogle = useCallback(
+    async (idToken: string): Promise<Sesion> => aplicarPar(await loginGoogleRequest(idToken)),
+    [aplicarPar],
+  );
 
   const salir = useCallback(() => {
     tokenAcceso = null;
@@ -104,7 +124,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     void logoutRequest();
   }, []);
 
-  const valor = useMemo(() => ({ sesion, entrar, salir }), [sesion, entrar, salir]);
+  const valor = useMemo(
+    () => ({ sesion, entrar, entrarConGoogle, salir }),
+    [sesion, entrar, entrarConGoogle, salir],
+  );
   return <Ctx.Provider value={valor}>{children}</Ctx.Provider>;
 }
 

@@ -56,6 +56,9 @@ services:
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_REVISION_ENABLED: ${GEMINI_REVISION_ENABLED:-0}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
+      # Acceso con Google (vacío = sin botón). Origen JS autorizado: http://localhost
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_DOMINIO: ${GOOGLE_DOMINIO:-unsa.edu.pe}
       # Enlaces de los correos
       APP_URL: ${PROD_APP_URL:-http://localhost:${PROD_PORT:-80}}
       # Correo: sin SMTP_HOST solo se registra en el log. Para verlos en el

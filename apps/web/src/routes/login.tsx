@@ -3,12 +3,16 @@ import { GraduationCap, LockKeyhole } from "lucide-react";
 import { useId, useState } from "react";
 import { destinoPorRol } from "../api/auth.js";
 import { useSession } from "../api/session.js";
+import { BotonGoogle } from "../components/domain/boton-google.js";
 import { Button } from "../components/ui/button.js";
 import { controlClase, Field } from "../components/ui/field.js";
 
-/** §3 Login: identidad UNSA/FIPS + acceso + error controlado + navegación por rol. */
+/**
+ * §3 Login: identidad UNSA/FIPS + acceso (clave o Google institucional) +
+ * error controlado + navegación por rol.
+ */
 export function LoginPage() {
-  const { entrar, sesion } = useSession();
+  const { entrar, entrarConGoogle, sesion } = useSession();
   const navigate = useNavigate();
   const [identificador, setIdentificador] = useState("");
   const [password, setPassword] = useState("");
@@ -33,6 +37,20 @@ export function LoginPage() {
     } catch (err) {
       // Mensaje del servidor solo para bloqueo/cuenta sin clave; el resto es genérico.
       setError(err instanceof Error ? err.message : "Credenciales inválidas o usuario inactivo");
+    } finally {
+      setCargando(false);
+    }
+  }
+
+  async function onGoogle(idToken: string): Promise<void> {
+    if (cargando) return;
+    setError(null);
+    setCargando(true);
+    try {
+      const s = await entrarConGoogle(idToken);
+      void navigate({ to: destinoPorRol(s.rol) });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo iniciar sesión con Google");
     } finally {
       setCargando(false);
     }
@@ -105,6 +123,12 @@ export function LoginPage() {
             <LockKeyhole size={16} />
             {cargando ? "Validando credenciales…" : "Ingresar"}
           </Button>
+          <BotonGoogle
+            deshabilitado={cargando}
+            onCredencial={(t) => {
+              void onGoogle(t);
+            }}
+          />
           <p className="text-center text-xs">
             <Link className="font-semibold text-navy-800 hover:underline" to="/restablecer">
               ¿Primera vez u olvidaste tu clave?

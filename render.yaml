@@ -35,6 +35,10 @@ services:
       # SMTP_HOST los correos solo se registran en el log del servicio.
       - key: MAIL_FROM
         value: no-reply@fips.unsa.edu.pe
+      # Acceso con Google: GOOGLE_CLIENT_ID como secreto en el Dashboard (la
+      # URL de Render debe estar en los orígenes JS autorizados del cliente).
+      - key: GOOGLE_DOMINIO
+        value: unsa.edu.pe
 
 databases:
   - name: situnsa-db

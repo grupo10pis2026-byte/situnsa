@@ -13,6 +13,7 @@ export type DomainErrorCode =
   | "SIN_CLAVE"
   | "GOOGLE_INVALIDO"
   | "SIN_CUENTA"
+  | "DOMINIO_NO_PERMITIDO"
   | "SESION_INVALIDA"
   | "SIN_PERMISO"
   | "FUERA_DE_ALCANCE"

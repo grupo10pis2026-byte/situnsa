@@ -41,6 +41,16 @@ export const SolicitarRestablecimientoSchema = z.object({
   identificador: z.string().min(2).max(255).describe("DNI, CUI o correo"),
 });
 
+/**
+ * Configuración pública del acceso con Google: la web solo muestra el botón
+ * si hay `clientId`. `dominio` = único dominio de Workspace admitido.
+ */
+export const ConfigGoogleSchema = z.object({
+  clientId: z.string().nullable(),
+  dominio: z.string(),
+});
+export type ConfigGoogle = z.infer<typeof ConfigGoogleSchema>;
+
 const c = initContract();
 
 export const authContract = c.router({
@@ -51,12 +61,19 @@ export const authContract = c.router({
     responses: { 200: ParSesionSchema, 401: ErrorEnvelopeSchema },
     summary: "Login local: DNI/CUI/correo + bcrypt, bloqueo 5×15min",
   },
+  configGoogle: {
+    method: "GET",
+    path: "/api/auth/google/config",
+    responses: { 200: ConfigGoogleSchema },
+    summary: "Client ID de Google OIDC y dominio institucional admitido (público)",
+  },
   loginGoogle: {
     method: "POST",
     path: "/api/auth/google",
     body: z.object({ idToken: z.string().min(10) }),
     responses: { 200: ParSesionSchema, 401: ErrorEnvelopeSchema, 501: ErrorEnvelopeSchema },
-    summary: "Google OIDC: solo usuarios activos existentes (sin autocreación)",
+    summary:
+      "Google OIDC: solo cuentas @unsa.edu.pe de usuarios activos existentes (sin autocreación)",
   },
   refresh: {
     method: "POST",

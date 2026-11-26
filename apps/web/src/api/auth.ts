@@ -1,4 +1,9 @@
-import { ParSesionSchema, type SesionDTO } from "@pis/contracts";
+import {
+  type ConfigGoogle,
+  ConfigGoogleSchema,
+  ParSesionSchema,
+  type SesionDTO,
+} from "@pis/contracts";
 import { apiBaseUrl } from "./client.js";
 
 export type { SesionDTO };
@@ -31,6 +36,46 @@ export async function loginRequest(identificador: string, password: string): Pro
       );
     }
     throw new Error("Credenciales inválidas o usuario inactivo");
+  }
+  return ParSesionSchema.parse(await res.json());
+}
+
+/** Client ID de Google y dominio admitido; sin `clientId` no se muestra el botón. */
+export async function configGoogleRequest(): Promise<ConfigGoogle> {
+  try {
+    const res = await fetch(`${apiBaseUrl}/api/auth/google/config`, { credentials: "include" });
+    if (!res.ok) return { clientId: null, dominio: "unsa.edu.pe" };
+    return ConfigGoogleSchema.parse(await res.json());
+  } catch {
+    return { clientId: null, dominio: "unsa.edu.pe" };
+  }
+}
+
+/**
+ * Login con el ID token de Google Identity Services. El servidor exige cuenta
+ * del Workspace institucional y un usuario activo ya registrado.
+ */
+export async function loginGoogleRequest(idToken: string): Promise<ParSesion> {
+  const res = await fetch(`${apiBaseUrl}/api/auth/google`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ idToken }),
+  });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as {
+      error?: { codigo?: string; mensaje?: string };
+    } | null;
+    const codigo = body?.error?.codigo;
+    if (codigo === "DOMINIO_NO_PERMITIDO") {
+      throw new Error(body?.error?.mensaje ?? "Usa tu cuenta institucional @unsa.edu.pe");
+    }
+    if (codigo === "SIN_CUENTA") {
+      throw new Error(
+        "Tu correo institucional no tiene una cuenta activa en el sistema. Si enviaste una solicitud, espera el correo del área de titulación.",
+      );
+    }
+    throw new Error("No se pudo iniciar sesión con Google. Intenta nuevamente.");
   }
   return ParSesionSchema.parse(await res.json());
 }

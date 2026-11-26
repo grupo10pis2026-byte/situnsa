@@ -9,7 +9,10 @@ import {
   ActivarCuentaUseCase,
   SolicitarRestablecimientoUseCase,
 } from "./use-cases/acceso/activar-cuenta.use-case.js";
-import { LoginGoogleUseCase } from "./use-cases/login-google/login-google.use-case.js";
+import {
+  dominioGooglePermitido,
+  LoginGoogleUseCase,
+} from "./use-cases/login-google/login-google.use-case.js";
 import { LoginLocalUseCase } from "./use-cases/login-local/login-local.use-case.js";
 import {
   LogoutUseCase,
@@ -48,6 +51,13 @@ export function registerAuthRoutes(app: FastifyInstance): void {
         },
       };
     },
+    configGoogle: async () => ({
+      status: 200 as const,
+      body: {
+        clientId: process.env.GOOGLE_CLIENT_ID?.trim() || null,
+        dominio: dominioGooglePermitido(),
+      },
+    }),
     loginGoogle: async ({ body, request, reply }) => {
       if (!process.env.GOOGLE_CLIENT_ID) {
         return {
