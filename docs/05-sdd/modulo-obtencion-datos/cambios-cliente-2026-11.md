@@ -6,7 +6,7 @@
 | **Documento base** | [`spec.md`](./spec.md) (`SPEC-MOD-OBT-001`) |
 | **Rama** | `feat/modulo-obtencion-datos` |
 | **Fecha de registro** | 19/11/2026 |
-| **Estado** | Implementado en la rama (19/11/2026) — decisiones confirmadas (§6), detalle en §7 |
+| **Estado** | Implementado en la rama (19/11/2026) — decisiones confirmadas (§6), detalle en §7 · Ampliado por [`CR-MOD-OBT-002`](./cambios-cliente-2026-11-26.md) |
 | **Vistas afectadas** | Mesa de Partes (`/mesa-de-partes`), Detalle de Solicitud (`/solicitudes/:id`) y modal Aceptar Solicitud |
 
 ---
@@ -299,7 +299,7 @@ Cada entrega pasa `make check`; antes del PR, `make prod-local`.
 | ID | Pregunta | Decisión |
 |---|---|---|
 | D-1 | Cuenta de envío | Cuenta Google Workspace del equipo con contraseña de aplicación, configurada en `.env` (`SMTP_USER`/`SMTP_PASS`, nunca en commits). Prod: definir cuenta institucional dedicada. |
-| D-2 | Usuario recién creado | **Enlace de activación** de un solo uso (72 h, ruta `/activar`). Se eliminó la contraseña temporal del modal, del contrato y del correo. |
+| D-2 | Usuario recién creado | **Enlace de activación** de un solo uso (72 h, ruta `/activar`). Se eliminó la contraseña temporal del modal, del contrato y del correo. Desde `CR-MOD-OBT-002` la cuenta se crea ya al **observar** y el enlace viaja en el correo de observación. |
 | D-3 | Alcance de "observaciones" | Solo **Mesa de Partes** (solicitudes). Se reutilizó la infraestructura existente (pg-boss + nodemailer) y se dejó un catálogo extensible. |
 | D-4 | Corrector | **Ortografía + formato**, gratuito y local (Hunspell ES/EN en un Web Worker). Sin gramática ni servicios externos. |
 | D-5 | Vista previa en el dropzone | Sí: la zona muestra la **primera página** del archivo cargado. |
@@ -346,6 +346,7 @@ demanda (chunks separados): no aumentan la carga inicial de la SPA.
 
 ### 7.3. Pendiente
 - `make prod-local` antes del PR (vista previa con X-Accel en Nginx).
-- Prueba de punta a punta con API + DB: observar y aceptar una solicitud y
-  revisar los correos recibidos (activación → `/activar`).
+- ~~Prueba de punta a punta con API + DB: observar y aceptar una solicitud y
+  revisar los correos recibidos (activación → `/activar`).~~ Hecha el 26/11/2026
+  con el flujo nuevo ([`CR-MOD-OBT-002`](./cambios-cliente-2026-11-26.md) §8.2).
 - Definir la cuenta de envío de producción (D-1) y configurarla en Render.

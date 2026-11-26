@@ -10,7 +10,15 @@
 | **Requerimientos Cubiertos** | `RF-02xx[000]` al `RF-02xx[015]` |
 | **Mockup Base** | `docs/06-mockups/prototipos_modulo_obtencion_de_datos/prototipo_version2/` (Vistas 0, 1, 2 y 3) |
 | **Arquitectura de Referencia** | Monorepo PIS-UNSA (`AGENTS.md`, Fastify 5, React 19, ts-rest, Drizzle ORM, Postgres 16) |
-| **Solicitudes de Cambio** | [`cambios-cliente-2026-11.md`](./cambios-cliente-2026-11.md) (`CR-MOD-OBT-001`: dropzones, correos, corrector de título, vista previa) |
+| **Solicitudes de Cambio** | [`cambios-cliente-2026-11.md`](./cambios-cliente-2026-11.md) (`CR-MOD-OBT-001`: dropzones, correos, corrector de título, vista previa) · [`cambios-cliente-2026-11-26.md`](./cambios-cliente-2026-11-26.md) (`CR-MOD-OBT-002`: OAuth Google, cuenta al observar, sin plazo, foto JPG) |
+
+> **Revisión 2026-11-26 — [`CR-MOD-OBT-002`](./cambios-cliente-2026-11-26.md) prevalece sobre
+> este documento.** Resumen: sin subsanación por token (tabla `tokens_subsanacion`
+> eliminada, migración `0022`); al observar se crean las cuentas TESISTA y el estudiante
+> corrige desde «Mi trámite» (`GET /api/v1/mi-solicitud`,
+> `POST /api/v1/mi-solicitud/:id/subsanar`); la observación no tiene fecha límite
+> (RN-SOL-05 en suspenso); fotografía solo JPG; acceso con Google solo para cuentas
+> `@unsa.edu.pe` activas. Las secciones afectadas abajo están marcadas «(rev. 2026-11-26)».
 
 ---
 
@@ -41,7 +49,7 @@ graph TD
         A2["Generación atómica de correlativo SOL-AAAA-NNNN"]
         A3["Almacenamiento seguro de PDFs en volumen local (con SHA-256)"]
         A4["Bandeja Administrativa con KPIs, filtros, búsqueda y exportación XLS"]
-        A5["Flujo de Observación y Subsanación externa vía Tokens Criptográficos (10 d.h.)"]
+        A5["Flujo de Observación con cuenta TESISTA y subsanación desde el portal (sin plazo)"]
         A6["Flujo de Rechazo Lógico archivado e inmutable"]
         A7["Aceptación Transaccional UoW: Usuarios + Expediente SET + Documentos + Subetapas E1"]
         A8["Encolado de Notificaciones asíncronas vía pg-boss (confirmación, credenciales, alertas)"]
@@ -75,7 +83,6 @@ erDiagram
     SOLICITUD ||--|{ SOLICITUD_PARTICIPANTE : "tiene (1..2)"
     SOLICITUD ||--|{ SOLICITUD_DOCUMENTO : "contiene (1..N)"
     SOLICITUD ||--|{ SOLICITUD_HISTORIAL : "registra (1..N)"
-    SOLICITUD ||--o| TOKEN_SUBSANACION : "genera (0..N)"
     SOLICITUD }o--|| USUARIO : "revisada_por (0..1)"
     SOLICITUD_PARTICIPANTE }o--|| USUARIO : "vinculada_a (0..1)"
     SOLICITUD |o--o| EXPEDIENTE : "genera_al_aceptar (0..1)"
@@ -93,9 +100,9 @@ Representa el trámite formal de postulación ingresado por la mesa de partes vi
 - `titulo`: `TEXT` (Título preliminar normalizado a tipo oración).
 - `anioEgreso`: `INTEGER` (Año de egreso universitario).
 - `cantidadTesistas`: `SMALLINT` (`1` o `2`).
-- `estado`: `ENUM('NUEVA', 'EN_REVISION', 'OBSERVADA', 'ACEPTADA', 'RECHAZADA')` (Default: `NUEVA`). Nota: Al vencer el plazo de 10 d.h. permanece en `OBSERVADA` con indicador visual de vencimiento.
+- `estado`: `ENUM('NUEVA', 'EN_REVISION', 'OBSERVADA', 'ACEPTADA', 'RECHAZADA')` (Default: `NUEVA`). (rev. 2026-11-26) `OBSERVADA` no vence: queda abierta hasta que el tesista reenvía.
 - `responsableAsignadoId`: `UUID` (FK `usuarios.id`, nullable).
-- `fechaLimiteSubsanacion`: `DATE` (Nullable, calculada sumando 10 días hábiles en estado `OBSERVADA`).
+- `fechaLimiteSubsanacion`: `DATE` (Nullable). (rev. 2026-11-26) Sin uso: siempre `NULL`; se conserva por si se reactiva el plazo.
 - `motivoObservacion`: `TEXT` (Nullable, plantilla o texto explicativo).
 - `motivoRechazo`: `TEXT` (Nullable, justificación formal normativa).
 - `expedienteId`: `UUID` (FK `expedientes.id`, nullable; se vincula al ser `ACEPTADA`).
@@ -153,7 +160,10 @@ Trazabilidad append-only de cada evento administrativo ocurrido sobre la solicit
 - `metadata`: `JSONB` (Estructura tipada: `{ campoModificado, valorAnterior, valorNuevo }` o `{ motivos: string[] }`).
 - `createdAt`: `TIMESTAMP WITH TIME ZONE` (Default `NOW()`).
 
-#### E. Entidad: `TokenSubsanacion`
+#### E. ~~Entidad: `TokenSubsanacion`~~ — eliminada (rev. 2026-11-26)
+Eliminada con la migración `0022_eliminar_tokens_subsanacion`: la subsanación se hace
+autenticado desde el portal. Se conserva la definición original como referencia histórica.
+
 Enlace criptográfico de acceso temporal para levantar observaciones sin requerir login.
 - `id`: `UUID` (PK).
 - `solicitudId`: `UUID` (FK `solicitudes.id`).
@@ -170,9 +180,8 @@ Enlace criptográfico de acceso temporal para levantar observaciones sin requeri
 stateDiagram-v2
     [*] --> NUEVA: Envío exitoso Formulario Público (SOL generado)
     NUEVA --> EN_REVISION: Apertura en detalle por personal administrativo (asigna responsable)
-    EN_REVISION --> OBSERVADA: Registro de motivos + cálculo 10 d.h. (Genera token subsanación)
-    OBSERVADA --> EN_REVISION: Postulante envía subsanación con token válido (marca "Subsanada")
-    OBSERVADA --> OBSERVADA: Vencimiento de plazo (permanece en OBSERVADA con indicador "Plazo Vencido")
+    EN_REVISION --> OBSERVADA: Registro de motivos (crea cuentas TESISTA y avisa por correo)
+    OBSERVADA --> EN_REVISION: Tesista reenvía desde el portal con documentos corregidos (marca "Subsanada")
     EN_REVISION --> RECHAZADA: Dictamen de rechazo formal definitivo (motivo normativo)
     EN_REVISION --> ACEPTADA: Checklist conforme + confirmación modal (Genera SETNNN)
     ACEPTADA --> [*]: Derivado a Expedientes (Solo lectura)
@@ -183,9 +192,8 @@ stateDiagram-v2
 |---|---|---|---|---|
 | `[*]` | `REGISTRAR_SOLICITUD` | `NUEVA` | Captcha válido, DJ marcada, DNI válidos no duplicados en el form. | Genera `SOL-AAAA-NNNN`. Encola correo de acuse de recibo. |
 | `NUEVA` | `ABRIR_DETALLE` | `EN_REVISION` | Usuario administrativo autenticado. | Registra `responsableAsignadoId`. Registra historial. |
-| `EN_REVISION` | `OBSERVAR_SOLICITUD` | `OBSERVADA` | Al menos un motivo seleccionado o texto $\ge 10$ caracteres. | Calcula fecha límite (10 d.h. hábiles UNSA). Emite `TokenSubsanacion`. Encola correo con URL segura. |
-| `OBSERVADA` | `ENVIAR_SUBSANACION` | `EN_REVISION` | Token válido, no expirado y no usado. Solo edita campos/archivos observados. | Incrementa versiones de archivos. Quema el token (`usadoAt = NOW()`). Encola correo de aviso al responsable. |
-| `OBSERVADA` | `VENCIMIENTO_PLAZO` | `OBSERVADA` | `NOW() > fechaLimiteSubsanacion`. Permanece en `OBSERVADA`. | Muestra badge/alerta visual "Plazo Vencido" en la bandeja. El administrativo puede prorrogar o rechazar manualmente. |
+| `EN_REVISION` | `OBSERVAR_SOLICITUD` | `OBSERVADA` | Al menos un motivo seleccionado o texto $\ge 10$ caracteres. | (rev. 2026-11-26) Crea/sincroniza las cuentas TESISTA (sin clave) y las vincula. Tras el commit, un correo por participante con motivos y acceso (activación o login). Sin fecha límite. |
+| `OBSERVADA` | `ENVIAR_SUBSANACION` | `EN_REVISION` | (rev. 2026-11-26) Sesión de un participante vinculado; al menos un archivo; formato válido (foto JPG, resto PDF). | Guarda versión nueva de cada archivo (conformidad `PENDIENTE`). Historial `SUBSANADA`. Correo de acuse a los participantes. |
 | `EN_REVISION` | `RECHAZAR_SOLICITUD` | `RECHAZADA` | Motivo de rechazo $\ge 10$ caracteres. Confirmación explícita. | Bloquea la solicitud como inmutable. Encola correo de rechazo con fundamento. |
 | `EN_REVISION` | `ACEPTAR_SOLICITUD` | `ACEPTADA` | Checklist documental conforme. Cuentas resueltas. Si taller: grupo/asesor asignado. | Transacción UoW: crea o actualiza cuentas en `usuarios`, asigna `SETNNN`, migra docs a `documentos`, inicializa E1. |
 
@@ -200,7 +208,7 @@ stateDiagram-v2
 - **RN-SOL-02 (Inmutabilidad de la Vía de Ingreso):** Una vez que la solicitud se remite, el campo `via` no puede modificarse. Si un postulante postuló por Taller cuando le correspondía Vía Regular, la solicitud debe ser rechazada u observada con indicación de que remita una nueva solicitud.
 - **RN-SOL-03 (Unicidad y Regla de Parejas):** En solicitudes de 2 participantes, `dni_p1 != dni_p2` y `email_p1 != email_p2`. Si un DNI ya posee un expediente abierto en la misma modalidad, la bandeja alertará con semáforo rojo al administrativo antes de aceptar.
 - **RN-SOL-04 (Protección de Datos en Mesa de Partes Pública):** Para evitar vectores de enumeración o fuga de información de alumnos, el formulario público jamás confirmará si un DNI ya tiene trámite abierto o qué correo tiene asignado. Cualquier duplicidad detectada se advertirá en la bandeja interna administrativa (`RF-02xx[013]`).
-- **RN-SOL-05 (Cálculo Riguroso de Días Hábiles):** El plazo de 10 días para subsanaciones computa exclusivamente días hábiles (excluyendo sábados, domingos y feriados nacionales/regionales de Arequipa), importando la función de kernel puro `@pis/domain/dist/expediente/dias-habiles.js`.
+- **RN-SOL-05 (Cálculo Riguroso de Días Hábiles) — EN SUSPENSO (rev. 2026-11-26, la observación no tiene plazo):** El plazo de 10 días para subsanaciones computa exclusivamente días hábiles (excluyendo sábados, domingos y feriados nacionales/regionales de Arequipa), importando la función de kernel puro `@pis/domain/dist/expediente/dias-habiles.js`.
 - **RN-SOL-06 (Auditoría de Modificaciones Menores):** Si el administrativo corrige una errata en el nombre o título antes de aprobar, el sistema no sobrescribe silenciosamente: genera un registro inmutable en `solicitud_historial` guardando el DNI del administrativo, IP, timestamp, valor anterior y nuevo valor.
 
 ---
@@ -230,7 +238,7 @@ situnsa/
 │   │       └── index.ts                         # [MODIFY] Export de solicitudes.contract
 │   ├── db/
 │   │   ├── src/schema/
-│   │   │   ├── solicitudes.ts                   # [NEW] Tablas: solicitudes, participantes, docs, historial, tokens
+│   │   │   ├── solicitudes.ts                   # [NEW] Tablas: solicitudes, participantes, docs, historial
 │   │   │   ├── enums.ts                         # [MODIFY] pgEnum estado_solicitud, via_ingreso
 │   │   │   └── index.ts                         # [MODIFY] Export schema solicitudes
 │   │   └── drizzle/                             # Migraciones SQL generadas (000X_solicitudes.sql)
@@ -238,7 +246,7 @@ situnsa/
 │       └── src/
 │           ├── solicitud/
 │           │   ├── solicitud.aggregate.ts       # [NEW] Reglas puras de dominio y FSM
-│           │   ├── plazos-solicitud.ts          # [NEW] Lógica de 10 días hábiles
+│           │   ├── plazos-solicitud.ts          # [NEW] Lógica de 10 días hábiles (en suspenso, rev. 2026-11-26)
 │           │   └── validaciones.ts              # [NEW] Reglas de 1 o 2 participantes y nombres
 │           └── index.ts                         # [MODIFY] Export público del kernel puro
 ├── apps/
@@ -253,7 +261,7 @@ situnsa/
 │   │       │           ├── crear-solicitud/             # [NEW] Wizard público y guardado de PDFs
 │   │       │           ├── listar-solicitudes/          # [NEW] Bandeja paginada con KPIs
 │   │       │           ├── obtener-solicitud/           # [NEW] Detalle completo y checklist
-│   │       │           ├── observar-solicitud/          # [NEW] Emisión token y notificación
+│   │       │           ├── observar-solicitud/          # [NEW] Cuentas TESISTA + correo (rev. 2026-11-26; antes token)
 │   │       │           ├── subsanar-solicitud/          # [NEW] Reemplazo de archivos versionados
 │   │       │           ├── rechazar-solicitud/          # [NEW] Cierre lógico fundamentado
 │   │       │           ├── aceptar-solicitud/           # [NEW] UoW atómico: Creación Expediente SET + Cuentas
@@ -265,13 +273,12 @@ situnsa/
 │           │   └── solicitudes.ts                       # [NEW] Cliente fetch tipado de solicitudes
 │           ├── routes/
 │           │   ├── mesa-de-partes.tsx                   # [NEW] Wizard público de 4 pasos (Mockup Vista 0)
-│           │   ├── subsanar.$token.tsx                  # [NEW] Portal público de subsanación de observaciones
 │           │   ├── solicitudes.tsx                      # [NEW] Bandeja Administrativa (Mockup Vista 1)
 │           │   └── solicitudes.$id.tsx                  # [NEW] Detalle, visor PDF y modales (Mockups Vistas 2 y 3)
 │           └── components/
 │               └── domain/solicitudes/
 │                   ├── modal-aceptar-expediente.tsx     # [NEW] Modal con aprovisionamiento de cuentas
-│                   ├── modal-observar-solicitud.tsx     # [NEW] Modal con motivos y plazos
+│                   ├── modal-observar-solicitud.tsx     # [NEW] Modal con motivos (sin plazo, rev. 2026-11-26)
 │                   ├── modal-rechazar-solicitud.tsx     # [NEW] Modal de confirmación de desestimación
 │                   └── checklist-documentario.tsx       # [NEW] Lista interactiva de verificación de archivos
 ```
@@ -432,7 +439,6 @@ export const solicitudesContract = c.router({
     body: z.object({
       motivosPredefinidos: z.array(z.string()).min(1),
       detalleObservacion: z.string().min(5).max(2000),
-      diasHabilesSubsanacion: z.number().int().min(1).max(30).default(10),
     }),
     responses: {
       200: z.object({ ok: z.literal(true), mensaje: z.string() }),
@@ -485,18 +491,14 @@ export const solicitudesContract = c.router({
     },
   },
 
-  // Portal Público: Subsanar Solicitud mediante Token
-  subsanarConToken: {
-    method: "POST",
-    path: "/api/v1/public/subsanar/:token",
-    body: z.object({
-      correccionesDatos: z.record(z.string(), z.string()).optional(),
-      archivosSubsanadosIds: z.array(z.string().uuid()).optional(),
-    }),
+  // (rev. 2026-11-26) Portal del tesista: su solicitud. La subsanación es la ruta
+  // multipart nativa POST /api/v1/mi-solicitud/:id/subsanar (archivo_<documentoId>).
+  miSolicitud: {
+    method: "GET",
+    path: "/api/v1/mi-solicitud",
     responses: {
-      200: z.object({ ok: z.literal(true), mensaje: z.string() }),
-      400: ErrorEnvelopeSchema,
-      404: ErrorEnvelopeSchema,
+      200: z.object({ solicitud: MiSolicitudDTOSchema.nullable() }),
+      401: ErrorEnvelopeSchema,
     },
   },
 });
@@ -706,23 +708,23 @@ Característica: Módulo de Obtención de Datos de Titulación
     Y si se envía directamente a la API, el servidor responde con HTTP 400 y código "VALIDACION_FALLIDA"
     Y ningún archivo queda persistido en disco
 
-  Escenario: Observación de solicitud por administrativo y generación de enlace seguro
+  # (rev. 2026-11-26) Escenarios reemplazados: cuenta al observar y subsanación en el portal.
+  Escenario: Observación de solicitud y habilitación del portal
     Dado que una solicitud está en estado "EN_REVISION"
-    Cuando la Srta. Angela marca la observación "Carátula con formato desactualizado"
-    Y define un plazo de subsanación de 10 días hábiles
-    Entonces la solicitud transiciona al estado "OBSERVADA"
-    Y el sistema calcula la fecha límite excluyendo fines de semana y feriados oficiales
-    Y genera un token firmado de un solo uso persistiendo su hash SHA-256
-    Y se encola un correo al postulante con la URL única "/subsanar/{token}"
+    Cuando la Srta. Angela registra la observación "Carátula con formato desactualizado"
+    Entonces la solicitud transiciona al estado "OBSERVADA" sin fecha límite
+    Y el sistema crea la cuenta TESISTA sin clave de cada participante y la vincula a la solicitud
+    Y se encola un correo por participante con las observaciones y su acceso
+      (enlace de activación "/activar" si no tiene clave, o "/login" si ya la tiene)
 
-  Escenario: Subsanación por el postulante dentro del plazo legal
-    Dado que el postulante recibe el enlace de subsanación con token válido
-    Cuando accede al portal de subsanación sin requerir usuario ni contraseña
+  Escenario: Subsanación por el postulante desde el portal
+    Dado que el postulante ingresó al portal con su clave o con Google institucional
+    Cuando abre "Mi trámite" y ve su solicitud "OBSERVADA" con las observaciones
     Y reemplaza únicamente el archivo observado "Carátula" con un nuevo PDF
-    Y pulsa "Reenviar Subsanación"
-    Entonces el sistema incrementa la versión del archivo a 2
-    Y cambia el estado de la solicitud a "EN_REVISION" con el indicador visual "Subsanada"
-    Y el token queda invalidado de forma permanente para evitar reenvíos posteriores
+    Y pulsa "Reenviar a revisión"
+    Entonces el sistema guarda la versión 2 del archivo con conformidad "PENDIENTE"
+    Y cambia el estado de la solicitud a "EN_REVISION" con el historial "SUBSANADA"
+    Y un segundo reenvío es rechazado porque la solicitud ya no está observada
 
   Escenario: Aprobación atómica de solicitud y creación de expediente SET
     Dado que una solicitud está en "EN_REVISION" con checklist conforme
@@ -741,7 +743,7 @@ Característica: Módulo de Obtención de Datos de Titulación
 ### 5.2. Estrategia de Pruebas y Validación de la IA
 1. **Pruebas Unitarias de Dominio (`packages/domain`):**
    - Validación pura de la FSM de solicitud: verificar que solo transicione `NUEVA → EN_REVISION → OBSERVADA → EN_REVISION → ACEPTADA`.
-   - Cálculo de días hábiles: verificar que un plazo de 10 días hábiles emitido antes de un fin de semana o feriado calendario sume exactamente las fechas laborales.
+   - Cálculo de días hábiles (en suspenso, rev. 2026-11-26): verificar que un plazo de 10 días hábiles emitido antes de un fin de semana o feriado calendario sume exactamente las fechas laborales.
 2. **Pruebas de Integración y Use Cases (`apps/api`):**
    - `CrearSolicitudUseCase.spec.ts`: Mock de sistema de archivos y verificación de la asignación atómica de `SOL-AAAA-NNNN`.
    - `AceptarSolicitudUseCase.spec.ts`: Prueba de rollback total. Si falla la copia de subetapas o la inserción de usuario, verificar que no quede ni el expediente SET ni la solicitud mutada.
@@ -766,10 +768,10 @@ Característica: Módulo de Obtención de Datos de Titulación
    - Las contraseñas temporales generadas se componen con entropía criptográfica (`crypto.randomBytes`) con longitud mínima de 10 caracteres, mayúsculas, minúsculas y caracteres especiales.
    - En la base de datos se almacena únicamente el hash con Argon2id / bcrypt. Jamás se guardan contraseñas en texto plano.
    - Las cuentas generadas con clave temporal tienen una marca obligatoria de cambio de contraseña en su primer inicio de sesión.
-4. **Protección de Enlaces de Subsanación:**
-   - El token de subsanación es una cadena aleatoria de 32 bytes codificada en `base64url`.
-   - En la tabla `tokens_subsanacion` únicamente se almacena `hash = sha256(token)`. Si la base de datos es filtrada, no es posible reutilizar los enlaces.
-   - Caducidad forzada a los 10 días hábiles o al primer uso efectivo (`usadoAt`).
+4. **Subsanación autenticada (rev. 2026-11-26; reemplaza los enlaces con token):**
+   - Solo un participante vinculado a la solicitud puede consultarla o reenviarla (404 en otro caso).
+   - El acceso inicial usa el enlace de activación de `tokens_acceso` (solo se guarda el hash, un uso, 72 h).
+   - Cada archivo se valida por magic bytes (foto JPG, resto PDF) y se guarda como versión nueva.
 
 ---
 *(Fin de la especificación técnica)*

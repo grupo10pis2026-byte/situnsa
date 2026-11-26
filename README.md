@@ -65,6 +65,7 @@ make dev
 | `APP_URL` | URL pública de la web para los enlaces de los correos (en Render, si falta, se usa `RENDER_EXTERNAL_URL`) |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_SECURE`, `MAIL_FROM` | Transporte SMTP (nodemailer). Dev: Mailpit `localhost:1025`. Sin `SMTP_HOST` los correos solo se registran en el log |
 | `DOCS_ENTREGA` | `accel` (Nginx X-Accel-Redirect) o `stream` (sin Nginx). Vacío = `accel` en producción, `stream` en dev |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_DOMINIO` | Botón «Acceder con Google» (vacío = sin botón). Solo el Client ID de un cliente OAuth «Aplicación web»; dominio admitido por defecto `unsa.edu.pe`. Guía: [`CR-MOD-OBT-002` §1.3](docs/05-sdd/modulo-obtencion-datos/cambios-cliente-2026-11-26.md) |
 
 El API carga el `.env` de la raíz por sí mismo en desarrollo
 (`apps/api/src/config/cargar-env.ts`); en producción las variables las
@@ -72,9 +73,13 @@ inyecta el orquestador.
 
 ### Acceso de tesistas al portal
 
-Al **validar la inscripción**, los participantes sin clave reciben un correo
-con un enlace de un solo uso (`/activar?token=…`, vence en 72 h) para crear su
-clave. Desde el login, «¿Primera vez u olvidaste tu clave?» (`/restablecer`)
+La cuenta TESISTA (sin clave) se crea al **observar** una solicitud de Mesa de
+Partes, o al **aceptarla** / **validar la inscripción** si no existía. Los
+participantes sin clave reciben un correo con un enlace de un solo uso
+(`/activar?token=…`, vence en 72 h) para crear su clave; también pueden entrar
+con **Google** usando su correo `@unsa.edu.pe`. Con la solicitud observada, en
+«Mi trámite» ven las observaciones, reemplazan documentos y la reenvían a
+revisión (sin fecha límite). Desde el login, «¿Primera vez u olvidaste tu clave?» (`/restablecer`)
 envía un enlace nuevo sin revelar si la cuenta existe. El administrador puede
 reenviarlo desde Datos del expediente → «Acceso al portal». En dev los
 correos se leen en Mailpit.
@@ -89,8 +94,9 @@ correos se leen en Mailpit.
 | Asesor | `87654321` | `x` |
 
 Auth real: acceso JWT 15 min (Bearer, solo en memoria) + refresh rotativo
-HttpOnly 8 h, bloqueo 5 intentos × 15 min, Google OIDC solo para usuarios
-existentes (sin autocreación). Permisos `modulo.accion` + alcance por
+HttpOnly 8 h, bloqueo 5 intentos × 15 min, Google OIDC solo para cuentas del
+Workspace `@unsa.edu.pe` (claim `hd` + correo) de usuarios existentes y activos
+(sin autocreación). Permisos `modulo.accion` + alcance por
 registro (403 auditado). El stub `x-user-dni` solo vive con `AUTH_STUB=1`
 (dev/curl); en prod se exige Bearer.
 

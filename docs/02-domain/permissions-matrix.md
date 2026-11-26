@@ -18,7 +18,7 @@
 | `RESP_TALLER` | (coordinación) | Grupos, periodos, asesores, pensiones |
 | `ASESOR` | Docentes designados | **Solo** sus grupos/alumnos/expedientes: revisar plan/borrador, observar, Visto Bueno |
 | `JURADO` | Terna (E1) / jurados sorteados (E3–E4) | Revisar y dictaminar lo asignado; proponer/confirmar fechas |
-| `TESISTA` | Alumno (portal invitado, credenciales DNI/CUI) | Ver su expediente, cargar/subsanar documentos de la **subetapa activa**, proponer rango de fechas, ver pensiones |
+| `TESISTA` | Alumno (portal invitado, credenciales DNI/CUI o Google `@unsa.edu.pe`) | Ver su expediente, cargar/subsanar documentos de la **subetapa activa**, proponer rango de fechas, ver pensiones. Antes del expediente: ver **su** solicitud de Mesa de Partes y subsanarla si está observada (cuenta creada al observar, CR-MOD-OBT-002) |
 | `AUTORIDAD` | Director Unidad, Decano, Secretaría, Comisión, Consejo, Grados y Títulos | Validaciones/aprobaciones/firmas de su instancia |
 | `INVITADO` | Público | Invitación de sustentación (lectura) |
 
@@ -36,6 +36,8 @@ relacional (`BD181_*`, `93_*V184`, `94_*V188`). DNI y CUI siempre **texto**
 | Crear expediente regular / validar inscripción | ✓ | ✓ | — | validar ✓ | — | — | — | — |
 | Editar datos personales/académicos | ✓ | ✓ (`REGISTRADO..EN_BORRADOR`) | ✓ (sus etapas) | ✓ (inscripción) | — | — | — (solo sus datos contacto) | — |
 | Cargar plan / borrador / subsanación | ✓ | — | — | — | — | — | ✓ (subetapa activa) | — |
+| Ver bandeja y detalle de solicitudes (Mesa de Partes) | ✓ | ✓ | ✓ (`reportes.ver`) | ✓ | — | — | — (solo la suya, en «Mi trámite») | ✓ (`reportes.ver`) |
+| Subsanar solicitud observada (reemplazar documentos y reenviar) | — | — | — | — | — | — | ✓ (participante vinculado, `OBSERVADA`) | — |
 | Revisar plan/borrador y observar | ✓ | — | — | — | ✓ (asignados) | ✓ (asignado) | — | — |
 | **Visto Bueno** académico | ✓ | — | — | — | ✓ (asignados) | — | — | — |
 | **Aprobar / finalizar subetapa** | ✓ | ✓ (E1–E2) | ✓ (E3–E7) | ✓ (inscripción) | — | — | — | — |

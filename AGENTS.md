@@ -76,7 +76,10 @@ return r;
   `exactOptionalPropertyTypes`):
   `app.get<{ Params: { id: string } }>(url, { preHandler: async (req, reply) => requireAuth(req, reply) }, handler)`.
   El use-case sí usa Result.
-- Autenticación = Bearer JWT (`middleware/require-auth.ts`). El stub
+- Autenticación = Bearer JWT (`middleware/require-auth.ts`). Segunda vía:
+  Google OIDC (`login-google.use-case.ts`), solo Workspace `GOOGLE_DOMINIO`
+  (`hd` + correo) y usuarios existentes y activos; la web lee el Client ID de
+  `GET /api/auth/google/config` (sin `VITE_`). El stub
   `x-user-dni` (`middleware/stub-auth.ts`) solo se activa con `AUTH_STUB=1`
   (dev/curl), nunca en prod.
 - Errores HTTP: `infra/http/manejador-errores.ts` es el único punto que traduce
@@ -98,10 +101,17 @@ return r;
   debe terminar con código 0.
 - Reportes en archivo (XLSX del Consejo) = rutas nativas en `modules/reportes/`;
   el XLSX lo arma `infra/xlsx/escribir-xlsx.ts` (sin dependencias).
+- Mesa de Partes (CR-MOD-OBT-002): la fotografía es solo JPG y el resto PDF,
+  validados por magic bytes en `modules/solicitudes/archivos-solicitud.ts`
+  (registro y subsanación). Al observar se crean las cuentas TESISTA
+  (`cuentas-participantes.ts`); el tesista subsana autenticado desde el portal
+  (`/api/v1/mi-solicitud`). No hay token de subsanación ni fecha límite.
+  Lectura de solicitudes ajenas: nunca con `expedientes.ver` (lo tiene TESISTA).
 - Archivos: `LocalStorageService` guarda rutas absolutas bajo
   `DOCS_VOLUME_PATH`; la entrega usa `entregarArchivo()` (X-Accel-Redirect a
-  `/protected-files/` en prod, stream en dev; ver `DOCS_ENTREGA`). La web
-  descarga con Bearer (`abrirArchivoProtegido`), nunca con un enlace directo.
+  `/protected-files/` en prod, stream en dev; ver `DOCS_ENTREGA`). Pasar siempre
+  `contentType` si no es PDF (es el valor por defecto). La web descarga con
+  Bearer (`abrirArchivoProtegido`), nunca con un enlace directo.
 
 ## Agent skills
 
