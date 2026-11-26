@@ -55,7 +55,28 @@ describe("CrearSolicitudUseCase (validaciones de dominio)", () => {
     }
   });
 
-  it("rechaza fotos que no sean PDF, JPG o PNG válidos", async () => {
+  it.each([
+    ["un PNG", new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a])],
+    ["un PDF", pdfValido],
+  ])("rechaza la fotografía si es %s (el reglamento exige JPG)", async (_, bytes) => {
+    const r = await uc.execute(
+      basePayload,
+      [
+        {
+          tipo: "FOTO_ESTUDIANTE",
+          participanteOrden: 1,
+          filename: "foto.png",
+          bytes,
+          mimeType: "image/jpeg",
+        },
+      ],
+      {},
+    );
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error.message).toContain("debe ser una imagen JPG");
+  });
+
+  it("rechaza fotos que no sean JPG válidos", async () => {
     const archivos = [
       {
         tipo: "FOTO_ESTUDIANTE",
@@ -69,7 +90,7 @@ describe("CrearSolicitudUseCase (validaciones de dominio)", () => {
     expect(r.ok).toBe(false);
     if (!r.ok) {
       expect(r.error.code).toBe("VALIDACION_FALLIDA");
-      expect(r.error.message).toContain("debe ser formato PDF, JPG o PNG");
+      expect(r.error.message).toContain("debe ser una imagen JPG");
     }
   });
 

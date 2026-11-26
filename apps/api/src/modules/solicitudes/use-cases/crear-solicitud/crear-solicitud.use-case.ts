@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import type { CrearSolicitudPayload } from "@pis/contracts";
@@ -7,50 +6,9 @@ import { DomainError, esProgramaOficial, fail, ok, type Result } from "@pis/doma
 import { sql } from "drizzle-orm";
 import { DrizzleUnitOfWork } from "../../../../infra/db/unit-of-work.js";
 import { enqueueCorreo } from "../../../../infra/jobs/colas.js";
+import { nombreEnDisco, sha256Hex, validarArchivoSolicitud } from "../../archivos-solicitud.js";
 import { correoSolicitudRecibida } from "../../correos-solicitud.js";
 import { appendHistorialSolicitud, siguienteCodigoSol } from "../../solicitudes.repository.js";
-
-/** Magic bytes de PDF: primeros 5 bytes deben ser `%PDF-` */
-const PDF_MAGIC = Buffer.from([0x25, 0x50, 0x44, 0x46, 0x2d]); // %PDF-
-
-function validarMagicBytesPdf(bytes: Uint8Array): boolean {
-  if (bytes.length < 5) return false;
-  return (
-    bytes[0] === PDF_MAGIC[0] &&
-    bytes[1] === PDF_MAGIC[1] &&
-    bytes[2] === PDF_MAGIC[2] &&
-    bytes[3] === PDF_MAGIC[3] &&
-    bytes[4] === PDF_MAGIC[4]
-  );
-}
-
-function validarMagicBytesFoto(bytes: Uint8Array): boolean {
-  if (validarMagicBytesPdf(bytes)) return true;
-  // JPEG: 0xFF, 0xD8, 0xFF
-  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
-    return true;
-  }
-  // PNG: 0x89, 0x50, 0x4E, 0x47
-  if (
-    bytes.length >= 4 &&
-    bytes[0] === 0x89 &&
-    bytes[1] === 0x50 &&
-    bytes[2] === 0x4e &&
-    bytes[3] === 0x47
-  ) {
-    return true;
-  }
-  return false;
-}
-
-function esTipoFoto(tipo: string): boolean {
-  const t = tipo.toUpperCase();
-  return t === "FOTO" || t.startsWith("FOTO_") || t.includes("FOTO");
-}
-
-function sha256Hex(bytes: Uint8Array): string {
-  return createHash("sha256").update(bytes).digest("hex");
-}
 
 export interface ArchivoSolicitud {
   tipo: string;
@@ -68,7 +26,7 @@ export interface SolicitudCreada {
 /**
  * RF-02xx[001] — Crear Solicitud Pública:
  * - Valida programa oficial.
- * - Valida Magic Bytes PDF de todos los archivos.
+ * - Valida el formato real (magic bytes): fotografía JPG, resto PDF.
  * - Genera código correlativo SOL-AAAA-NNNN con candado advisory.
  * - Guarda archivos en DOCS_VOLUME_PATH/solicitudes/SOL-AAAA-NNNN/.
  * - Registra solicitud, participantes, documentos e historial en un solo UoW.
@@ -90,25 +48,13 @@ export class CrearSolicitudUseCase {
       );
     }
 
-    // Validar Magic Bytes de los archivos (PDFs o imágenes para fotos)
+    // Formato real por magic bytes: fotografía JPG, el resto PDF (el MIME
+    // declarado por el navegador no se usa).
+    const mimes = new Map<ArchivoSolicitud, string>();
     for (const archivo of archivos) {
-      if (esTipoFoto(archivo.tipo)) {
-        if (!validarMagicBytesFoto(archivo.bytes)) {
-          return fail(
-            new DomainError(
-              "VALIDACION_FALLIDA",
-              `El archivo de fotografía "${archivo.filename}" debe ser formato PDF, JPG o PNG válido`,
-            ),
-          );
-        }
-      } else if (!validarMagicBytesPdf(archivo.bytes)) {
-        return fail(
-          new DomainError(
-            "VALIDACION_FALLIDA",
-            `El archivo "${archivo.filename}" no es un PDF válido`,
-          ),
-        );
-      }
+      const v = validarArchivoSolicitud(archivo.tipo, archivo.filename, archivo.bytes);
+      if (!v.ok) return fail(new DomainError("VALIDACION_FALLIDA", v.mensaje));
+      mimes.set(archivo, v.mime);
     }
 
     // Validar correo institucional obligatorio (@unsa.edu.pe)
@@ -195,9 +141,7 @@ export class CrearSolicitudUseCase {
       }> = [];
 
       for (const archivo of archivos) {
-        const baseNombre = archivo.filename.split(/[\\/]/).pop() ?? "documento.pdf";
-        const nombreSeguro = baseNombre.replace(/[^A-Za-z0-9._-]/g, "_").replace(/^\.+/, "");
-        const ruta = join(dirSolicitud, nombreSeguro);
+        const ruta = join(dirSolicitud, nombreEnDisco(archivo.tipo, archivo.filename));
         await writeFile(ruta, archivo.bytes);
         docsInsert.push({
           solicitudId: "", // se completa después del insert
@@ -205,7 +149,7 @@ export class CrearSolicitudUseCase {
           participanteOrden: archivo.participanteOrden,
           ruta,
           nombreOriginal: archivo.filename,
-          mimeType: archivo.mimeType,
+          mimeType: mimes.get(archivo) ?? "application/pdf",
           pesoBytes: archivo.bytes.length,
           sha256: sha256Hex(archivo.bytes),
         });

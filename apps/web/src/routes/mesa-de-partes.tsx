@@ -119,6 +119,7 @@ export function MesaDePartesPage() {
   const [resultadoExitoso, setResultadoExitoso] = useState<{
     modalidad: string;
     fecha: string;
+    correos: string[];
   } | null>(null);
 
   // Requisitos documentarios según la modalidad seleccionada
@@ -288,7 +289,7 @@ export function MesaDePartesPage() {
           : "Fotografía del Estudiante (Fondo blanco, JPG)",
       requerido: true,
       esFoto: true,
-      formatos: ".jpg,.jpeg,.png,.pdf",
+      formatos: "image/jpeg,.jpg,.jpeg",
       guiaTexto:
         "Fotografía reciente, de frente, a color con fondo blanco digitalizada, vestimenta formal – Formato JPG.",
     },
@@ -299,7 +300,7 @@ export function MesaDePartesPage() {
             nombre: "Fotografía del Participante 2 (Fondo blanco, JPG)",
             requerido: true,
             esFoto: true,
-            formatos: ".jpg,.jpeg,.png,.pdf",
+            formatos: "image/jpeg,.jpg,.jpeg",
             guiaTexto:
               "Fotografía reciente, de frente, a color con fondo blanco digitalizada del segundo participante – Formato JPG.",
           },
@@ -473,6 +474,9 @@ export function MesaDePartesPage() {
       };
 
       setResultadoExitoso({
+        correos: [p1.email, ...(cantidadTesistas === 2 ? [p2.email] : [])].map((c) =>
+          c.trim().toLowerCase(),
+        ),
         modalidad: nombresModalidad[modalidad],
         fecha: new Date().toLocaleDateString("es-PE", {
           day: "2-digit",
@@ -505,6 +509,23 @@ export function MesaDePartesPage() {
               Grados y Títulos de la FIPS - UNSA.
             </p>
 
+            {/* Aviso principal: el seguimiento del trámite llega por correo */}
+            <output className="mt-6 flex items-start gap-3 rounded-xl border border-dorado-500/40 bg-dorado-500/10 p-4 text-left">
+              <Mail className="mt-0.5 shrink-0 text-navy-800" size={20} />
+              <div className="space-y-1 text-xs text-slate-700">
+                <p className="text-sm font-bold text-navy-950">Revisa tu correo institucional</p>
+                <p>
+                  Te enviamos la confirmación de tu solicitud a{" "}
+                  <strong className="break-all text-navy-950">
+                    {resultadoExitoso.correos.join(" y ")}
+                  </strong>
+                  . Todas las novedades de tu trámite (observaciones, aprobación y accesos al
+                  portal) llegarán a ese correo: revísalo con frecuencia, incluida la carpeta de
+                  spam o correo no deseado.
+                </p>
+              </div>
+            </output>
+
             {/* Resumen sutil de la postulación */}
             <div className="my-6 rounded-xl border border-slate-200 bg-slate-50/70 p-4 text-left space-y-2 text-xs">
               <div className="flex justify-between items-center py-1 border-b border-slate-200">
@@ -535,8 +556,8 @@ export function MesaDePartesPage() {
                   personales.
                 </li>
                 <li>
-                  Si existiera alguna precisión o documento observado, recibirás un enlace seguro a
-                  tu correo UNSA para subsanarlo.
+                  Si existiera alguna observación, te avisaremos por correo y podrás ingresar al
+                  portal de titulación para actualizar tus documentos.
                 </li>
               </ul>
             </div>
@@ -981,8 +1002,8 @@ export function MesaDePartesPage() {
                   Paso 3: Carga de Documentos Requeridos
                 </h2>
                 <p className="text-xs text-grafito-600">
-                  Arrastre o seleccione cada documento en formato PDF (o imagen JPG para las
-                  fotografías).
+                  Arrastre o seleccione cada documento en formato PDF (las fotografías, solo en
+                  JPG).
                 </p>
               </div>
 
@@ -1003,7 +1024,8 @@ export function MesaDePartesPage() {
                     cantidadTesistas === 2
                       ? "Fotografías de los participantes"
                       : "Fotografía del estudiante",
-                  ayuda: "Fondo blanco, de frente. JPG o PNG (se admite PDF), máximo 20 MB.",
+                  ayuda:
+                    "Fondo blanco, de frente, a color y con vestimenta formal. Solo formato JPG, máximo 20 MB.",
                   icono: <ImageIcon size={16} />,
                   docs: docsRequeridos.filter((d) => d.esFoto),
                 },
@@ -1030,9 +1052,7 @@ export function MesaDePartesPage() {
                       key={doc.clave}
                       onArchivo={(file) => handleFileChange(doc.clave, file, doc.esFoto)}
                       requerido={doc.requerido}
-                      restricciones={
-                        doc.esFoto ? "JPG · PNG · PDF · máx. 20 MB" : "PDF · máx. 20 MB"
-                      }
+                      restricciones={doc.esFoto ? "Solo JPG · máx. 20 MB" : "PDF · máx. 20 MB"}
                       tipo={doc.esFoto ? "foto" : "documento"}
                     />
                   ))}
@@ -1160,11 +1180,10 @@ const PESO_MAXIMO_BYTES = 20 * 1024 * 1024;
 /** Valida formato y peso de un archivo del Paso 3 (el servidor vuelve a validar). */
 function validarArchivo(file: File, esFoto: boolean): string | null {
   if (esFoto) {
-    const extensionValida = /\.(pdf|jpe?g|png)$/i.test(file.name);
-    const mimeValido = ["application/pdf", "image/jpeg", "image/png", "image/jpg"].includes(
-      file.type,
-    );
-    if (!extensionValida && !mimeValido) return "La fotografía debe ser JPG, PNG o PDF.";
+    // Reglamento FIPS (1ra etapa, req. 8): fotografía digitalizada en formato JPG.
+    const extensionValida = /\.jpe?g$/i.test(file.name);
+    const mimeValido = file.type === "" || file.type === "image/jpeg" || file.type === "image/jpg";
+    if (!extensionValida || !mimeValido) return "La fotografía debe estar en formato JPG.";
   } else if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
     return `"${file.name}" no es un PDF. Solo se aceptan archivos PDF.`;
   }

@@ -190,7 +190,8 @@ function VisorDocumento({
 }) {
   const url = documentoSolicitudUrl(solicitudId, doc.id);
   const { objetoUrl, tipoMime, cargando, error } = useArchivoProtegido(url);
-  const mime = tipoMime || doc.mimeType;
+  // El tipo registrado al subir manda; el del Blob solo cubre filas sin tipo.
+  const mime = doc.mimeType || tipoMime || "";
   const [errorAccion, setErrorAccion] = useState<string | null>(null);
 
   async function ejecutar(accion: () => Promise<void>) {
