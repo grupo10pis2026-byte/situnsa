@@ -1,6 +1,7 @@
 import type {
   FiltrosSolicitudesQuery,
   KpisSolicitudes,
+  MiSolicitudDTO,
   SolicitudDetalleDTO,
   SolicitudResumen,
 } from "@pis/contracts";
@@ -11,11 +12,10 @@ import {
   solicitudes,
   solicitudHistorial,
   solicitudParticipantes,
-  tokensSubsanacion,
   usuarios,
 } from "@pis/db";
-import { estaSubsanacionVencida } from "@pis/domain";
 import { and, count, desc, eq, gte, ilike, lte, or, sql } from "drizzle-orm";
+import { esTipoFoto } from "./archivos-solicitud.js";
 
 /* -------------------------------------------------------------------------- */
 /* TIPOS INTERNOS                                                              */
@@ -112,7 +112,6 @@ export async function listarSolicitudes(filtros: FiltrosSolicitudesQuery): Promi
     partMap.set(p.solicitudId, arr);
   }
 
-  const ahora = new Date();
   const items: SolicitudResumen[] = rows.map((s) => {
     const parts = (partMap.get(s.id) ?? []).sort((a, b) => a.orden - b.orden);
     const p1 = parts[0];
@@ -142,10 +141,6 @@ export async function listarSolicitudes(filtros: FiltrosSolicitudesQuery): Promi
       documentosConformes: Number(doc?.conformes ?? 0),
       estado: s.estado,
       expedienteCodigo: null, // Se agrega en query optimizada si se necesita
-      fechaLimiteSubsanacion: s.fechaLimiteSubsanacion,
-      esPlazoVencido: s.fechaLimiteSubsanacion
-        ? estaSubsanacionVencida(new Date(s.fechaLimiteSubsanacion), ahora)
-        : false,
     };
   });
 
@@ -237,11 +232,6 @@ export async function getSolicitudById(
     expedienteCodigo = exp?.codigo ?? null;
   }
 
-  const ahora = new Date();
-  const esPlazoVencido = sol.fechaLimiteSubsanacion
-    ? estaSubsanacionVencida(new Date(sol.fechaLimiteSubsanacion), ahora)
-    : false;
-
   const participantes = partsRows
     .sort((a, b) => a.orden - b.orden)
     .map((p) => ({
@@ -303,8 +293,6 @@ export async function getSolicitudById(
     estado: sol.estado,
     responsableAsignado: null,
     fechaRecepcion: sol.createdAt.toISOString(),
-    fechaLimiteSubsanacion: sol.fechaLimiteSubsanacion,
-    esPlazoVencido,
     motivoObservacion: sol.motivoObservacion ?? null,
     motivoRechazo: sol.motivoRechazo ?? null,
     expedienteId: sol.expedienteId ?? null,
@@ -329,16 +317,68 @@ export async function getSolicitudRaw(
 }
 
 /* -------------------------------------------------------------------------- */
-/* TOKEN DE SUBSANACIÓN                                                       */
+/* PORTAL DEL TESISTA (alcance: solo solicitudes donde es participante)       */
 /* -------------------------------------------------------------------------- */
 
-export async function getTokenSubsanacionPorHash(hash: string, tx: DbExecutor = db) {
+/** ¿El usuario es participante (cuenta vinculada) de la solicitud? */
+export async function esParticipanteDeSolicitud(
+  solicitudId: string,
+  usuarioId: string,
+  tx: DbExecutor = db,
+): Promise<boolean> {
   const [row] = await tx
-    .select()
-    .from(tokensSubsanacion)
-    .where(eq(tokensSubsanacion.hash, hash))
+    .select({ id: solicitudParticipantes.id })
+    .from(solicitudParticipantes)
+    .where(
+      and(
+        eq(solicitudParticipantes.solicitudId, solicitudId),
+        eq(solicitudParticipantes.usuarioId, usuarioId),
+      ),
+    )
     .limit(1);
-  return row ?? null;
+  return Boolean(row);
+}
+
+/** Solicitud más reciente del usuario como participante (null si no tiene). */
+export async function getMiSolicitud(
+  usuarioId: string,
+  tx: DbExecutor = db,
+): Promise<MiSolicitudDTO | null> {
+  const [sol] = await tx
+    .select({ s: solicitudes })
+    .from(solicitudes)
+    .innerJoin(solicitudParticipantes, eq(solicitudParticipantes.solicitudId, solicitudes.id))
+    .where(eq(solicitudParticipantes.usuarioId, usuarioId))
+    .orderBy(desc(solicitudes.createdAt))
+    .limit(1);
+  if (!sol) return null;
+  const docs = await tx
+    .select()
+    .from(solicitudDocumentos)
+    .where(eq(solicitudDocumentos.solicitudId, sol.s.id))
+    .orderBy(solicitudDocumentos.createdAt);
+  return {
+    id: sol.s.id,
+    codigo: sol.s.codigo,
+    estado: sol.s.estado,
+    modalidad: sol.s.modalidad,
+    programa: sol.s.programa,
+    titulo: sol.s.titulo,
+    fechaRecepcion: sol.s.createdAt.toISOString(),
+    motivoObservacion: sol.s.estado === "OBSERVADA" ? (sol.s.motivoObservacion ?? null) : null,
+    motivoRechazo: sol.s.estado === "RECHAZADA" ? (sol.s.motivoRechazo ?? null) : null,
+    puedeSubsanar: sol.s.estado === "OBSERVADA",
+    documentos: docs.map((d) => ({
+      id: d.id,
+      tipo: d.tipo,
+      nombreOriginal: d.nombreOriginal,
+      mimeType: d.mimeType,
+      version: d.version,
+      estadoConformidad: d.estadoConformidad,
+      participanteOrden: d.participanteOrden ?? null,
+      esFoto: esTipoFoto(d.tipo),
+    })),
+  };
 }
 
 /* -------------------------------------------------------------------------- */

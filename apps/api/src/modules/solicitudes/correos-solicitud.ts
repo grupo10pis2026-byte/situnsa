@@ -1,3 +1,4 @@
+import { TOKEN_ACCESO_HORAS } from "@pis/db";
 import type { CorreoPayload } from "../../infra/jobs/colas.js";
 
 /**
@@ -46,7 +47,7 @@ export function correoSolicitudRecibida(d: {
     variante: "informativo",
     texto:
       `Tu solicitud fue registrada con el código **${d.codigo}**. Consérvalo para cualquier consulta.\n\n` +
-      "El área de titulación revisará tus datos y documentos. Te escribiremos a este correo con el resultado; si hay observaciones, recibirás un enlace para subsanarlas.",
+      "El área de titulación revisará tus datos y documentos. Te escribiremos a este correo con el resultado; si hay observaciones, te indicaremos cómo ingresar al portal de titulación para corregirlas.",
     datos: [
       { etiqueta: "Código de solicitud", valor: d.codigo },
       { etiqueta: "Modalidad", valor: MODALIDAD_LEGIBLE[d.modalidad] ?? d.modalidad },
@@ -55,31 +56,59 @@ export function correoSolicitudRecibida(d: {
   };
 }
 
+/**
+ * Cómo entra al portal el participante de una solicitud observada:
+ * `ACTIVAR` = cuenta sin clave (enlace de un solo uso a /activar);
+ * `INGRESAR` = ya tiene clave (enlace al inicio de sesión).
+ */
+export type AccesoObservacion = { tipo: "ACTIVAR" | "INGRESAR"; enlace: string };
+
+/**
+ * Solicitud observada: el tesista corrige desde el portal (su cuenta se crea
+ * al observar). Sin fecha límite: la observación queda abierta hasta que el
+ * tesista reenvíe la solicitud (decisión del cliente, 2026-11-26).
+ */
 export function correoSolicitudObservada(d: {
   codigo: string;
   detalle: string;
-  fechaLimite: Date;
-  enlace: string;
+  nombres: string;
+  dni: string;
+  acceso: AccesoObservacion;
+  /** Acceso con Google habilitado (se menciona como alternativa a la clave). */
+  conGoogle: boolean;
   para: string[];
 }): CorreoPayload {
   const items = itemsObservacion(d.detalle);
+  const activar = d.acceso.tipo === "ACTIVAR";
+  const comoIngresar = activar
+    ? "Creamos tu cuenta en el portal de titulación. Para tu primer ingreso, crea tu clave con el botón de abajo" +
+      (d.conGoogle ? " o usa «Ingresar con Google» con tu correo institucional." : ".")
+    : "Ingresa al portal de titulación con tu usuario y tu clave" +
+      (d.conGoogle ? " (o con «Ingresar con Google» y tu correo institucional)." : ".");
   return {
     para: d.para,
-    asunto: `[${d.codigo}] Solicitud observada – subsane en 10 días hábiles`,
-    titulo: "Tu solicitud requiere subsanación",
+    aParticipantes: false,
+    asunto: `[${d.codigo}] Solicitud observada – corrige tus documentos en el portal`,
+    titulo: "Tu solicitud tiene observaciones",
     etiqueta: "Solicitud observada",
     variante: "observacion",
+    saludo: `Hola, ${d.nombres}:`,
     texto:
       `Revisamos tu solicitud **${d.codigo}** y encontramos observaciones que debes corregir para continuar con el trámite.\n\n` +
-      "Ingresa con el botón de abajo, corrige lo indicado y confirma la subsanación antes de la fecha límite.",
+      `${comoIngresar}\n\n` +
+      "En «Mi trámite» verás las observaciones, podrás reemplazar los documentos observados y reenviar tu solicitud a revisión.",
     datos: [
       { etiqueta: "Código de solicitud", valor: d.codigo },
-      { etiqueta: "Fecha límite", valor: fechaLegible(d.fechaLimite) },
+      { etiqueta: "Usuario (DNI)", valor: d.dni },
     ],
     lista: { titulo: "Observaciones", items: items.length > 0 ? items : [d.detalle.trim()] },
-    enlace: d.enlace,
-    textoEnlace: "Subsanar mi solicitud",
-    nota: "El enlace es personal, de un solo uso y vence en la fecha límite (10 días hábiles). Si vence sin subsanar, la solicitud podrá ser rechazada.",
+    enlace: d.acceso.enlace,
+    textoEnlace: activar ? "Crear mi clave e ingresar" : "Ingresar al portal",
+    ...(activar
+      ? {
+          nota: `El enlace para crear tu clave es personal, vence en ${TOKEN_ACCESO_HORAS} horas y solo puede usarse una vez. Si vence, pide uno nuevo con «¿Primera vez u olvidaste tu clave?» en el inicio de sesión.`,
+        }
+      : {}),
   };
 }
 

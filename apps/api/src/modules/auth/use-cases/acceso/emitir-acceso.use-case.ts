@@ -10,9 +10,25 @@ export interface AccesoEmitido {
   email: string;
 }
 
-/** Contexto opcional del correo: alta de cuenta al aprobar una solicitud. */
+/** Destinatario de un enlace recién emitido. */
+export interface DestinatarioAcceso {
+  usuarioId: string;
+  email: string;
+  nombres: string;
+  dni: string;
+  /** Enlace de un solo uso a `/activar`. */
+  enlace: string;
+}
+
+/** Contexto opcional del correo. */
 export interface ContextoAcceso {
+  /** Alta de cuenta al aprobar una solicitud. */
   codigoExpediente?: string;
+  /**
+   * Correo propio del evento que incluye el enlace (p. ej. la observación de
+   * una solicitud), en lugar del correo genérico de activación.
+   */
+  correo?: (d: DestinatarioAcceso) => CorreoPayload;
 }
 
 /**
@@ -66,10 +82,18 @@ export class EmitirAccesoUseCase {
       return out;
     });
     for (const e of emitidos) {
-      await enqueueCorreo(correoAcceso(proposito, e, contexto));
+      await enqueueCorreo(
+        contexto.correo
+          ? contexto.correo({ ...e, enlace: enlaceActivacion(e.token) })
+          : correoAcceso(proposito, e, contexto),
+      );
     }
     return emitidos.map(({ usuarioId, email }) => ({ usuarioId, email }));
   }
+}
+
+export function enlaceActivacion(token: string): string {
+  return urlPortal(`/activar?token=${encodeURIComponent(token)}`);
 }
 
 /** Correo de activación / restablecimiento (bloques estructurados, sin HTML). */
@@ -78,7 +102,7 @@ export function correoAcceso(
   e: { email: string; token: string; nombres: string; dni: string },
   contexto: ContextoAcceso = {},
 ): CorreoPayload {
-  const enlace = urlPortal(`/activar?token=${encodeURIComponent(e.token)}`);
+  const enlace = enlaceActivacion(e.token);
   const vigencia = `El enlace es personal, vence en ${TOKEN_ACCESO_HORAS} horas y solo puede usarse una vez. Si vence, solicita uno nuevo con la opción "¿Primera vez u olvidaste tu clave?" del inicio de sesión.`;
   if (proposito === "RESTABLECER") {
     return {

@@ -155,6 +155,13 @@
       "when": 1795130793032,
       "tag": "0021_formatos_catalogo",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1795734084022,
+      "tag": "0022_eliminar_tokens_subsanacion",
+      "breakpoints": true
     }
   ]
 }

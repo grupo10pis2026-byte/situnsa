@@ -11,11 +11,11 @@ type TransicionSolicitudKey = `${EstadoSolicitud}>${EstadoSolicitud}`;
 /**
  * Transiciones legales según la FSM del módulo de obtención de datos:
  * - NUEVA -> EN_REVISION (apertura por personal administrativo)
- * - EN_REVISION -> OBSERVADA (observación con emisión de token)
- * - OBSERVADA -> EN_REVISION (subsanación del postulante)
+ * - EN_REVISION -> OBSERVADA (observación: el postulante corrige desde el portal)
+ * - OBSERVADA -> EN_REVISION (subsanación del postulante, sin fecha límite)
  * - EN_REVISION -> ACEPTADA (checklist conforme y creación de expediente SET)
  * - EN_REVISION -> RECHAZADA (dictamen de rechazo formal)
- * - OBSERVADA -> RECHAZADA (rechazo si expira el plazo o causal sobreviniente)
+ * - OBSERVADA -> RECHAZADA (causal sobreviniente)
  */
 const TRANSICIONES_SOLICITUD: ReadonlySet<TransicionSolicitudKey> = new Set<TransicionSolicitudKey>(
   [
@@ -139,7 +139,6 @@ export function validarParticipantesSolicitud(
 export interface SolicitudObservadaEvent extends DomainEvent {
   readonly type: "SolicitudObservada";
   readonly solicitudId: string;
-  readonly fechaLimite: Date;
 }
 
 export interface SolicitudAceptadaEvent extends DomainEvent {
@@ -185,7 +184,8 @@ export class SolicitudAggregate {
     return ok(undefined);
   }
 
-  observar(fechaLimite: Date): Result<void, DomainError> {
+  /** Sin fecha límite: la observación queda abierta (decisión del cliente, 2026-11-26). */
+  observar(): Result<void, DomainError> {
     const check = assertTransitionSolicitud(this.estado, "OBSERVADA");
     if (!check.ok) return check;
     this.estado = "OBSERVADA";
@@ -193,7 +193,6 @@ export class SolicitudAggregate {
       type: "SolicitudObservada",
       occurredAt: new Date(),
       solicitudId: this.id,
-      fechaLimite,
     } as SolicitudObservadaEvent);
     return ok(undefined);
   }

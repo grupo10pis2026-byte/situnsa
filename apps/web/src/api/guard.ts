@@ -10,7 +10,7 @@ const CLAVE = "pis-sesion";
 
 const STAFF = new Set(["ADMIN_FIPS", "SECRETARIA", "DECANO"]);
 
-/** Rutas sin sesión: login, enlaces de acceso y mesa de partes pública / subsanación. */
+/** Rutas sin sesión: login, enlaces de acceso y mesa de partes pública. */
 const PUBLICAS = new Set(["/", "/login", "/activar", "/restablecer", "/mesa-de-partes"]);
 
 /** Ruta → roles legacy permitidos (`*` = cualquier autenticado). */
@@ -51,7 +51,7 @@ export function rolGuardado(): string | null {
  * Pura y testeable: recibe el rol en vez de leer storage.
  */
 export function redirigirSiNoPuede(rol: string | null, path: string): string | null {
-  if (PUBLICAS.has(path) || path.startsWith("/subsanar")) return null;
+  if (PUBLICAS.has(path)) return null;
   if (!rol) return "/login";
   for (const r of REGLAS) {
     const base = r.prefijo.endsWith("/") ? r.prefijo.slice(0, -1) : r.prefijo;

@@ -4,12 +4,14 @@ import {
   type EstadoConformidadDocumento,
   type FiltrosSolicitudesQuery,
   type KpisSolicitudes,
+  type MiSolicitudDTO,
+  MiSolicitudDTOSchema,
   type ObservarSolicitudInput,
   type RechazarSolicitudInput,
   type SolicitudDetalleDTO,
   SolicitudDetalleDTOSchema,
   type SolicitudResumen,
-  type SubsanarSolicitudPayload,
+  SubsanacionPortalRespuestaSchema,
 } from "@pis/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiBaseUrl } from "./client.js";
@@ -213,55 +215,42 @@ export async function crearSolicitudPublica(formData: FormData): Promise<{
   return (await res.json()) as { ok: true; id: string; codigo: string };
 }
 
-export interface SolicitudSubsanacionPublica {
-  codigo: string;
-  titulo: string;
-  programa: string;
-  via: string;
-  modalidad: string;
-  motivoObservacion: string;
-  fechaLimiteSubsanacion: string;
-  esPlazoVencido: boolean;
-  participantes: Array<{
-    orden: number;
-    nombres: string;
-    apellidos: string;
-    dni: string;
-    email: string;
-    telefono: string | null;
-  }>;
-  documentos: Array<{
-    id: string;
-    tipo: string;
-    nombreOriginal: string;
-    estadoConformidad: string;
-  }>;
-}
+/* -------------------------------------------------------------------------- */
+/* PORTAL DEL TESISTA                                                         */
+/* -------------------------------------------------------------------------- */
 
-export function useConsultarPorTokenSubsanacion(token: string) {
+export const miSolicitudKey = ["mi-solicitud"] as const;
+
+/** Solicitud propia (null si el tesista no tiene ninguna). */
+export function useMiSolicitud(habilitado = true) {
   return useQuery({
-    queryKey: ["subsanar", token],
-    enabled: Boolean(token),
-    queryFn: async (): Promise<SolicitudSubsanacionPublica> => {
-      const res = await fetch(`${apiBaseUrl}/api/v1/public/subsanar/${token}`);
-      if (!res.ok)
-        throw await errorDeRespuesta(res, "No se pudo cargar la información para subsanación");
-      const data = (await res.json()) as { solicitud: SolicitudSubsanacionPublica };
-      return data.solicitud;
+    queryKey: miSolicitudKey,
+    enabled: habilitado,
+    queryFn: async (): Promise<MiSolicitudDTO | null> => {
+      const res = await apiFetch(`${apiBaseUrl}/api/v1/mi-solicitud`);
+      if (!res.ok) throw await errorDeRespuesta(res, "No se pudo cargar tu solicitud");
+      const body = (await res.json()) as { solicitud: unknown };
+      return body.solicitud === null ? null : MiSolicitudDTOSchema.parse(body.solicitud);
     },
   });
 }
 
-export function useSubsanarConToken(token: string) {
+/** Reenvía la solicitud observada con los documentos reemplazados (multipart). */
+export function useSubsanarMiSolicitud(solicitudId: string) {
+  const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: SubsanarSolicitudPayload) => {
-      const res = await fetch(`${apiBaseUrl}/api/v1/public/subsanar/${token}`, {
+    mutationFn: async (archivos: ReadonlyMap<string, File>) => {
+      const fd = new FormData();
+      for (const [documentoId, file] of archivos) fd.append(`archivo_${documentoId}`, file);
+      const res = await apiFetch(`${apiBaseUrl}/api/v1/mi-solicitud/${solicitudId}/subsanar`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: fd,
       });
       if (!res.ok) throw await errorDeRespuesta(res, "No se pudo enviar la subsanación");
-      return (await res.json()) as { ok: true; mensaje: string };
+      return SubsanacionPortalRespuestaSchema.parse(await res.json());
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: miSolicitudKey });
     },
   });
 }

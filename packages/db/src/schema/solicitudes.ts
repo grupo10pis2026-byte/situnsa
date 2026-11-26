@@ -149,24 +149,3 @@ export const solicitudHistorial = pgTable(
 
 export type SolicitudHistorial = typeof solicitudHistorial.$inferSelect;
 export type NuevoSolicitudHistorial = typeof solicitudHistorial.$inferInsert;
-
-/**
- * Enlaces temporales criptográficos de un solo uso para subsanación sin requerir cuenta.
- */
-export const tokensSubsanacion = pgTable(
-  "tokens_subsanacion",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    solicitudId: uuid("solicitud_id")
-      .notNull()
-      .references(() => solicitudes.id, { onDelete: "cascade" }),
-    hash: varchar("hash", { length: 64 }).notNull().unique(), // sha256(token)
-    expiraAt: timestamp("expira_at", { withTimezone: true }).notNull(),
-    usadoAt: timestamp("usado_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  },
-  (t) => [index("tokens_subsanacion_hash_idx").on(t.hash)],
-);
-
-export type TokenSubsanacion = typeof tokensSubsanacion.$inferSelect;
-export type NuevoTokenSubsanacion = typeof tokensSubsanacion.$inferInsert;

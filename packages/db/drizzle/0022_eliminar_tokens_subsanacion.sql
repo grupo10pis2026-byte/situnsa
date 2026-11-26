@@ -1,0 +1,1 @@
+DROP TABLE "tokens_subsanacion" CASCADE;

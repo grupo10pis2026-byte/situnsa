@@ -120,8 +120,7 @@ describe("SolicitudAggregate", () => {
     expect(r1.ok).toBe(true);
     expect(agg.getEstado()).toBe("EN_REVISION");
 
-    const fechaLimite = calcularLimiteSubsanacion(new Date("2026-10-16T10:00:00Z"), 10);
-    const r2 = agg.observar(fechaLimite);
+    const r2 = agg.observar();
     expect(r2.ok).toBe(true);
     expect(agg.getEstado()).toBe("OBSERVADA");
 

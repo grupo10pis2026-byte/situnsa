@@ -1,4 +1,4 @@
-import type { CrearSolicitudPayload } from "@pis/contracts";
+import type { CrearSolicitudPayload, SubsanacionPortalRespuesta } from "@pis/contracts";
 import { CrearSolicitudPayloadSchema } from "@pis/contracts";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { autorizar } from "../../infra/auth/autorizacion.js";
@@ -6,15 +6,21 @@ import { entregarArchivo } from "../../infra/http/entrega-archivo.js";
 import { errorEnvelope, estadoHttp, PATRON_UUID } from "../../infra/http/errores.js";
 import { LocalStorageService } from "../../infra/storage/local-storage.service.js";
 import { requireAuth } from "../../middleware/require-auth.js";
-import { getDocumentoSolicitudById } from "./solicitudes.repository.js";
+import { esParticipanteDeSolicitud, getDocumentoSolicitudById } from "./solicitudes.repository.js";
 import { CrearSolicitudUseCase } from "./use-cases/crear-solicitud/crear-solicitud.use-case.js";
+import {
+  type ArchivoSubsanacion,
+  SubsanarSolicitudUseCase,
+} from "./use-cases/subsanar-solicitud/subsanar-solicitud.use-case.js";
 
 const crearUC = new CrearSolicitudUseCase();
+const subsanarUC = new SubsanarSolicitudUseCase();
 const storage = new LocalStorageService();
 
 /**
  * Rutas nativas Fastify del módulo de solicitudes (multipart y streaming protegido).
  * - POST /api/v1/public/solicitudes                          → multipart público
+ * - POST /api/v1/mi-solicitud/:id/subsanar                   → multipart del tesista
  * - GET  /api/v1/solicitudes/:id/documentos/:docId/descargar → streaming protegido
  */
 export function registerSolicitudesPublicasRoutes(app: FastifyInstance): void {
@@ -96,8 +102,50 @@ export function registerSolicitudesPublicasRoutes(app: FastifyInstance): void {
   );
 
   /**
+   * POST /api/v1/mi-solicitud/:id/subsanar
+   * Portal del tesista: reemplaza documentos de su solicitud OBSERVADA y la
+   * reenvía a revisión. Un campo `archivo_<documentoId>` por documento.
+   */
+  app.post<{ Params: { id: string } }>(
+    "/api/v1/mi-solicitud/:id/subsanar",
+    { preHandler: async (req, reply) => requireAuth(req, reply) },
+    async (req, reply) => {
+      const actor = req.actor;
+      if (!actor) {
+        await reply.status(401).send(errorEnvelope("SIN_SESION", "Se requiere autenticación"));
+        return;
+      }
+      if (!PATRON_UUID.test(req.params.id)) {
+        await reply.status(404).send(errorEnvelope("NO_ENCONTRADO", "Solicitud no encontrada"));
+        return;
+      }
+      const archivos: ArchivoSubsanacion[] = [];
+      for await (const part of req.parts()) {
+        if (part.type !== "file") continue;
+        const documentoId = part.fieldname.replace(/^archivo_/, "");
+        const bytes = new Uint8Array(await part.toBuffer());
+        if (!PATRON_UUID.test(documentoId)) continue;
+        archivos.push({ documentoId, filename: part.filename, bytes });
+      }
+      const r = await subsanarUC.execute(req.params.id, actor, archivos, req.ip ?? null);
+      if (!r.ok) {
+        await reply
+          .status(estadoHttp(r.error.code))
+          .send(errorEnvelope(r.error.code, r.error.message));
+        return;
+      }
+      const cuerpo: SubsanacionPortalRespuesta = {
+        ok: true,
+        mensaje: r.value.mensaje,
+        documentosActualizados: r.value.documentosActualizados,
+      };
+      await reply.status(200).send(cuerpo);
+    },
+  );
+
+  /**
    * GET /api/v1/solicitudes/:id/documentos/:documentoId/descargar
-   * Descarga o visualización protegida de archivo PDF individual.
+   * Descarga o visualización protegida de un archivo (PDF o fotografía JPG).
    */
   app.get<{ Params: { id: string; documentoId: string } }>(
     "/api/v1/solicitudes/:id/documentos/:documentoId/descargar",
@@ -108,26 +156,46 @@ export function registerSolicitudesPublicasRoutes(app: FastifyInstance): void {
         await reply.status(404).send(errorEnvelope("NO_ENCONTRADO", "Documento no encontrado"));
         return;
       }
-      const a = await autorizar(req.actor, {
-        permiso: ["solicitudes", "ver"],
-        alternativas: [
-          ["inscripciones", "ver"],
-          ["expedientes", "ver"],
-        ],
-      });
-      if (!a.ok) {
-        await reply.status(a.status).send(a.body);
-        return;
+      // Alcance: el participante ve sus propios archivos desde el portal; el
+      // resto requiere permiso administrativo (403 auditado).
+      const propia = req.actor ? await esParticipanteDeSolicitud(id, req.actor.id) : false;
+      if (!propia) {
+        const a = await autorizar(req.actor, {
+          permiso: ["solicitudes", "ver"],
+          alternativas: [
+            ["inscripciones", "ver"],
+            ["reportes", "ver"],
+          ],
+        });
+        if (!a.ok) {
+          await reply.status(a.status).send(a.body);
+          return;
+        }
       }
       const doc = await getDocumentoSolicitudById(id, documentoId);
       if (!doc) {
         await reply.status(404).send(errorEnvelope("NO_ENCONTRADO", "Documento no encontrado"));
         return;
       }
+      // El MIME real (no el PDF por defecto): sin esto la foto JPG llegaba
+      // etiquetada como PDF y el visor administrativo no podía mostrarla.
       await entregarArchivo(reply, storage, doc.ruta, {
         nombre: doc.nombreOriginal,
         inline: true,
+        contentType: mimeEntregable(doc.mimeType),
       });
     },
   );
+}
+
+/**
+ * MIME con el que se entrega un documento de solicitud. Solo se reenvían
+ * tipos de lista blanca (nunca text/html u otro tipo activo declarado por el
+ * navegador al subir); filas antiguas pueden traer "image/jpg" o PNG.
+ */
+export function mimeEntregable(mime: string): string {
+  const m = mime.trim().toLowerCase();
+  if (m === "image/jpeg" || m === "image/jpg" || m === "image/pjpeg") return "image/jpeg";
+  if (m === "image/png") return "image/png";
+  return "application/pdf";
 }

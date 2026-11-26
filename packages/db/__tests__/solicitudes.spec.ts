@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import * as esquema from "../src/index.js";
 import {
   estadoConformidadDocumentoEnum,
   estadoSolicitudEnum,
@@ -6,7 +7,6 @@ import {
   solicitudes,
   solicitudHistorial,
   solicitudParticipantes,
-  tokensSubsanacion,
   viaIngresoEnum,
 } from "../src/index.js";
 
@@ -32,6 +32,9 @@ describe("Esquemas de Base de Datos - Módulo de Solicitudes", () => {
     expect(solicitudParticipantes).toBeDefined();
     expect(solicitudDocumentos).toBeDefined();
     expect(solicitudHistorial).toBeDefined();
-    expect(tokensSubsanacion).toBeDefined();
+  });
+
+  it("ya no expone la tabla de tokens de subsanación (subsanación desde el portal)", () => {
+    expect("tokensSubsanacion" in esquema).toBe(false);
   });
 });

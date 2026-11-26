@@ -229,11 +229,6 @@ export function SolicitudDetallePage() {
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="font-mono text-xl font-bold text-navy-950">{sol.codigo}</h1>
                 <StatusBadge estado={sol.estado} />
-                {sol.esPlazoVencido && sol.estado === "OBSERVADA" && (
-                  <span className="rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-bold text-red-700">
-                    Plazo Vencido
-                  </span>
-                )}
               </div>
               <p className="text-xs text-grafito-600 mt-0.5">
                 {formatoModalidad(sol.modalidad)} · Recibido el{" "}
@@ -307,11 +302,9 @@ export function SolicitudDetallePage() {
                 <p className="mt-0.5 whitespace-pre-line text-orange-900 leading-relaxed font-medium max-h-56 overflow-y-auto pr-1">
                   {sol.motivoObservacion}
                 </p>
-                {sol.fechaLimiteSubsanacion && (
-                  <p className="mt-1 font-semibold text-orange-800">
-                    Fecha límite para subsanación: {sol.fechaLimiteSubsanacion}
-                  </p>
-                )}
+                <p className="mt-1 text-orange-800">
+                  El estudiante corrige sus documentos desde el portal de titulación.
+                </p>
               </div>
             </div>
           </Card>

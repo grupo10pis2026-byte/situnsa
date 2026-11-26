@@ -119,11 +119,6 @@ export function SolicitudesPage() {
       celda: (s) => (
         <div className="flex flex-col gap-1 items-start">
           <StatusBadge estado={s.estado} />
-          {s.esPlazoVencido && s.estado === "OBSERVADA" && (
-            <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700">
-              Plazo Vencido
-            </span>
-          )}
         </div>
       ),
     },

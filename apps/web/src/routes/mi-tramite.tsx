@@ -13,9 +13,11 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useExpedienteDetalle, useListarExpedientes } from "../api/expedientes.js";
+import { useMiSolicitud } from "../api/solicitudes.js";
 import { DocumentoCard } from "../components/domain/documento-card.js";
 import { PropuestaFechasCard } from "../components/domain/propuesta-fechas-card.js";
 import { SemaforoBadge } from "../components/domain/semaforo-badge.js";
+import { MiSolicitudPanel } from "../components/domain/solicitudes/mi-solicitud-panel.js";
 import { AppShell } from "../components/layout/app-shell.js";
 import { Card, CardEncabezado } from "../components/ui/card.js";
 import { EmptyState } from "../components/ui/empty-state.js";
@@ -51,6 +53,38 @@ function useMiExpedienteId(): string | null | undefined {
   return lista.data.items[0]?.id ?? null;
 }
 
+/**
+ * Sin expediente todavía: el tesista ve su solicitud de Mesa de Partes (y la
+ * corrige si está observada); si tampoco tiene solicitud, un estado vacío.
+ */
+function SinExpediente() {
+  const mia = useMiSolicitud();
+  return (
+    <AppShell activo="/mi-tramite">
+      <PageHeader
+        {...(mia.data
+          ? { descripcion: "Estado de tu solicitud en la Mesa de Partes Virtual" }
+          : {})}
+        titulo="Mi trámite de titulación"
+      />
+      {mia.isPending ? (
+        <output aria-label="Cargando" className="block h-32 animate-pulse rounded-xl bg-white" />
+      ) : mia.data ? (
+        <MiSolicitudPanel solicitud={mia.data} />
+      ) : (
+        <EmptyState
+          titulo="Sin expediente asociado"
+          descripcion={
+            mia.isError
+              ? "No se pudo consultar tu solicitud. Recarga la página en unos minutos."
+              : "Aún no tienes un expediente asociado a tu identidad. Acércate a mesa de partes para iniciar tu trámite."
+          }
+        />
+      )}
+    </AppShell>
+  );
+}
+
 /** §5 Dashboard del Tesista: avance horizontal por etapas, subida documental e historial de observaciones. */
 export function MiTramitePage() {
   const id = useMiExpedienteId();
@@ -65,17 +99,7 @@ export function MiTramitePage() {
     }
   }, [query.data?.avance.etapaActual]);
 
-  if (id === null) {
-    return (
-      <AppShell activo="/mi-tramite">
-        <PageHeader titulo="Mi trámite de titulación" />
-        <EmptyState
-          titulo="Sin expediente asociado"
-          descripcion="Aún no tienes un expediente asociado a tu identidad. Acércate a mesa de partes para iniciar tu trámite."
-        />
-      </AppShell>
-    );
-  }
+  if (id === null) return <SinExpediente />;
   if (id === undefined || query.isPending) {
     return (
       <AppShell activo="/mi-tramite">

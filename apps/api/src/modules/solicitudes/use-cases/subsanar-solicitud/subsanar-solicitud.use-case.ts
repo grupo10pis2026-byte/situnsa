@@ -1,242 +1,173 @@
-import { createHash } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
-import { dirname } from "node:path";
-import type { SubsanarSolicitudPayload } from "@pis/contracts";
-import {
-  db,
-  solicitudDocumentos,
-  solicitudes,
-  solicitudParticipantes,
-  tokensSubsanacion,
-} from "@pis/db";
-import { DomainError, estaSubsanacionVencida, fail, ok, type Result } from "@pis/domain";
-import { eq } from "drizzle-orm";
+import { mkdir, unlink, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import { db, solicitudDocumentos, solicitudes, solicitudParticipantes } from "@pis/db";
+import { DomainError, fail, ok, type Result } from "@pis/domain";
+import { and, eq } from "drizzle-orm";
 import { DrizzleUnitOfWork } from "../../../../infra/db/unit-of-work.js";
 import { enqueueCorreo } from "../../../../infra/jobs/colas.js";
+import type { Actor } from "../../../expedientes/use-cases/inscribir-plan/inscribir-plan.use-case.js";
+import { nombreEnDisco, sha256Hex, validarArchivoSolicitud } from "../../archivos-solicitud.js";
 import { correoSubsanacionRecibida } from "../../correos-solicitud.js";
-import {
-  appendHistorialSolicitud,
-  getTokenSubsanacionPorHash,
-} from "../../solicitudes.repository.js";
+import { appendHistorialSolicitud } from "../../solicitudes.repository.js";
 
-/** Magic bytes de PDF: primeros 5 bytes deben ser `%PDF-` */
-const PDF_MAGIC = Buffer.from([0x25, 0x50, 0x44, 0x46, 0x2d]);
-
-function validarMagicBytesPdf(bytes: Uint8Array): boolean {
-  if (bytes.length < 5) return false;
-  return (
-    bytes[0] === PDF_MAGIC[0] &&
-    bytes[1] === PDF_MAGIC[1] &&
-    bytes[2] === PDF_MAGIC[2] &&
-    bytes[3] === PDF_MAGIC[3] &&
-    bytes[4] === PDF_MAGIC[4]
-  );
-}
-
-function sha256Hex(bytes: Uint8Array): string {
-  return createHash("sha256").update(bytes).digest("hex");
-}
-
+/** Documento reemplazado desde el portal (campo multipart `archivo_<documentoId>`). */
 export interface ArchivoSubsanacion {
-  documentoId?: string;
-  tipo?: string;
+  documentoId: string;
   filename: string;
   bytes: Uint8Array;
-  mimeType?: string;
 }
 
-export interface SubsanacionAceptada {
+export interface SubsanacionRegistrada {
   mensaje: string;
-  solicitudId: string;
-  codigo: string;
+  documentosActualizados: number;
 }
 
 /**
- * RF-02xx[009] — Subsanar Solicitud por Token:
- * - Valida token (único uso, no expirado).
- * - Recibe los nuevos PDFs (multipart) y sobrescribe físicamente los archivos observados en el disco.
- * - Actualiza metadatos (sha256, peso, versión) y restablece estadoConformidad a PENDIENTE.
- * - Transiciona estado de solicitud a EN_REVISION.
- * - Encola correo de confirmación a los tesistas.
+ * RF-02xx[009] — Subsanar solicitud desde el portal del tesista.
+ *
+ * - Alcance: solo un participante con cuenta vinculada (si no, 404: no se
+ *   revela si la solicitud existe).
+ * - Solo en estado OBSERVADA; sin fecha límite (decisión del cliente).
+ * - Cada archivo reemplaza a un documento de la solicitud: formato real por
+ *   magic bytes (fotografía JPG, resto PDF). Se guarda como versión nueva sin
+ *   pisar la anterior; la conformidad vuelve a PENDIENTE.
+ * - OBSERVADA → EN_REVISION + historial en la misma transacción; correo de
+ *   acuse a los participantes tras el commit.
  */
 export class SubsanarSolicitudUseCase {
   async execute(
-    tokenPlano: string,
-    payload: SubsanarSolicitudPayload,
-    arg3?: string | null | ArchivoSubsanacion[],
-    arg4?: ArchivoSubsanacion[] | string | null,
-  ): Promise<Result<SubsanacionAceptada, DomainError>> {
-    let ip: string | null = null;
-    let archivos: ArchivoSubsanacion[] = [];
-
-    if (Array.isArray(arg3)) {
-      archivos = arg3;
-      if (typeof arg4 === "string" || arg4 === null) ip = arg4;
-    } else {
-      if (typeof arg3 === "string" || arg3 === null) ip = arg3;
-      if (Array.isArray(arg4)) archivos = arg4;
+    solicitudId: string,
+    actor: Actor,
+    archivos: readonly ArchivoSubsanacion[],
+    ip: string | null = null,
+  ): Promise<Result<SubsanacionRegistrada, DomainError>> {
+    if (archivos.length === 0) {
+      return fail(
+        new DomainError(
+          "VALIDACION_FALLIDA",
+          "Adjunta al menos un documento corregido antes de reenviar la solicitud",
+        ),
+      );
+    }
+    const ids = new Set(archivos.map((a) => a.documentoId));
+    if (ids.size !== archivos.length) {
+      return fail(
+        new DomainError("VALIDACION_FALLIDA", "Cada documento solo puede reemplazarse una vez"),
+      );
     }
 
-    // Validar que los archivos adjuntados sean PDFs válidos
-    for (const archivo of archivos) {
-      if (!validarMagicBytesPdf(archivo.bytes)) {
-        return fail(
-          new DomainError(
-            "VALIDACION_FALLIDA",
-            `El archivo subsanado "${archivo.filename}" no es un PDF válido`,
-          ),
-        );
-      }
-    }
-
-    const tokenHash = createHash("sha256").update(tokenPlano).digest("hex");
-
+    const escritos: string[] = [];
     const uow = new DrizzleUnitOfWork(db);
-    const r = await uow.run(async (tx) => {
-      const token = await getTokenSubsanacionPorHash(tokenHash, tx);
-      if (!token) {
-        return fail(new DomainError("NO_ENCONTRADO", "Enlace de subsanación inválido"));
-      }
-      if (token.usadoAt) {
-        return fail(new DomainError("TOKEN_INVALIDO", "Este enlace ya fue utilizado"));
-      }
-      if (estaSubsanacionVencida(token.expiraAt, new Date())) {
-        return fail(
-          new DomainError(
-            "PLAZO_VENCIDO",
-            "El enlace de subsanación ha expirado. Contacta a la oficina de titulación.",
-          ),
-        );
-      }
+    let r: Result<{ codigo: string; correos: string[]; total: number }, DomainError>;
+    try {
+      r = await uow.run(async (tx) => {
+        const parts = await tx
+          .select()
+          .from(solicitudParticipantes)
+          .where(eq(solicitudParticipantes.solicitudId, solicitudId));
+        if (!parts.some((p) => p.usuarioId === actor.id)) {
+          return fail(new DomainError("NO_ENCONTRADO", "Solicitud no encontrada"));
+        }
 
-      // Obtener solicitud
-      const [sol] = await tx
-        .select()
-        .from(solicitudes)
-        .where(eq(solicitudes.id, token.solicitudId))
-        .limit(1);
-
-      if (!sol) return fail(new DomainError("NO_ENCONTRADO", "Solicitud no encontrada"));
-
-      // Marcar token como usado
-      await tx
-        .update(tokensSubsanacion)
-        .set({ usadoAt: new Date() })
-        .where(eq(tokensSubsanacion.id, token.id));
-
-      // Obtener documentos actuales de la solicitud
-      const docsExistentes = await tx
-        .select()
-        .from(solicitudDocumentos)
-        .where(eq(solicitudDocumentos.solicitudId, sol.id));
-
-      const docsActualizadosIds = new Set<string>();
-
-      // Sobrescribir físicamente los archivos observados en el volumen de almacenamiento
-      for (const archivo of archivos) {
-        const docExistente =
-          (archivo.documentoId &&
-            docsExistentes.find(
-              (d: typeof solicitudDocumentos.$inferSelect) => d.id === archivo.documentoId,
-            )) ||
-          (archivo.tipo &&
-            docsExistentes.find(
-              (d: typeof solicitudDocumentos.$inferSelect) =>
-                d.tipo.toUpperCase() === archivo.tipo?.toUpperCase(),
-            )) ||
-          docsExistentes.find(
-            (d: typeof solicitudDocumentos.$inferSelect) =>
-              d.nombreOriginal.toLowerCase() === archivo.filename.toLowerCase(),
+        // Candado de fila: dos participantes no reenvían a la vez.
+        const [sol] = await tx
+          .select()
+          .from(solicitudes)
+          .where(eq(solicitudes.id, solicitudId))
+          .for("update")
+          .limit(1);
+        if (!sol) return fail(new DomainError("NO_ENCONTRADO", "Solicitud no encontrada"));
+        if (sol.estado !== "OBSERVADA") {
+          return fail(
+            new DomainError(
+              "TRANSICION_INVALIDA",
+              "La solicitud no tiene observaciones pendientes: ya fue reenviada o resuelta",
+            ),
           );
+        }
 
-        if (docExistente) {
-          // Sobrescritura en disco
-          await mkdir(dirname(docExistente.ruta), { recursive: true });
-          await writeFile(docExistente.ruta, archivo.bytes);
+        const docs = await tx
+          .select()
+          .from(solicitudDocumentos)
+          .where(eq(solicitudDocumentos.solicitudId, solicitudId));
 
-          // Actualizar metadatos del registro y restablecer conformidad a PENDIENTE
+        const reemplazados: Array<{ tipo: string; version: number }> = [];
+        for (const archivo of archivos) {
+          const doc = docs.find((d) => d.id === archivo.documentoId);
+          if (!doc) {
+            return fail(
+              new DomainError("VALIDACION_FALLIDA", "El documento no pertenece a la solicitud"),
+            );
+          }
+          const v = validarArchivoSolicitud(doc.tipo, archivo.filename, archivo.bytes);
+          if (!v.ok) return fail(new DomainError("VALIDACION_FALLIDA", v.mensaje));
+
+          const version = (doc.version ?? 1) + 1;
+          const ruta = join(dirname(doc.ruta), nombreEnDisco(doc.tipo, archivo.filename, version));
+          await mkdir(dirname(ruta), { recursive: true });
+          await writeFile(ruta, archivo.bytes);
+          escritos.push(ruta);
+
           await tx
             .update(solicitudDocumentos)
             .set({
+              ruta,
               nombreOriginal: archivo.filename,
-              mimeType: archivo.mimeType ?? "application/pdf",
+              mimeType: v.mime,
               pesoBytes: archivo.bytes.length,
               sha256: sha256Hex(archivo.bytes),
               estadoConformidad: "PENDIENTE",
-              version: (docExistente.version ?? 1) + 1,
+              version,
             })
-            .where(eq(solicitudDocumentos.id, docExistente.id));
-
-          docsActualizadosIds.add(docExistente.id);
-        }
-      }
-
-      // Restablecer conformidad de documentos indicados en payload que no vinieron como archivo
-      if (payload.archivosSubsanadosIds && payload.archivosSubsanadosIds.length > 0) {
-        for (const docId of payload.archivosSubsanadosIds) {
-          if (!docsActualizadosIds.has(docId)) {
-            const doc = docsExistentes.find(
-              (d: typeof solicitudDocumentos.$inferSelect) => d.id === docId,
+            .where(
+              and(eq(solicitudDocumentos.id, doc.id), eq(solicitudDocumentos.solicitudId, sol.id)),
             );
-            await tx
-              .update(solicitudDocumentos)
-              .set({
-                estadoConformidad: "PENDIENTE",
-                version: (doc?.version ?? 1) + 1,
-              })
-              .where(eq(solicitudDocumentos.id, docId));
-            docsActualizadosIds.add(docId);
-          }
+          reemplazados.push({ tipo: doc.tipo, version });
         }
-      }
 
-      // Transición: OBSERVADA → EN_REVISION (subsanada)
-      await tx
-        .update(solicitudes)
-        .set({
-          estado: "EN_REVISION",
-          motivoObservacion: null,
-          fechaLimiteSubsanacion: null,
-          updatedAt: new Date(),
-        })
-        .where(eq(solicitudes.id, sol.id));
+        await tx
+          .update(solicitudes)
+          .set({ estado: "EN_REVISION", motivoObservacion: null, updatedAt: new Date() })
+          .where(eq(solicitudes.id, sol.id));
 
-      // Obtener participantes para notificación por correo
-      const parts = await tx
-        .select()
-        .from(solicitudParticipantes)
-        .where(eq(solicitudParticipantes.solicitudId, sol.id));
-      const correos = parts.map((p: typeof solicitudParticipantes.$inferSelect) =>
-        p.email.trim().toLowerCase(),
-      );
+        await appendHistorialSolicitud(tx, {
+          solicitudId: sol.id,
+          accion: "SUBSANADA",
+          actorId: actor.id,
+          actorDni: actor.dni,
+          ip,
+          detalle: `Subsanada por el tesista desde el portal (${reemplazados.length} documento(s) actualizado(s))`,
+          metadata: { documentos: reemplazados },
+        });
 
-      await appendHistorialSolicitud(tx, {
-        solicitudId: sol.id,
-        accion: "SUBSANADA",
-        actorId: null,
-        actorDni: "portal-publico",
-        ip: ip ?? null,
-        detalle: `Solicitud subsanada por el tesista vía token (${docsActualizadosIds.size} documento(s) actualizado(s))`,
-        metadata: {
-          archivosSubsanadosIds: Array.from(docsActualizadosIds),
-          archivosSobrescritos: archivos.length,
-          correccionesDatos: payload.correccionesDatos ?? {},
-        },
+        return ok({
+          codigo: sol.codigo,
+          correos: parts.map((p) => p.email.trim().toLowerCase()),
+          total: reemplazados.length,
+        });
       });
-
-      return ok({ solicitudId: sol.id, codigo: sol.codigo, correos });
-    });
-
-    if (!r.ok) return fail(r.error);
+    } catch (err) {
+      await borrar(escritos);
+      throw err;
+    }
+    if (!r.ok) {
+      // Rollback: los archivos nuevos no quedan huérfanos en el volumen.
+      await borrar(escritos);
+      return fail(r.error);
+    }
 
     await enqueueCorreo(
       correoSubsanacionRecibida({ codigo: r.value.codigo, para: r.value.correos }),
     );
 
     return ok({
-      mensaje: "Subsanación registrada correctamente. Se notificó al área de titulación.",
-      solicitudId: r.value.solicitudId,
-      codigo: r.value.codigo,
+      mensaje:
+        "Recibimos tus correcciones. El área de titulación revisará nuevamente tu solicitud.",
+      documentosActualizados: r.value.total,
     });
   }
+}
+
+async function borrar(rutas: readonly string[]): Promise<void> {
+  await Promise.all(rutas.map((r) => unlink(r).catch(() => undefined)));
 }

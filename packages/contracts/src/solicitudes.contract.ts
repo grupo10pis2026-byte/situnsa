@@ -176,12 +176,6 @@ export const ActualizarConformidadDocumentoSchema = z.object({
   estadoConformidad: EstadoConformidadDocumentoSchema,
 });
 
-export const SubsanarSolicitudPayloadSchema = z.object({
-  correccionesDatos: z.record(z.string(), z.string()).optional(),
-  archivosSubsanadosIds: z.array(z.string().uuid()).optional(),
-});
-export type SubsanarSolicitudPayload = z.infer<typeof SubsanarSolicitudPayloadSchema>;
-
 /* ========================================================================== */
 /* ESQUEMAS DTO DE SALIDA (BANDEJA, DETALLE Y KPIS)                           */
 /* ========================================================================== */
@@ -230,8 +224,6 @@ export const SolicitudResumenSchema = z.object({
   documentosConformes: z.number().int(),
   estado: EstadoSolicitudSchema,
   expedienteCodigo: z.string().nullable(),
-  fechaLimiteSubsanacion: z.string().nullable(),
-  esPlazoVencido: z.boolean(),
 });
 export type SolicitudResumen = z.infer<typeof SolicitudResumenSchema>;
 
@@ -294,8 +286,6 @@ export const SolicitudDetalleDTOSchema = z.object({
   estado: EstadoSolicitudSchema,
   responsableAsignado: z.string().nullable(),
   fechaRecepcion: z.string(),
-  fechaLimiteSubsanacion: z.string().nullable(),
-  esPlazoVencido: z.boolean(),
   motivoObservacion: z.string().nullable(),
   motivoRechazo: z.string().nullable(),
   expedienteId: z.string().uuid().nullable(),
@@ -306,6 +296,52 @@ export const SolicitudDetalleDTOSchema = z.object({
   trazabilidad: z.array(SolicitudHistorialDTOSchema),
 });
 export type SolicitudDetalleDTO = z.infer<typeof SolicitudDetalleDTOSchema>;
+
+/**
+ * Solicitud propia vista desde el portal del tesista (sin trazabilidad ni
+ * datos de otros participantes). Al observarla se crean las cuentas de los
+ * participantes, que corrigen sus documentos aquí: no hay fecha límite ni
+ * enlace de subsanación aparte (decisión del cliente, 2026-11-26).
+ */
+export const MiSolicitudDocumentoDTOSchema = z.object({
+  id: z.string().uuid(),
+  tipo: z.string(),
+  nombreOriginal: z.string(),
+  mimeType: z.string(),
+  version: z.number().int(),
+  estadoConformidad: EstadoConformidadDocumentoSchema,
+  participanteOrden: z.number().int().nullable(),
+  /** Requisito de fotografía: solo se acepta JPG; el resto, PDF. */
+  esFoto: z.boolean(),
+});
+export type MiSolicitudDocumentoDTO = z.infer<typeof MiSolicitudDocumentoDTOSchema>;
+
+export const MiSolicitudDTOSchema = z.object({
+  id: z.string().uuid(),
+  codigo: z.string(),
+  estado: EstadoSolicitudSchema,
+  modalidad: ModalidadSchema,
+  programa: z.string(),
+  titulo: z.string(),
+  fechaRecepcion: z.string(),
+  motivoObservacion: z.string().nullable(),
+  motivoRechazo: z.string().nullable(),
+  /** OBSERVADA: el tesista puede reemplazar documentos y reenviarla a revisión. */
+  puedeSubsanar: z.boolean(),
+  documentos: z.array(MiSolicitudDocumentoDTOSchema),
+});
+export type MiSolicitudDTO = z.infer<typeof MiSolicitudDTOSchema>;
+
+/**
+ * Respuesta de `POST /api/v1/mi-solicitud/:id/subsanar` (ruta multipart nativa:
+ * un campo `archivo_<documentoId>` por cada documento reemplazado).
+ */
+export const SubsanacionPortalRespuestaSchema = z.object({
+  ok: z.literal(true),
+  mensaje: z.string(),
+  documentosActualizados: z.number().int(),
+});
+export type SubsanacionPortalRespuesta = z.infer<typeof SubsanacionPortalRespuestaSchema>;
 
 /* ========================================================================== */
 /* CONTRATO TS-REST                                                           */
@@ -415,7 +451,7 @@ export const solicitudesContract = c.router({
       404: ErrorEnvelopeSchema,
       409: ErrorEnvelopeSchema,
     },
-    summary: "Observar solicitud y emitir enlace seguro de subsanación",
+    summary: "Observar solicitud: crea las cuentas de los participantes y les avisa por correo",
   },
 
   // Acción: Rechazar Solicitud Definitivamente
@@ -460,64 +496,14 @@ export const solicitudesContract = c.router({
     summary: "Aceptar solicitud y generar expediente SET con aprovisionamiento de cuentas",
   },
 
-  // Portal Público: Consultar solicitud mediante token de subsanación
-  consultarPorTokenSubsanacion: {
+  // Portal del tesista: su solicitud más reciente (null si no tiene)
+  miSolicitud: {
     method: "GET",
-    path: "/api/v1/public/subsanar/:token",
-    pathParams: z.object({
-      token: z.string().min(16),
-    }),
+    path: "/api/v1/mi-solicitud",
     responses: {
-      200: z.object({
-        solicitud: z.object({
-          codigo: z.string(),
-          titulo: z.string(),
-          programa: z.string(),
-          via: ViaIngresoSchema,
-          modalidad: ModalidadSchema,
-          motivoObservacion: z.string(),
-          fechaLimiteSubsanacion: z.string(),
-          esPlazoVencido: z.boolean(),
-          participantes: z.array(
-            z.object({
-              orden: z.number(),
-              nombres: z.string(),
-              apellidos: z.string(),
-              dni: z.string(),
-              email: z.string(),
-              telefono: z.string().nullable(),
-            }),
-          ),
-          documentos: z.array(
-            z.object({
-              id: z.string().uuid(),
-              tipo: z.string(),
-              nombreOriginal: z.string(),
-              estadoConformidad: EstadoConformidadDocumentoSchema,
-            }),
-          ),
-        }),
-      }),
-      404: ErrorEnvelopeSchema,
-      410: ErrorEnvelopeSchema, // Enlace expirado o ya usado
+      200: z.object({ solicitud: MiSolicitudDTOSchema.nullable() }),
+      401: ErrorEnvelopeSchema,
     },
-    summary: "Consultar datos y observaciones con token de subsanación",
-  },
-
-  // Portal Público: Enviar subsanación con token
-  subsanarConToken: {
-    method: "POST",
-    path: "/api/v1/public/subsanar/:token",
-    pathParams: z.object({
-      token: z.string().min(16),
-    }),
-    body: SubsanarSolicitudPayloadSchema,
-    responses: {
-      200: z.object({ ok: z.literal(true), mensaje: z.string() }),
-      400: ErrorEnvelopeSchema,
-      404: ErrorEnvelopeSchema,
-      410: ErrorEnvelopeSchema,
-    },
-    summary: "Reenviar solicitud subsanada mediante token",
+    summary: "Solicitud propia del tesista en sesión (observaciones y documentos)",
   },
 });

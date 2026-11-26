@@ -53,19 +53,39 @@ describe("catálogo de correos de Mesa de Partes", () => {
     expect(c.html).not.toContain("&lt;strong&gt;");
   });
 
-  it("observación: lista de motivos, fecha límite y enlace de subsanación", () => {
+  it("observación con cuenta nueva: motivos y enlace para crear la clave, sin fecha límite", () => {
     const p = correoSolicitudObservada({
       codigo: "SOL-2026-0007",
       detalle: "- Falta firma en el Anexo 17\n- El DNI no coincide",
-      fechaLimite: new Date("2026-12-04T12:00:00Z"),
-      enlace: "https://titulacion.unsa.edu.pe/subsanar/abc",
-      para: ["a@b.pe"],
+      nombres: "Ana",
+      dni: "12345678",
+      acceso: { tipo: "ACTIVAR", enlace: "https://titulacion.unsa.edu.pe/activar?token=abc" },
+      conGoogle: true,
+      para: ["a@unsa.edu.pe"],
     });
     expect(p.lista?.items).toEqual(["Falta firma en el Anexo 17", "El DNI no coincide"]);
+    expect(p.textoEnlace).toBe("Crear mi clave e ingresar");
     const c = render(p);
-    expect(c.html).toContain("diciembre de 2026");
-    expect(c.html).toContain('href="https://titulacion.unsa.edu.pe/subsanar/abc"');
+    expect(c.html).toContain('href="https://titulacion.unsa.edu.pe/activar?token=abc"');
+    expect(c.html).toContain("Ingresar con Google");
     expect(c.texto).toContain("  - El DNI no coincide");
+    // Sin plazo de subsanación ni enlace de subsanación aparte
+    expect(c.texto.toLowerCase()).not.toMatch(/fecha l[ií]mite|d[ií]as h[aá]biles|subsanar\//);
+  });
+
+  it("observación con cuenta activa: lleva al inicio de sesión y no menciona vencimientos", () => {
+    const p = correoSolicitudObservada({
+      codigo: "SOL-2026-0008",
+      detalle: "Foto con fondo de color",
+      nombres: "Luis",
+      dni: "87654321",
+      acceso: { tipo: "INGRESAR", enlace: "https://titulacion.unsa.edu.pe/login" },
+      conGoogle: false,
+      para: ["l@unsa.edu.pe"],
+    });
+    expect(p.textoEnlace).toBe("Ingresar al portal");
+    expect(p.nota).toBeUndefined();
+    expect(p.texto).not.toContain("Google");
   });
 
   it("rechazo: incluye el fundamento escapado", () => {

@@ -32,7 +32,6 @@ import { RegistroOficiosPage } from "./routes/registro-oficios.js";
 import { RestablecerPage } from "./routes/restablecer.js";
 import { SolicitudDetallePage } from "./routes/solicitudes.$id.js";
 import { SolicitudesPage } from "./routes/solicitudes.js";
-import { SubsanarSolicitudPage } from "./routes/subsanar-solicitud.$token.js";
 import { TallerDetallePage } from "./routes/taller-detalle.js";
 import { AsesoresPage, TalleresPage } from "./routes/talleres-asesores.js";
 import { TalleresNuevoPage } from "./routes/talleres-nuevo.js";
@@ -186,11 +185,6 @@ const landingRoute = createRoute({
   path: "/landing",
   component: LandingPage,
 });
-const subsanarRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/subsanar/$token",
-  component: SubsanarSolicitudPage,
-});
 const solicitudesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/solicitudes",
@@ -216,7 +210,6 @@ const routeTree = rootRoute.addChildren([
   solicitudDetalleRoute,
   mesaDePartesRoute,
   landingRoute,
-  subsanarRoute,
   miTramiteRoute,
   asesorRoute,
   nuevoRoute,

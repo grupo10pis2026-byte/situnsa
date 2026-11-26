@@ -1,5 +1,11 @@
 import { sumarDiasHabiles } from "../expediente/dias-habiles.js";
 
+/*
+ * EN SUSPENSO (2026-11-26): por decisión del cliente la observación de una
+ * solicitud no tiene fecha límite; la API y la web no usan estas funciones.
+ * Se conservan (puras y probadas) por si el plazo se reactiva.
+ */
+
 /** Días hábiles por defecto otorgados al postulante para subsanar observaciones (RF-02xx[009]). */
 export const DIAS_HABILES_SUBSANACION_DEFAULT = 10;
 

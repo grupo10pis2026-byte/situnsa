@@ -44,7 +44,7 @@ export function ModalObservarSolicitud({
     <Dialogo
       abierto={abierto}
       ancho="max-w-lg"
-      descripcion={`Se notificará al postulante de la solicitud ${codigoSolicitud} con un enlace de subsanación único.`}
+      descripcion={`Se habilitará el acceso al portal de los participantes de la solicitud ${codigoSolicitud} y se les enviarán estas observaciones por correo para que actualicen sus documentos.`}
       onAbierto={onAbierto}
       titulo="Observar Solicitud de Titulación"
     >
@@ -56,7 +56,7 @@ export function ModalObservarSolicitud({
         )}
 
         <Field
-          ayuda="Instrucciones claras para que el estudiante subsane sus requisitos (plazo legal: 10 días hábiles)."
+          ayuda="Instrucciones claras para que el estudiante corrija sus requisitos (una observación por línea)."
           etiqueta="Detalle y Precisiones para el Estudiante"
         >
           <textarea
